@@ -1,0 +1,1735 @@
+{% load static %}
+{# ============================================================ #}
+{# BULK UPLOAD MODALS + STYLES + SCRIPTS #}
+{# Flow: Upload → Map columns → Preview (paginated) → Save #}
+{# CLIENT-SIDE filtering, validation, pagination #}
+{# Server only: initial load (email-exists) + final save #}
+{# ============================================================ #}
+
+
+{# ============================================================ #}
+{# MODAL 1 — File picker #}
+{# ============================================================ #}
+<div class="modal fade" id="bulkUploadModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header border-bottom">
+        <h5 class="modal-title">
+          <i class="fas fa-file-upload me-2" style="color:#e74c3c;"></i>Bulk Upload
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body" style="padding:25px;">
+        <div class="text-center mb-4">
+          <div style="width:80px;height:80px;background:rgba(231,76,60,.1);border-radius:50%;
+                      display:inline-flex;align-items:center;justify-content:center;margin-bottom:15px;">
+            <i class="fas fa-cloud-upload-alt" style="font-size:36px;color:#e74c3c;"></i>
+          </div>
+          <p class="text-muted">Upload your Excel file with badge details</p>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Select File <span class="text-danger">*</span></label>
+          <input type="file" class="form-control" id="bulkFile" accept=".xlsx,.xls,.csv">
+          <small class="text-muted">Supported: .xlsx, .xls, .csv — Max 5 MB</small>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded">
+          <span class="text-muted"><i class="fas fa-download me-2"></i>Need the template?</span>
+          <a href="{% static 'sample/bulk_upload_template.xlsx' %}" class="btn btn-sm btn-outline-danger" download>
+            <i class="fas fa-file-download me-1"></i>Download Template
+          </a>
+        </div>
+      </div>
+
+      <div class="modal-footer border-top">
+        <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn px-4" id="uploadBulkBtn" style="background:#e74c3c;color:white;">
+          <i class="fas fa-upload me-2"></i>Upload &amp; Process
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+{# ============================================================ #}
+{# MODAL 2 — Column mapping #}
+{# ============================================================ #}
+<div class="modal fade" id="fieldMappingModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Map columns to system fields</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <div id="mappingContainer"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="confirmMappingBtn" class="btn btn-primary">Continue</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+{# ============================================================ #}
+{# MODAL 3 — Preview table (paginated) #}
+{# ============================================================ #}
+<div class="modal fade" id="bulkPreviewModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:95vw;">
+    <div class="modal-content"
+      style="border-radius:10px;overflow:hidden;border:none;box-shadow:0 20px 60px rgba(0,0,0,.15);">
+
+      {# ── Header ── #}
+      <div class="modal-header preview-header"
+        style="background:#fff;border-bottom:3px solid #1a56db;padding:16px 24px;align-items:flex-start;">
+        <div style="flex:1;">
+          <div class="d-flex align-items-center gap-3 mb-1">
+            <span style="font-size:18px;font-weight:700;color:#111;">Preview</span>
+            <input type="text" class="form-control form-control-sm" id="previewSearchInput"
+              placeholder="Search by name, email, company, ticket type…"
+              style="max-width:280px;border-radius:6px;border:1px solid #ddd;font-size:14px;">
+          </div>
+          <!-- <small class="text-muted" style="font-size:12px;">Name this import batch for reference.</small> -->
+        </div>
+        <!-- ✅ ADD THIS SEARCH BAR -->
+        <!-- <div style="margin-top:10px;">
+      <input type="text" id="previewSearchInput"
+             class="form-control form-control-sm"
+             placeholder="🔍 Search by name, email, company, ticket type…"
+             style="max-width:480px;border-radius:6px;border:1px solid #ddd;font-size:13px;">
+    </div> -->
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      {# ── Tabs ── #}
+      <div style="background:#fff;border-bottom:1px solid #e5e7eb;padding:0 24px;">
+        <ul style="list-style:none;margin:0;padding:0;display:flex;gap:0;">
+          <li><button class="bulk-preview-tab active" data-bptab="all">
+              All <span class="bpt-badge" id="tab-count-all">0</span>
+            </button></li>
+          <li><button class="bulk-preview-tab" data-bptab="valid">
+              Valid <span class="bpt-badge bpt-valid" id="tab-count-valid">0</span>
+            </button></li>
+          <li><button class="bulk-preview-tab" data-bptab="invalid">
+              Invalid <span class="bpt-badge bpt-invalid" id="tab-count-invalid">0</span>
+            </button></li>
+        </ul>
+      </div>
+
+      {# ── Table ── #}
+      <div class="modal-body" style="padding:0;background:#fff;">
+        <div style="overflow-x:auto;max-height:360px;overflow-y:auto;">
+          <table style="width:100%;font-size:13.5px;border-collapse:collapse;">
+            <thead>
+              <tr style="background:#f3f4f6;position:sticky;top:0;z-index:2;">
+                <th class="bpt-th">ROW</th>
+                <th class="bpt-th">FIRST NAME</th>
+                <th class="bpt-th">LAST NAME</th>
+                <th class="bpt-th">EMAIL</th>
+                <th class="bpt-th">MOBILE</th>
+                <th class="bpt-th">COUNTRY</th>
+                <th class="bpt-th">NATIONALITY</th>
+                <th class="bpt-th">COMPANY</th>
+                <th class="bpt-th">JOB TITLE</th>
+                <th class="bpt-th">TICKET TYPE</th>
+                <th class="bpt-th">TERMS</th>
+                <th class="bpt-th">DATA SHARING</th>
+                <th class="bpt-th">MARKETING</th>
+                <th class="bpt-th">DIGITAL BADGE</th>
+                <th class="bpt-th">ONSITE BADGE</th>
+                <th class="bpt-th">STATUS</th>
+              </tr>
+            </thead>
+            <tbody id="previewTableBody"></tbody>
+          </table>
+        </div>
+
+        {# ── Pagination bar ── #}
+        <div id="paginationBar" style="display:flex;align-items:center;justify-content:space-between;
+                    padding:10px 16px;border-top:1px solid #e5e7eb;background:#fafafa;">
+          <span id="paginationInfo" style="font-size:13px;color:#6b7280;"></span>
+          <div id="paginationBtns" style="display:flex;gap:4px;align-items:center;"></div>
+          <!-- <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#6b7280;">
+            <span>Rows per page</span>
+            <select id="pageSizeSelect"
+                    style="border:1px solid #d1d5db;border-radius:6px;padding:4px 8px;font-size:13px;">
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50" selected>50</option>
+              <option value="100">100</option>
+            </select>
+          </div> -->
+        </div>
+      </div>
+
+      {# ── Footer ── #}
+      <div class="modal-footer border-top" style="background:#fff;padding:14px 24px;justify-content:space-between;">
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn px-4" id="backToUploadBtn"
+            style="background:#fff;color:#333;border:1px solid #ddd;">
+            <i class="fas fa-arrow-left me-1"></i> Back
+          </button>
+        </div>
+        <button type="button" class="btn px-5" id="submitBulkBtn" style="background:#1a56db;color:white;border:none;">
+          Submit
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{# ============================================================ #}
+{# NOTIFICATION MODAL #}
+{# ============================================================ #}
+<div class="modal fade" id="notificationModal" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header" id="notificationHeader">
+        <h5 class="modal-title" id="notificationTitle"></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="notificationMessage"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" id="notificationOkBtn" data-bs-dismiss="modal">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+{# ============================================================ #}
+{# STYLES #}
+{# ============================================================ #}
+<style>
+  .bulk-preview-tab {
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    padding: 12px 18px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #6b7280;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    transition: color .15s, border-color .15s;
+  }
+
+  .bulk-preview-tab:hover {
+    color: #1a56db;
+  }
+
+  .bulk-preview-tab.active {
+    color: #1a56db;
+    border-bottom-color: #1a56db;
+  }
+
+  .bpt-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    background: #e5e7eb;
+    color: #374151;
+  }
+
+  .bpt-valid {
+    background: #d1fae5;
+    color: #065f46;
+  }
+
+  .bpt-invalid {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  .bpt-th {
+    padding: 11px 14px;
+    color: #555;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: .04em;
+    border-bottom: 1px solid #e5e7eb;
+    white-space: nowrap;
+    text-align: left;
+  }
+
+  .bpt-td {
+    padding: 9px 14px;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  .bpt-row:hover .bpt-td {
+    background: #f9fafb;
+  }
+
+  .bpt-row-invalid .bpt-td:first-child {
+    border-left: 3px solid #ef4444;
+  }
+
+  .bpt-row-invalid .bpt-td {
+    background: #fff8f8;
+  }
+
+  .bpt-row-invalid:hover .bpt-td {
+    background: #fff0f0;
+  }
+
+  .bpt-input {
+    border: 1px solid #d1d5db;
+    border-radius: 5px;
+    padding: 5px 9px;
+    font-size: 13px;
+    width: 100%;
+    min-width: 100px;
+    outline: none;
+    transition: border-color .15s;
+    background: #fff;
+  }
+
+  .bpt-input:focus {
+    border-color: #1a56db;
+    box-shadow: 0 0 0 2px rgba(26, 86, 219, .08);
+  }
+
+  .bpt-input-err {
+    border-color: #ef4444;
+    background: #fff5f5;
+  }
+
+  .bpt-error {
+    font-size: 11px;
+    color: #dc2626;
+    margin-top: 3px;
+  }
+
+  .bpt-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11.5px;
+    font-weight: 600;
+  }
+
+  .bpt-s-valid {
+    background: #d1fae5;
+    color: #065f46;
+  }
+
+  .bpt-s-invalid {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  .pg-btn {
+    min-width: 32px;
+    height: 32px;
+    padding: 0 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #fff;
+    font-size: 13px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .15s, border-color .15s;
+  }
+
+  .pg-btn:hover:not(:disabled) {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+  }
+
+  .pg-btn.active {
+    background: #1a56db;
+    color: #fff;
+    border-color: #1a56db;
+    font-weight: 600;
+  }
+
+  .pg-btn:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+  }
+
+  .fm-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+  }
+
+  .fm-left {
+    width: 45%;
+    font-size: 14px;
+    color: #333;
+  }
+
+  .fm-right {
+    width: 55%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .fm-select {
+    flex: 1;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 14px;
+    background: #fff;
+  }
+
+  .fm-delete {
+    border: none;
+    background: none;
+    color: #e74c3c;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  .fm-delete:hover {
+    color: #c0392b;
+  }
+
+  #fieldMappingModal .modal-body {
+    max-height: 70vh;
+    overflow-y: auto;
+    padding: 16px 20px;
+  }
+
+  #fieldMappingModal .modal-dialog {
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #fieldMappingModal .modal-content {
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .preview-header .btn-close {
+    filter: none;
+  }
+
+  .notification-success .modal-header {
+    background-color: #d1fae5;
+    color: #065f46;
+    border-bottom-color: #a7f3d0;
+  }
+
+  .notification-error .modal-header {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border-bottom-color: #fecaca;
+  }
+
+  .notification-warning .modal-header {
+    background-color: #fed7aa;
+    color: #92400e;
+    border-bottom-color: #fdba74;
+  }
+
+  .notification-info .modal-header {
+    background-color: #dbeafe;
+    color: #1e40af;
+    border-bottom-color: #bfdbfe;
+  }
+  /* Add inside your <style> block */
+.mobile-number-container .iti {
+  width: 100%;
+}
+.mobile-number-container .iti__tel-input {
+  width: 100%;
+  min-width: 130px;
+}
+</style>
+
+
+{# ============================================================ #}
+{# SCRIPTS #}
+{# ============================================================ #}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script>
+
+  document.getElementById("previewSearchInput").addEventListener("input", debounce(function () {
+    pagination.searchQuery = this.value;
+    pagination.currentPage = 1;   // reset to page 1 on new search
+    renderCurrentView();
+  }, 200));
+  // ═════════════════════════════════════════════════════════════
+  // STATE
+  // ═════════════════════════════════════════════════════════════
+
+  let existingEmailsSet = new Set(); // DB emails — fetched once on "Upload & Process"
+  let parsedFileRows = [];        // Raw rows parsed by SheetJS (never mutated)
+  let allRows = [];        // Working copy with status/errors — single source of truth
+
+  const pagination = {
+    currentPage: 1,
+    pageSize: 50,
+    activeTab: "all",
+    savedMapping: {},
+    searchQuery: "",
+  };
+
+  // ═════════════════════════════════════════════════════════════
+  // HELPERS
+  // ═════════════════════════════════════════════════════════════
+
+  function showNotificationModal(title, message, type = 'info') {
+    const modalEl = document.getElementById('notificationModal');
+    modalEl.classList.remove('notification-success', 'notification-error', 'notification-warning', 'notification-info');
+    modalEl.classList.add(`notification-${type}`);
+    document.getElementById('notificationTitle').textContent = title;
+    document.getElementById('notificationMessage').innerHTML = message;
+    new bootstrap.Modal(modalEl).show();
+    return new Promise(resolve => {
+      modalEl.addEventListener('hidden.bs.modal', function h() {
+        modalEl.removeEventListener('hidden.bs.modal', h);
+        resolve();
+      });
+    });
+  }
+
+  function getCsrfToken() {
+    return document.cookie.split("; ").find(r => r.startsWith("csrftoken"))?.split("=")[1];
+  }
+
+  function postJSON(url, data) {
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": getCsrfToken() },
+      body: JSON.stringify(data),
+    }).then(r => r.json());
+  }
+
+  function postFormData(url, fd) {
+    return fetch(url, {
+      method: "POST",
+      headers: { "X-CSRFToken": getCsrfToken() },
+      body: fd,
+    }).then(r => r.json());
+  }
+
+  function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str).replace(/[&<>"']/g, m =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])
+    );
+  }
+
+  function debounce(fn, ms) {
+    let t;
+    return function (...args) {
+      clearTimeout(t);
+      t = setTimeout(() => fn.apply(this, args), ms);
+    };
+  }
+
+  function cleanVal(v) {
+    if (v == null || v === '') return null;
+    const s = String(v).trim();
+    return s === '' ? null : s;
+  }
+
+  function toBool(v) {
+    if (v == null) return false;
+    if (typeof v === 'boolean') return v;
+    return ['true', '1', 'yes', 'y', 'checked'].includes(String(v).trim().toLowerCase());
+  }
+
+  // ═════════════════════════════════════════════════════════════
+  // CLIENT-SIDE FILE PARSING  (SheetJS — no server needed)
+  // ═════════════════════════════════════════════════════════════
+
+  /**
+   * Read the selected file with SheetJS and return an array of plain objects.
+   * Column headers are trimmed; values are kept as strings/booleans/numbers.
+   */
+  function parseFileInBrowser(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const wb = XLSX.read(e.target.result, { type: 'array' });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          // defval: '' so missing cells become empty string, not undefined
+          const data = XLSX.utils.sheet_to_json(ws, { defval: '' });
+          // Normalise header names (trim spaces)
+          const rows = data.map(row => {
+            const out = {};
+            Object.keys(row).forEach(k => { out[k.trim()] = row[k]; });
+            return out;
+          });
+          resolve(rows);
+        } catch (err) { reject(err); }
+      };
+      reader.onerror = () => reject(new Error('File read error'));
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  /**
+   * Apply savedMapping to raw rows, normalise values, and return the
+   * structured row objects that allRows expects.
+   */
+  function applyMappingAndNormalise(rawRows, mapping) {
+    return rawRows.map((raw, index) => {
+      // Remap keys according to column mapping
+      const mapped = { ...raw };
+      Object.entries(mapping).forEach(([srcCol, sysField]) => {
+        if (srcCol in mapped) {
+          mapped[sysField] = mapped[srcCol];
+          if (srcCol !== sysField) delete mapped[srcCol];
+        }
+      });
+
+      return {
+        id: index,
+        row: index + 1,
+        first_name: cleanVal(mapped.first_name),
+        last_name: cleanVal(mapped.last_name),
+        email: cleanVal(mapped.email),
+        mobile_number: cleanVal(mapped.mobile_number),
+        country: cleanVal(mapped.country),
+        nationality: cleanVal(mapped.nationality),
+        company_name: cleanVal(mapped.company_name),
+        job_title: cleanVal(mapped.job_title),
+        ticket_type: cleanVal(mapped.ticket_type),
+        accepted_terms: toBool(mapped.accepted_terms),
+        accepted_data_sharing: toBool(mapped.accepted_data_sharing),
+        accepted_marketing: toBool(mapped.accepted_marketing),
+        digital_badge_issued: toBool(mapped.digital_badge_issued),
+        onsite_badge_printed: toBool(mapped.onsite_badge_printed),
+      };
+    });
+  }
+
+  // ═════════════════════════════════════════════════════════════
+  // VALIDATION  (100% client-side)
+  // ═════════════════════════════════════════════════════════════
+
+  function validateRowData(data, skipId = null) {
+    const errors = [];
+    const NAME_RE = /^[A-Za-z \-'.]+$/;
+
+    const first_name = String(data.first_name || "").trim();
+    const last_name = String(data.last_name || "").trim();
+    const email = String(data.email || "").trim().toLowerCase();
+    const country = String(data.country || "").trim();
+    const nationality = String(data.nationality || "").trim();
+    const ticket_type = String(data.ticket_type || "").trim();
+
+    // ── first_name ───────────────────────────────────────────
+    if (!first_name) {
+      errors.push("First name required");
+    } else if (first_name.length < 2) {
+      errors.push("First name must be at least 2 characters");
+    } else if (!NAME_RE.test(first_name)) {
+      errors.push("First name should only contain letters");
+    }
+
+    // ── last_name (optional — only validate if filled) ───────
+    if (last_name) {
+      if (last_name.length < 2) {
+        errors.push("Last name must be at least 2 characters");
+      } else if (!NAME_RE.test(last_name)) {
+        errors.push("Last name should only contain letters");
+      }
+    }
+
+    // ── email ─────────────────────────────────────────────────
+    if (!email || !email.includes("@")) {
+      errors.push("Invalid email");
+    } else {
+      const inDb = existingEmailsSet.has(email);
+      const inFile = allRows.some(r =>
+        r.id !== skipId && String(r.email || "").trim().toLowerCase() === email
+      );
+      if (inDb || inFile) errors.push("Email already exists");
+    }
+
+    // ── mobile_number ──────────────────────────────────────────
+    if (data.mobile_number) {
+  // Strip whitespace/dashes for basic length check
+  const digits = String(data.mobile_number).replace(/[\s\-().+]/g, '');
+  if (digits.length < 5 || digits.length > 15) {
+    errors.push("Invalid mobile number");
+  }
+} 
+
+    // ── country ───────────────────────────────────────────────
+    if (!country) {
+  errors.push("Country required");
+} else {
+  const validCountry = COUNTRIES.some(
+    c => c.name.toLowerCase() === country.toLowerCase()
+  );
+  if (!validCountry) errors.push("Country required");
+}
+
+// ── nationality ───────────────────────────────────────────────
+if (!nationality) {
+  errors.push("Nationality required");
+} else {
+  const validNationality = COUNTRIES.some(
+    c => c.nationality.toLowerCase() === nationality.toLowerCase()
+  );
+  if (!validNationality) errors.push("Nationality required");
+}
+
+    // ── ticket_type ───────────────────────────────────────────
+    if (!ticket_type) {
+      errors.push("Ticket type required");
+    } else if (!["VIP", "VISITOR", "EXHIBITOR"].includes(ticket_type.toUpperCase())) {
+      errors.push("Invalid ticket type");
+    }
+
+    // ── accepted_terms ────────────────────────────────────────
+    if (!data.accepted_terms) {
+      errors.push("Terms must be accepted");
+    }
+
+    return errors;
+  }
+
+  // ═════════════════════════════════════════════════════════════
+  // MODAL NAVIGATION
+  // ═════════════════════════════════════════════════════════════
+
+  document.getElementById("backToUploadBtn").addEventListener("click", () => {
+    bootstrap.Modal.getInstance(document.getElementById("bulkPreviewModal")).hide();
+    setTimeout(() => new bootstrap.Modal(document.getElementById("bulkUploadModal")).show(), 350);
+  });
+
+  // ═════════════════════════════════════════════════════════════
+  // STEP 1 — "Upload & Process" clicked
+  //   • Parse file in browser with SheetJS  (no server call)
+  //   • Fetch existing DB emails from server (one lightweight call)
+  //   • Show column-mapping modal
+  // ═════════════════════════════════════════════════════════════
+
+  document.getElementById("uploadBulkBtn").addEventListener("click", async () => {
+    const file = document.getElementById("bulkFile").files[0];
+    if (!file) return showNotificationModal('No File', 'Please select a file first.', 'warning');
+
+    const btn = document.getElementById("uploadBulkBtn");
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Reading…';
+
+    try {
+      // Parse file entirely in the browser
+      parsedFileRows = await parseFileInBrowser(file);
+
+      if (!parsedFileRows.length) {
+        showNotificationModal('Empty File', 'The file contains no data rows.', 'warning');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-upload me-2"></i>Upload &amp; Process';
+        return;
+      }
+
+      // Fetch DB existing emails — the ONLY remaining server call before submit
+      const emailRes = await postJSON("/get-existing-emails/", {});
+      existingEmailsSet = new Set((emailRes.emails || []).map(e => String(e).toLowerCase()));
+
+      // Derive column headers from first row
+      const columns = Object.keys(parsedFileRows[0]);
+      renderFieldMapping(columns);
+
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-upload me-2"></i>Upload &amp; Process';
+
+      new bootstrap.Modal(document.getElementById("fieldMappingModal")).show();
+    } catch (err) {
+      console.error(err);
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-upload me-2"></i>Upload &amp; Process';
+      showNotificationModal('Parse Error', 'Could not read the file. Please check the format and try again.', 'error');
+    }
+  });
+
+  // ═════════════════════════════════════════════════════════════
+  // STEP 2 — Column-mapping UI
+  // ═════════════════════════════════════════════════════════════
+
+  const SYSTEM_FIELDS = [
+    "first_name", "last_name", "email", "mobile_number",
+    "country", "nationality", "company_name", "job_title",
+    "ticket_type", "accepted_terms", "accepted_data_sharing",
+    "accepted_marketing", "digital_badge_issued", "onsite_badge_printed",
+  ];
+
+  function toLabel(str) {
+    return str.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  function renderFieldMapping(columns) {
+    const container = document.getElementById("mappingContainer");
+    container.innerHTML = "";
+    columns.forEach(col => {
+      // Auto-select if column name already matches a system field
+      const autoMatch = SYSTEM_FIELDS.includes(col.toLowerCase()) ? col.toLowerCase() : "";
+      const row = document.createElement("div");
+      row.className = "fm-row";
+      row.innerHTML = `
+      <div class="fm-left">${escapeHtml(col)}</div>
+      <div class="fm-right">
+        <select class="fm-select" data-col="${escapeHtml(col)}">
+          <option value="">— skip —</option>
+          ${SYSTEM_FIELDS.map(f =>
+        `<option value="${f}" ${autoMatch === f ? 'selected' : ''}>${toLabel(f)}</option>`
+      ).join("")}
+        </select>
+        <button class="fm-delete" title="Clear"><i class="fas fa-trash"></i></button>
+      </div>`;
+      row.querySelector(".fm-delete").onclick = () => row.querySelector("select").value = "";
+      container.appendChild(row);
+    });
+  }
+
+  // ═════════════════════════════════════════════════════════════
+  // STEP 3 — "Continue" on mapping modal
+  //   • Apply mapping to parsedFileRows entirely in JS
+  //   • Validate every row client-side
+  //   • Show preview modal — zero server calls
+  // ═════════════════════════════════════════════════════════════
+
+  document.getElementById("confirmMappingBtn").addEventListener("click", async () => {
+    // Collect mapping
+    pagination.savedMapping = {};
+    document.querySelectorAll(".fm-select").forEach(sel => {
+      if (sel.value) pagination.savedMapping[sel.dataset.col] = sel.value;
+    });
+
+    // Reset pagination state
+    pagination.currentPage = 1;
+    const pageSizeSel = document.getElementById("pageSizeSelect");
+    pagination.pageSize = pageSizeSel ? parseInt(pageSizeSel.value) : 50;
+    pagination.activeTab = "all";
+    document.querySelectorAll(".bulk-preview-tab").forEach(b => b.classList.remove("active"));
+    document.querySelector('[data-bptab="all"]').classList.add("active");
+
+    // Apply mapping + normalise in browser
+    const structured = applyMappingAndNormalise(parsedFileRows, pagination.savedMapping);
+
+    // Build allRows with initial validation
+    allRows = structured.map(r => {
+      const errors = validateRowData(r, r.id);
+      return { ...r, status: errors.length === 0 ? "valid" : "invalid", errors };
+    });
+
+    // Global Mobile Validation Pass (Headless)
+    // Create a temporary instance to validate all rows for accurate tab counts
+    const tempInput = document.createElement("input");
+    const iti = intlTelInput(tempInput, {
+      utilsScript: 'https://cdn.jsdelivr.net/npm/intl-tel-input@23.1.0/build/js/utils.js',
+    });
+    
+    // Ensure utils are loaded for accurate validation if supported
+    if (window.intlTelInput && typeof window.intlTelInput.loadUtils === 'function') {
+      try {
+        await window.intlTelInput.loadUtils('https://cdn.jsdelivr.net/npm/intl-tel-input@23.1.0/build/js/utils.js');
+      } catch(e) { console.warn("ITI utils load failed", e); }
+    }
+
+    allRows.forEach(r => {
+      if (r.mobile_number) {
+        iti.setNumber(String(r.mobile_number));
+        if (!iti.isValidNumber()) {
+          if (!r.errors.includes("Invalid mobile number")) {
+            r.errors.push("Invalid mobile number");
+            r.status = "invalid";
+          }
+        }
+      }
+    });
+    iti.destroy();
+
+    renderCurrentView();
+    new bootstrap.Modal(document.getElementById("bulkPreviewModal")).show();
+  });
+
+  // ═════════════════════════════════════════════════════════════
+  // DERIVED VIEWS  (filter + paginate allRows in memory)
+  // ═════════════════════════════════════════════════════════════
+
+  function getFilteredRows() {
+    const tab = pagination.activeTab;
+    let rows = allRows;
+    if (tab === "valid") rows = rows.filter(r => r.status === "valid");
+    if (tab === "invalid") rows = rows.filter(r => r.status === "invalid");
+
+    // ✅ ADD THIS BLOCK
+    const q = pagination.searchQuery.toLowerCase().trim();
+    if (q) {
+      rows = rows.filter(r =>
+        [r.first_name, r.last_name, r.email, r.company_name,
+        r.job_title, r.mobile_number, r.ticket_type, r.country, r.nationality]
+          .some(v => v && String(v).toLowerCase().includes(q))
+      );
+    }
+
+    return rows;
+  }
+
+  function renderCurrentView() {
+    const filtered = getFilteredRows();
+    const total = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(total / pagination.pageSize));
+
+    if (pagination.currentPage > totalPages) pagination.currentPage = totalPages;
+
+    const start = (pagination.currentPage - 1) * pagination.pageSize;
+    const page = filtered.slice(start, start + pagination.pageSize);
+
+    const validCount = allRows.filter(r => r.status === "valid").length;
+    const invalidCount = allRows.filter(r => r.status === "invalid").length;
+
+    updateTabCounts(validCount, invalidCount, allRows.length);
+    renderPreviewTable(page);
+    renderPagination(total, totalPages);
+  }
+
+  // ═════════════════════════════════════════════════════════════
+  // TAB COUNTS
+  // ═════════════════════════════════════════════════════════════
+
+  function updateTabCounts(valid, invalid, totalAll) {
+    document.getElementById("tab-count-all").textContent = totalAll;
+    document.getElementById("tab-count-valid").textContent = valid;
+    document.getElementById("tab-count-invalid").textContent = invalid;
+  }
+
+  // ── Countries Data ──────────────────────────────────────────────────────
+  const COUNTRIES = [
+    { code: "AF", name: "Afghanistan", nationality: "Afghan" },
+    { code: "AL", name: "Albania", nationality: "Albanian" },
+    { code: "DZ", name: "Algeria", nationality: "Algerian" },
+    { code: "AD", name: "Andorra", nationality: "Andorran" },
+    { code: "AO", name: "Angola", nationality: "Angolan" },
+    { code: "AG", name: "Antigua and Barbuda", nationality: "Antiguan" },
+    { code: "AR", name: "Argentina", nationality: "Argentine" },
+    { code: "AM", name: "Armenia", nationality: "Armenian" },
+    { code: "AU", name: "Australia", nationality: "Australian" },
+    { code: "AT", name: "Austria", nationality: "Austrian" },
+    { code: "AZ", name: "Azerbaijan", nationality: "Azerbaijani" },
+    { code: "BS", name: "Bahamas", nationality: "Bahamian" },
+    { code: "BH", name: "Bahrain", nationality: "Bahraini" },
+    { code: "BD", name: "Bangladesh", nationality: "Bangladeshi" },
+    { code: "BB", name: "Barbados", nationality: "Barbadian" },
+    { code: "BY", name: "Belarus", nationality: "Belarusian" },
+    { code: "BE", name: "Belgium", nationality: "Belgian" },
+    { code: "BZ", name: "Belize", nationality: "Belizean" },
+    { code: "BJ", name: "Benin", nationality: "Beninese" },
+    { code: "BT", name: "Bhutan", nationality: "Bhutanese" },
+    { code: "BO", name: "Bolivia", nationality: "Bolivian" },
+    { code: "BA", name: "Bosnia and Herzegovina", nationality: "Bosnian" },
+    { code: "BW", name: "Botswana", nationality: "Motswana" },
+    { code: "BR", name: "Brazil", nationality: "Brazilian" },
+    { code: "BN", name: "Brunei", nationality: "Bruneian" },
+    { code: "BG", name: "Bulgaria", nationality: "Bulgarian" },
+    { code: "BF", name: "Burkina Faso", nationality: "Burkinabé" },
+    { code: "BI", name: "Burundi", nationality: "Burundian" },
+    { code: "CV", name: "Cabo Verde", nationality: "Cape Verdean" },
+    { code: "KH", name: "Cambodia", nationality: "Cambodian" },
+    { code: "CM", name: "Cameroon", nationality: "Cameroonian" },
+    { code: "CA", name: "Canada", nationality: "Canadian" },
+    { code: "CF", name: "Central African Republic", nationality: "Central African" },
+    { code: "TD", name: "Chad", nationality: "Chadian" },
+    { code: "CL", name: "Chile", nationality: "Chilean" },
+    { code: "CN", name: "China", nationality: "Chinese" },
+    { code: "CO", name: "Colombia", nationality: "Colombian" },
+    { code: "KM", name: "Comoros", nationality: "Comorian" },
+    { code: "CG", name: "Congo", nationality: "Congolese" },
+    { code: "CD", name: "Congo (DRC)", nationality: "Congolese" },
+    { code: "CR", name: "Costa Rica", nationality: "Costa Rican" },
+    { code: "CI", name: "Côte d'Ivoire", nationality: "Ivorian" },
+    { code: "HR", name: "Croatia", nationality: "Croatian" },
+    { code: "CU", name: "Cuba", nationality: "Cuban" },
+    { code: "CY", name: "Cyprus", nationality: "Cypriot" },
+    { code: "CZ", name: "Czech Republic", nationality: "Czech" },
+    { code: "DK", name: "Denmark", nationality: "Danish" },
+    { code: "DJ", name: "Djibouti", nationality: "Djiboutian" },
+    { code: "DM", name: "Dominica", nationality: "Dominican" },
+    { code: "DO", name: "Dominican Republic", nationality: "Dominican" },
+    { code: "EC", name: "Ecuador", nationality: "Ecuadorian" },
+    { code: "EG", name: "Egypt", nationality: "Egyptian" },
+    { code: "SV", name: "El Salvador", nationality: "Salvadoran" },
+    { code: "GQ", name: "Equatorial Guinea", nationality: "Equatoguinean" },
+    { code: "ER", name: "Eritrea", nationality: "Eritrean" },
+    { code: "EE", name: "Estonia", nationality: "Estonian" },
+    { code: "SZ", name: "Eswatini", nationality: "Swazi" },
+    { code: "ET", name: "Ethiopia", nationality: "Ethiopian" },
+    { code: "FJ", name: "Fiji", nationality: "Fijian" },
+    { code: "FI", name: "Finland", nationality: "Finnish" },
+    { code: "FR", name: "France", nationality: "French" },
+    { code: "GA", name: "Gabon", nationality: "Gabonese" },
+    { code: "GM", name: "Gambia", nationality: "Gambian" },
+    { code: "GE", name: "Georgia", nationality: "Georgian" },
+    { code: "DE", name: "Germany", nationality: "German" },
+    { code: "GH", name: "Ghana", nationality: "Ghanaian" },
+    { code: "GR", name: "Greece", nationality: "Greek" },
+    { code: "GD", name: "Grenada", nationality: "Grenadian" },
+    { code: "GT", name: "Guatemala", nationality: "Guatemalan" },
+    { code: "GN", name: "Guinea", nationality: "Guinean" },
+    { code: "GW", name: "Guinea-Bissau", nationality: "Guinean" },
+    { code: "GY", name: "Guyana", nationality: "Guyanese" },
+    { code: "HT", name: "Haiti", nationality: "Haitian" },
+    { code: "HN", name: "Honduras", nationality: "Honduran" },
+    { code: "HU", name: "Hungary", nationality: "Hungarian" },
+    { code: "IS", name: "Iceland", nationality: "Icelandic" },
+    { code: "IN", name: "India", nationality: "Indian" },
+    { code: "ID", name: "Indonesia", nationality: "Indonesian" },
+    { code: "IR", name: "Iran", nationality: "Iranian" },
+    { code: "IQ", name: "Iraq", nationality: "Iraqi" },
+    { code: "IE", name: "Ireland", nationality: "Irish" },
+    { code: "IL", name: "Israel", nationality: "Israeli" },
+    { code: "IT", name: "Italy", nationality: "Italian" },
+    { code: "JM", name: "Jamaica", nationality: "Jamaican" },
+    { code: "JP", name: "Japan", nationality: "Japanese" },
+    { code: "JO", name: "Jordan", nationality: "Jordanian" },
+    { code: "KZ", name: "Kazakhstan", nationality: "Kazakhstani" },
+    { code: "KE", name: "Kenya", nationality: "Kenyan" },
+    { code: "KI", name: "Kiribati", nationality: "I-Kiribati" },
+    { code: "KP", name: "Korea (North)", nationality: "North Korean" },
+    { code: "KR", name: "Korea (South)", nationality: "South Korean" },
+    { code: "KW", name: "Kuwait", nationality: "Kuwaiti" },
+    { code: "KG", name: "Kyrgyzstan", nationality: "Kyrgyz" },
+    { code: "LA", name: "Laos", nationality: "Lao" },
+    { code: "LV", name: "Latvia", nationality: "Latvian" },
+    { code: "LB", name: "Lebanon", nationality: "Lebanese" },
+    { code: "LS", name: "Lesotho", nationality: "Mosotho" },
+    { code: "LR", name: "Liberia", nationality: "Liberian" },
+    { code: "LY", name: "Libya", nationality: "Libyan" },
+    { code: "LI", name: "Liechtenstein", nationality: "Liechtenstein" },
+    { code: "LT", name: "Lithuania", nationality: "Lithuanian" },
+    { code: "LU", name: "Luxembourg", nationality: "Luxembourgish" },
+    { code: "MG", name: "Madagascar", nationality: "Malagasy" },
+    { code: "MW", name: "Malawi", nationality: "Malawian" },
+    { code: "MY", name: "Malaysia", nationality: "Malaysian" },
+    { code: "MV", name: "Maldives", nationality: "Maldivian" },
+    { code: "ML", name: "Mali", nationality: "Malian" },
+    { code: "MT", name: "Malta", nationality: "Maltese" },
+    { code: "MH", name: "Marshall Islands", nationality: "Marshallese" },
+    { code: "MR", name: "Mauritania", nationality: "Mauritanian" },
+    { code: "MU", name: "Mauritius", nationality: "Mauritian" },
+    { code: "MX", name: "Mexico", nationality: "Mexican" },
+    { code: "FM", name: "Micronesia", nationality: "Micronesian" },
+    { code: "MD", name: "Moldova", nationality: "Moldovan" },
+    { code: "MC", name: "Monaco", nationality: "Monégasque" },
+    { code: "MN", name: "Mongolia", nationality: "Mongolian" },
+    { code: "ME", name: "Montenegro", nationality: "Montenegrin" },
+    { code: "MA", name: "Morocco", nationality: "Moroccan" },
+    { code: "MZ", name: "Mozambique", nationality: "Mozambican" },
+    { code: "MM", name: "Myanmar", nationality: "Burmese" },
+    { code: "NA", name: "Namibia", nationality: "Namibian" },
+    { code: "NR", name: "Nauru", nationality: "Nauruan" },
+    { code: "NP", name: "Nepal", nationality: "Nepali" },
+    { code: "NL", name: "Netherlands", nationality: "Dutch" },
+    { code: "NZ", name: "New Zealand", nationality: "New Zealander" },
+    { code: "NI", name: "Nicaragua", nationality: "Nicaraguan" },
+    { code: "NE", name: "Niger", nationality: "Nigerien" },
+    { code: "NG", name: "Nigeria", nationality: "Nigerian" },
+    { code: "MK", name: "North Macedonia", nationality: "Macedonian" },
+    { code: "NO", name: "Norway", nationality: "Norwegian" },
+    { code: "OM", name: "Oman", nationality: "Omani" },
+    { code: "PK", name: "Pakistan", nationality: "Pakistani" },
+    { code: "PW", name: "Palau", nationality: "Palauan" },
+    { code: "PA", name: "Panama", nationality: "Panamanian" },
+    { code: "PG", name: "Papua New Guinea", nationality: "Papua New Guinean" },
+    { code: "PY", name: "Paraguay", nationality: "Paraguayan" },
+    { code: "PE", name: "Peru", nationality: "Peruvian" },
+    { code: "PH", name: "Philippines", nationality: "Filipino" },
+    { code: "PL", name: "Poland", nationality: "Polish" },
+    { code: "PT", name: "Portugal", nationality: "Portuguese" },
+    { code: "QA", name: "Qatar", nationality: "Qatari" },
+    { code: "RO", name: "Romania", nationality: "Romanian" },
+    { code: "RU", name: "Russia", nationality: "Russian" },
+    { code: "RW", name: "Rwanda", nationality: "Rwandan" },
+    { code: "KN", name: "Saint Kitts and Nevis", nationality: "Kittitian" },
+    { code: "LC", name: "Saint Lucia", nationality: "Saint Lucian" },
+    { code: "VC", name: "Saint Vincent and the Grenadines", nationality: "Vincentian" },
+    { code: "WS", name: "Samoa", nationality: "Samoan" },
+    { code: "SM", name: "San Marino", nationality: "Sammarinese" },
+    { code: "ST", name: "Sao Tome and Principe", nationality: "São Toméan" },
+    { code: "SA", name: "Saudi Arabia", nationality: "Saudi" },
+    { code: "SN", name: "Senegal", nationality: "Senegalese" },
+    { code: "RS", name: "Serbia", nationality: "Serbian" },
+    { code: "SC", name: "Seychelles", nationality: "Seychellois" },
+    { code: "SL", name: "Sierra Leone", nationality: "Sierra Leonean" },
+    { code: "SG", name: "Singapore", nationality: "Singaporean" },
+    { code: "SK", name: "Slovakia", nationality: "Slovak" },
+    { code: "SI", name: "Slovenia", nationality: "Slovenian" },
+    { code: "SB", name: "Solomon Islands", nationality: "Solomon Islander" },
+    { code: "SO", name: "Somalia", nationality: "Somali" },
+    { code: "ZA", name: "South Africa", nationality: "South African" },
+    { code: "SS", name: "South Sudan", nationality: "South Sudanese" },
+    { code: "ES", name: "Spain", nationality: "Spanish" },
+    { code: "LK", name: "Sri Lanka", nationality: "Sri Lankan" },
+    { code: "SD", name: "Sudan", nationality: "Sudanese" },
+    { code: "SR", name: "Suriname", nationality: "Surinamese" },
+    { code: "SE", name: "Sweden", nationality: "Swedish" },
+    { code: "CH", name: "Switzerland", nationality: "Swiss" },
+    { code: "SY", name: "Syria", nationality: "Syrian" },
+    { code: "TW", name: "Taiwan", nationality: "Taiwanese" },
+    { code: "TJ", name: "Tajikistan", nationality: "Tajik" },
+    { code: "TZ", name: "Tanzania", nationality: "Tanzanian" },
+    { code: "TH", name: "Thailand", nationality: "Thai" },
+    { code: "TL", name: "Timor-Leste", nationality: "Timorese" },
+    { code: "TG", name: "Togo", nationality: "Togolese" },
+    { code: "TO", name: "Tonga", nationality: "Tongan" },
+    { code: "TT", name: "Trinidad and Tobago", nationality: "Trinidadian" },
+    { code: "TN", name: "Tunisia", nationality: "Tunisian" },
+    { code: "TR", name: "Turkey", nationality: "Turkish" },
+    { code: "TM", name: "Turkmenistan", nationality: "Turkmen" },
+    { code: "TV", name: "Tuvalu", nationality: "Tuvaluan" },
+    { code: "UG", name: "Uganda", nationality: "Ugandan" },
+    { code: "UA", name: "Ukraine", nationality: "Ukrainian" },
+    { code: "AE", name: "United Arab Emirates", nationality: "Emirati" },
+    { code: "GB", name: "United Kingdom", nationality: "British" },
+    { code: "US", name: "United States", nationality: "American" },
+    { code: "UY", name: "Uruguay", nationality: "Uruguayan" },
+    { code: "UZ", name: "Uzbekistan", nationality: "Uzbekistani" },
+    { code: "VU", name: "Vanuatu", nationality: "Ni-Vanuatu" },
+    { code: "VE", name: "Venezuela", nationality: "Venezuelan" },
+    { code: "VN", name: "Vietnam", nationality: "Vietnamese" },
+    { code: "YE", name: "Yemen", nationality: "Yemeni" },
+    { code: "ZM", name: "Zambia", nationality: "Zambian" },
+    { code: "ZW", name: "Zimbabwe", nationality: "Zimbabwean" },
+  ];
+
+  // ═════════════════════════════════════════════════════════════
+  // RENDER TABLE
+  // ═════════════════════════════════════════════════════════════
+
+  // ── Populate selects BEFORE modal opens ─────────────────────────────────
+  function populateCountrySelect(selectId, useNationality = false) {
+    const select = document.getElementById(selectId);
+    if (!select || select.dataset.populated) return; // prevent double population
+    COUNTRIES.forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = useNationality ? c.nationality : c.name;
+      opt.dataset.code = c.code;
+      opt.text = useNationality ? c.nationality : c.name;
+      select.appendChild(opt);
+    });
+    select.dataset.populated = "true";
+  }
+
+  populateCountrySelect("countryResidence", false);
+  populateCountrySelect("nationality", true);
+
+  // ── Flag image helper ───────────────────────────────────────────────────
+  function getFlagImg(code) {
+    return `<img src="https://flagcdn.com/20x15/${code.toLowerCase()}.png"
+                     width="20" height="15"
+                     style="margin-right:6px;vertical-align:middle;border-radius:2px;flex-shrink:0;"
+                     onerror="this.style.display='none'">`;
+  }
+
+  // ── Select2 templates ───────────────────────────────────────────────────
+  function countryTemplate(option) {
+    if (!option.id) return option.text;
+    const code = option.element && option.element.dataset.code;
+    if (!code) return option.text;
+    return $(`<span style="display:flex;align-items:center;">
+                    ${getFlagImg(code)}<span>${option.text}</span>
+                  </span>`);
+  }
+
+  function countrySelection(option) {
+    if (!option.id) return option.text;
+    const code = option.element && option.element.dataset.code;
+    if (!code) return option.text;
+    return $(`<span style="display:flex;align-items:center;">
+                    ${getFlagImg(code)}<span>${option.text}</span>
+                  </span>`);
+  }
+
+  function renderPreviewTable(rows) {
+    const tbody = document.getElementById("previewTableBody");
+    tbody.innerHTML = "";
+
+    function initPreviewSelect2() {
+      // Destroy any existing Select2 instances inside the preview modal
+      $('.bpt-country-select, .bpt-nationality-select').each(function () {
+        if ($(this).hasClass('select2-hidden-accessible')) {
+          $(this).select2('destroy');
+        }
+      });
+
+      // Initialise country select with flags
+      $('.bpt-country-select').select2({
+        theme: 'bootstrap-5',
+        dropdownParent: $('#bulkPreviewModal'),
+        placeholder: 'Select Country',
+        allowClear: true,
+        templateResult: countryTemplate,
+        templateSelection: countrySelection,
+        width: '100%'
+      });
+
+      // Initialise nationality select with flags
+      $('.bpt-nationality-select').select2({
+        theme: 'bootstrap-5',
+        dropdownParent: $('#bulkPreviewModal'),
+        placeholder: 'Select Nationality',
+        allowClear: true,
+        templateResult: countryTemplate,
+        templateSelection: countrySelection,
+        width: '100%'
+      });
+    }
+
+
+
+    rows.forEach(r => {
+      const isInvalid = r.status === "invalid";
+
+      // ✅ FIX: accept multiple error messages
+      const err = (...msgs) => msgs
+        .filter(m => r.errors.includes(m))
+        .map(m => `<div class="bpt-error">${m}</div>`)
+        .join("");
+
+      const cls = (...msgs) => msgs.some(m => r.errors.includes(m)) ? "bpt-input-err" : "";
+
+      const tr = document.createElement("tr");
+      tr.className = `bpt-row ${isInvalid ? "bpt-row-invalid" : ""}`;
+      tr.dataset.bpstatus = r.status;
+      tr.dataset.rowId = r.id;
+
+      tr.innerHTML = `
+      <td class="bpt-td" style="color:#888;font-weight:600;">${r.row}</td>
+
+      <td class="bpt-td">
+        <input class="bpt-input ${cls(
+        'First name required',
+        'First name must be at least 2 characters',
+        'First name should only contain letters'
+      )}" value="${escapeHtml(r.first_name)}">
+        ${err(
+        'First name required',
+        'First name must be at least 2 characters',
+        'First name should only contain letters'
+      )}
+      </td>
+
+      <td class="bpt-td">
+        <input class="bpt-input ${cls(
+        'Last name must be at least 2 characters',
+        'Last name should only contain letters'
+      )}" value="${escapeHtml(r.last_name)}">
+        ${err(
+        'Last name must be at least 2 characters',
+        'Last name should only contain letters'
+      )}
+      </td>
+
+      <td class="bpt-td">
+        <input class="bpt-input ${cls('Invalid email', 'Email already exists')}"
+               value="${escapeHtml(r.email)}">
+        ${err('Invalid email', 'Email already exists')}
+      </td>
+
+      <td class="bpt-td" style="min-width:200px;">
+  <div class="mobile-number-container" style="display:flex;align-items:center;">
+    <input class="bpt-input mobile-number-input ${cls('Invalid mobile number')}"
+           data-row-id="${r.id}"
+           value="${escapeHtml(r.mobile_number || '')}"
+           style="width:100%;min-width:150px;">
+  </div>
+  ${err('Invalid mobile number')}
+</td>
+
+      <td class="bpt-td">
+  <select class="bpt-country-select form-select" data-row-id="${r.id}" style="width:100%;">
+    <option value="">Select Country</option>
+    ${COUNTRIES.map(c => `<option value="${escapeHtml(c.name)}" data-code="${c.code}"  ${r.country === c.name ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('')}
+  </select>
+  ${err('Country required')}
+</td>
+
+      <td class="bpt-td">
+  <select class="bpt-nationality-select form-select"  data-row-id="${r.id}" style="width:100%;">
+    <option value="">Select Nationality</option>
+    ${COUNTRIES.map(c => `<option value="${escapeHtml(c.nationality)}" data-code="${c.code}" ${r.nationality === c.nationality ? 'selected' : ''}>${escapeHtml(c.nationality)}</option>`).join('')}
+  </select>
+  ${err('Nationality required')}
+</td>
+
+      <td class="bpt-td"><input class="bpt-input" value="${escapeHtml(r.company_name)}"></td>
+      <td class="bpt-td"><input class="bpt-input" value="${escapeHtml(r.job_title)}"></td>
+
+      <td class="bpt-td">
+        <select class="bpt-input bpt-ticket-type ${cls('Ticket type required', 'Invalid ticket type')}">
+          <option value="">Select</option>
+          <option value="VIP"       ${r.ticket_type === "VIP" ? "selected" : ""}>VIP</option>
+          <option value="VISITOR"   ${r.ticket_type === "VISITOR" ? "selected" : ""}>Visitor</option>
+          <option value="EXHIBITOR" ${r.ticket_type === "EXHIBITOR" ? "selected" : ""}>Exhibitor</option>
+        </select>
+        ${err('Ticket type required', 'Invalid ticket type')}
+      </td>
+
+      <td class="bpt-td text-center">
+        <input type="checkbox" ${r.accepted_terms ? "checked" : ""}>
+        ${err('Terms must be accepted')}
+      </td>
+      <td class="bpt-td text-center"><input type="checkbox" ${r.accepted_data_sharing ? "checked" : ""}></td>
+      <td class="bpt-td text-center"><input type="checkbox" ${r.accepted_marketing ? "checked" : ""}></td>
+      <td class="bpt-td text-center"><input type="checkbox" ${r.digital_badge_issued ? "checked" : ""}></td>
+      <td class="bpt-td text-center"><input type="checkbox" ${r.onsite_badge_printed ? "checked" : ""}></td>
+
+      <td class="bpt-td">
+        <span class="bpt-status ${isInvalid ? 'bpt-s-invalid' : 'bpt-s-valid'}">${r.status}</span>
+        <button class="btn btn-sm btn-outline-primary check-row-btn ms-1">✔ Check</button>
+      </td>`;
+
+      tbody.appendChild(tr);
+    });
+
+
+    attachRowEventListeners();
+    initPreviewSelect2();
+    initMobileFields();
+  }
+
+
+  // Initialize intl-tel-input on all mobile number inputs
+  function initMobileFields() {
+  $('.mobile-number-input').each(function () {
+    const input = this;
+    if (input.itiInstance) {
+      input.itiInstance.destroy();
+      delete input.itiInstance;
+    }
+    const initialValue = input.value.trim();
+    const iti = intlTelInput(input, {
+      initialCountry: 'ae',
+      separateDialCode: false,
+      // Use ONE utils URL — remove the duplicate loadUtilsOnInit
+      utilsScript: 'https://cdn.jsdelivr.net/npm/intl-tel-input@23.1.0/build/js/utils.js',
+      autoPlaceholder: 'aggressive',
+      formatOnDisplay: true,
+      // loadUtilsOnInit: "https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/utils.js"
+    });
+    if (initialValue) {
+      iti.setNumber(initialValue);
+    } 
+    input.itiInstance = iti;
+
+    // Trigger validation immediately after init
+    const rowId = parseInt(input.dataset.rowId);
+    const idx = allRows.findIndex(r => r.id === rowId);
+    if (idx !== -1 && initialValue !== "") {
+      if (!iti.isValidNumber()) {
+        if (!allRows[idx].errors.includes("Invalid mobile number")) {
+          allRows[idx].errors.push("Invalid mobile number");
+          allRows[idx].status = "invalid";
+          updateRowUI($(input).closest('tr')[0], allRows[idx]);
+        }
+      }
+    }
+
+    const syncMobile = debounce(function () {
+      const rowId = parseInt(input.dataset.rowId);
+      const idx = allRows.findIndex(r => r.id === rowId);
+      if (idx !== -1) {
+        const e164 = iti.getNumber();
+        allRows[idx].mobile_number = e164 || input.value.trim();
+      }
+    }, 300);
+
+    input.addEventListener('countrychange', syncMobile);
+    input.addEventListener('input', syncMobile);
+    input.addEventListener('blur', syncMobile);
+  });
+
+  // Refresh tab counts after processing visible rows
+  const validCount = allRows.filter(r => r.status === "valid").length;
+  const invalidCount = allRows.filter(r => r.status === "invalid").length;
+  updateTabCounts(validCount, invalidCount, allRows.length);
+}
+
+  // ═════════════════════════════════════════════════════════════
+  // ROW INPUT CHANGE — silent sync only (no validation on typing)
+  // ═════════════════════════════════════════════════════════════
+
+  function attachRowEventListeners() {
+    document.querySelectorAll(".bpt-row").forEach(tr => {
+      tr.querySelectorAll("input, select").forEach(inp => {
+        inp.removeEventListener("input", handleFieldChange);
+        inp.removeEventListener("change", handleFieldChange);
+        inp.addEventListener("input", handleFieldChange);
+        inp.addEventListener("change", handleFieldChange);
+      });
+    });
+  }
+
+  const handleFieldChange = debounce(function () {
+    const tr = this.closest(".bpt-row");
+    if (!tr) return;
+    const rowId = parseInt(tr.dataset.rowId);
+    const idx = allRows.findIndex(r => r.id === rowId);
+    if (idx === -1) return;
+    // Silently keep allRows in sync with DOM — no re-validation
+    Object.assign(allRows[idx], readRowFromDOM(tr));
+  }, 150);
+  function readRowFromDOM(tr) {
+  const mobileInput = tr.children[4].querySelector(".mobile-number-input");
+  const iti = mobileInput ? mobileInput.itiInstance : null;
+
+  let mobileNumber = '';
+  if (iti) {
+    const e164 = iti.getNumber();          // always returns E.164 if user typed anything
+    mobileNumber = e164 || mobileInput.value.trim();
+  } else if (mobileInput) {
+    mobileNumber = mobileInput.value.trim();
+  }
+
+  return {
+    first_name:            tr.children[1].querySelector("input").value.trim(),
+    last_name:             tr.children[2].querySelector("input").value.trim(),
+    email:                 tr.children[3].querySelector("input").value.trim(),
+    mobile_number:         mobileNumber,
+    country:               tr.children[5].querySelector("select.bpt-country-select").value,
+    nationality:           tr.children[6].querySelector("select.bpt-nationality-select").value,
+    company_name:          tr.children[7].querySelector("input").value.trim(),
+    job_title:             tr.children[8].querySelector("input").value.trim(),
+    ticket_type:           tr.children[9].querySelector("select").value,
+    accepted_terms:        tr.children[10].querySelector("input").checked,
+    accepted_data_sharing: tr.children[11].querySelector("input").checked,
+    accepted_marketing:    tr.children[12].querySelector("input").checked,
+    digital_badge_issued:  tr.children[13].querySelector("input").checked,
+    onsite_badge_printed:  tr.children[14].querySelector("input").checked,
+  };
+}
+
+  // ═════════════════════════════════════════════════════════════
+  // "✔ CHECK" BUTTON — validate row, update status + counts
+  // ═════════════════════════════════════════════════════════════
+
+document.addEventListener("click", e => {
+  if (!e.target.classList.contains("check-row-btn")) return;
+
+  const tr = e.target.closest("tr");
+  const rowId = parseInt(tr.dataset.rowId);
+  const idx = allRows.findIndex(r => r.id === rowId);
+  if (idx === -1) return;
+
+  // Sync the current mobile value into allRows before reading and validating
+  const mobileInput = tr.querySelector(".mobile-number-input");
+  if (mobileInput && mobileInput.itiInstance) {
+      const iti = mobileInput.itiInstance;
+      allRows[idx].mobile_number = iti.getNumber() || mobileInput.value.trim();
+  }
+
+  const updated = readRowFromDOM(tr);
+  const errors = validateRowData(updated, rowId);
+
+  // Mobile validation — run if user actually typed something
+  if (mobileInput && mobileInput.itiInstance) {
+  const rawValue = mobileInput.value.trim();
+  if (rawValue !== "") {
+    const iti = mobileInput.itiInstance;
+    if (!iti.isValidNumber()) {
+      // Remove the generic parse-time error if present, add the ITI one
+      const idx2 = errors.indexOf("Invalid mobile number");
+      if (idx2 === -1) errors.push("Invalid mobile number");
+    } else {
+      // ITI says valid — remove any parse-time false positive
+      const idx2 = errors.indexOf("Invalid mobile number");
+      if (idx2 !== -1) errors.splice(idx2, 1);
+    }
+  }
+}
+
+  const status = errors.length === 0 ? "valid" : "invalid";
+  Object.assign(allRows[idx], updated, { errors, status });
+  updateRowUI(tr, allRows[idx]);
+
+  const validCount   = allRows.filter(r => r.status === "valid").length;
+  const invalidCount = allRows.filter(r => r.status === "invalid").length;
+  updateTabCounts(validCount, invalidCount, allRows.length);
+
+  if (pagination.activeTab !== "all") renderCurrentView();
+});
+
+  // Update error markers + status pill for a single row (no table re-render)
+  function updateRowUI(tr, rowData) {
+    const { errors, status } = rowData;
+    const isInvalid = status === "invalid";
+
+    const refreshCell = (cellIdx, inputSel, ...messages) => {
+      const td = tr.children[cellIdx];
+      const inp = td.querySelector(inputSel);
+      td.querySelectorAll(".bpt-error").forEach(el => el.remove());
+      inp.classList.remove("bpt-input-err");
+      const mine = messages.filter(m => errors.includes(m));
+      if (mine.length) {
+        inp.classList.add("bpt-input-err");
+        mine.forEach(m => inp.insertAdjacentHTML("afterend", `<div class="bpt-error">${m}</div>`));
+      }
+    };
+
+    // ── now covers all error messages including new name rules ──
+    refreshCell(1, "input",
+      "First name required",
+      "First name must be at least 2 characters",   // ✅ new
+      "First name should only contain letters"       // ✅ new
+    );
+    refreshCell(2, "input",
+      "Last name must be at least 2 characters",     // ✅ new
+      "Last name should only contain letters"        // ✅ new
+    );
+    refreshCell(3, "input", "Invalid email", "Email already exists");
+    // Country
+    let countryTd = tr.children[5];
+    let countrySelect = countryTd.querySelector(".bpt-country-select");
+    countryTd.querySelectorAll(".bpt-error").forEach(el => el.remove());
+    countrySelect.classList.remove("bpt-input-err");
+    if (errors.includes("Country required")) {
+      countrySelect.classList.add("bpt-input-err");
+      // Also add red border to Select2 container
+      $(countrySelect).next('.select2-container').find('.select2-selection').css('border', '1px solid red');
+      countryTd.insertAdjacentHTML("beforeend", `<div class="bpt-error">Country required</div>`);
+    } else {
+      $(countrySelect).next('.select2-container').find('.select2-selection').css('border', '1px solid #ddd');
+    }
+    // Nationality (similar)
+    let nationalityTd = tr.children[6];
+    let nationalitySelect = nationalityTd.querySelector(".bpt-nationality-select");
+    nationalityTd.querySelectorAll(".bpt-error").forEach(el => el.remove());
+    nationalitySelect.classList.remove("bpt-input-err");
+    if (errors.includes("Nationality required")) {
+      nationalitySelect.classList.add("bpt-input-err");
+      $(nationalitySelect).next('.select2-container').find('.select2-selection').css('border', '1px solid red');
+      nationalityTd.insertAdjacentHTML("beforeend", `<div class="bpt-error">Nationality required</div>`);
+    } else {
+      $(nationalitySelect).next('.select2-container').find('.select2-selection').css('border', '1px solid #ddd');
+    }
+    refreshCell(9, "select",
+      "Ticket type required",
+      "Invalid ticket type"                          // ✅ new
+    );
+
+    const mobileTd = tr.children[4];
+    const mobileContainer = mobileTd.querySelector('.mobile-number-container');
+    mobileTd.querySelectorAll(".bpt-error").forEach(el => el.remove());
+    if (errors.includes("Invalid mobile number")) {
+      mobileContainer.insertAdjacentHTML("afterend", `<div class="bpt-error">Invalid mobile number</div>`);
+      mobileContainer.querySelector('input').classList.add("bpt-input-err");
+    } else {
+      mobileContainer.querySelector('input').classList.remove("bpt-input-err");
+    }
+
+    const termsTd = tr.children[10];
+    termsTd.querySelectorAll(".bpt-error").forEach(el => el.remove());
+    if (errors.includes("Terms must be accepted"))
+      termsTd.insertAdjacentHTML("beforeend", `<div class="bpt-error">Required</div>`);
+
+    tr.dataset.bpstatus = status;
+    tr.classList.toggle("bpt-row-invalid", isInvalid);
+
+    const pill = tr.children[15].querySelector(".bpt-status");
+    pill.className = `bpt-status ${isInvalid ? "bpt-s-invalid" : "bpt-s-valid"}`;
+    pill.textContent = status;
+  }
+
+  // ═════════════════════════════════════════════════════════════
+  // TAB FILTER
+  // ═════════════════════════════════════════════════════════════
+
+  document.querySelectorAll(".bulk-preview-tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".bulk-preview-tab").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      pagination.activeTab = btn.dataset.bptab;
+      pagination.currentPage = 1;
+      renderCurrentView();
+    });
+  });
+
+  // ═════════════════════════════════════════════════════════════
+  // PAGINATION
+  // ═════════════════════════════════════════════════════════════
+
+  function renderPagination(total, totalPages) {
+    const { currentPage, pageSize } = pagination;
+    const from = total === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+    const to = Math.min(currentPage * pageSize, total);
+
+    document.getElementById("paginationInfo").textContent =
+      total === 0 ? "No rows" : `Showing ${from}–${to} of ${total} rows`;
+
+    const container = document.getElementById("paginationBtns");
+    container.innerHTML = "";
+    if (totalPages <= 1) return;
+
+    container.appendChild(makePageBtn("‹", currentPage === 1, () => goToPage(currentPage - 1)));
+    buildPageRange(currentPage, totalPages).forEach(p => {
+      if (p === "…") {
+        const dot = document.createElement("span");
+        dot.textContent = "…";
+        dot.style.cssText = "padding:0 4px;color:#9ca3af;line-height:32px;";
+        container.appendChild(dot);
+      } else {
+        const btn = makePageBtn(p, false, () => goToPage(p));
+        if (p === currentPage) btn.classList.add("active");
+        container.appendChild(btn);
+      }
+    });
+    container.appendChild(makePageBtn("›", currentPage === totalPages, () => goToPage(currentPage + 1)));
+  }
+
+  function buildPageRange(current, total) {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages = new Set([1, total]);
+    for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) pages.add(i);
+    const sorted = [...pages].sort((a, b) => a - b);
+    const result = [];
+    sorted.forEach((p, i) => {
+      if (i > 0 && p - sorted[i - 1] > 1) result.push("…");
+      result.push(p);
+    });
+    return result;
+  }
+
+  function makePageBtn(label, disabled, onClick) {
+    const btn = document.createElement("button");
+    btn.className = "pg-btn";
+    btn.textContent = label;
+    btn.disabled = disabled;
+    if (!disabled) btn.addEventListener("click", onClick);
+    return btn;
+  }
+
+  function goToPage(page) {
+    if (page < 1) return;
+    pagination.currentPage = page;
+    renderCurrentView();
+  }
+
+  document.getElementById("pageSizeSelect").addEventListener("change", function () {
+    pagination.pageSize = parseInt(this.value);
+    pagination.currentPage = 1;
+    renderCurrentView();
+  });
+
+  // ═════════════════════════════════════════════════════════════
+  // SUBMIT — POST allRows JSON to server → Celery task
+  // ═════════════════════════════════════════════════════════════
+
+  document.getElementById("submitBulkBtn").addEventListener("click", async () => {
+    const submitBtn = document.getElementById("submitBulkBtn");
+    const origText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+
+    const SAVE_FIELDS = [
+      "first_name", "last_name", "email", "mobile_number",
+      "country", "nationality", "company_name", "job_title", "ticket_type",
+      "accepted_terms", "accepted_data_sharing", "accepted_marketing",
+      "digital_badge_issued", "onsite_badge_printed",
+    ];
+
+    const validRows = allRows
+      .filter(r => r.status === "valid")
+      .map(r => {
+        const out = {};
+        SAVE_FIELDS.forEach(f => { out[f] = r[f] ?? null; });
+        return out;
+      });
+
+    if (!validRows.length) {
+      await showNotificationModal('Nothing to Save', 'There are no valid rows to import.', 'warning');
+      submitBtn.disabled = false;
+      return;
+    }
+
+    try {
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading…';
+
+      const data = await postJSON("/bulk-upload-save/", { rows: validRows });
+
+      if (!data.success) {
+        await showNotificationModal('Upload Failed', data.errors || 'Unknown error', 'error');
+        submitBtn.innerHTML = origText;
+        submitBtn.disabled = false;
+        return;
+      }
+
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing…';
+
+      const result = await pollTaskStatus(data.task_id);
+
+      await showNotificationModal(
+        'Import Complete',
+        `<strong>${result.created}</strong> record(s) created.<br>
+         <strong>${result.skipped}</strong> record(s) skipped.<br>
+         Total valid rows: <strong>${result.total_valid}</strong>`,
+        'success'
+      );
+
+      bootstrap.Modal.getInstance(document.getElementById("bulkPreviewModal")).hide();
+      location.reload();
+
+    } catch (error) {
+      console.error(error);
+      await showNotificationModal('Unexpected Error', error.message || 'Something went wrong.', 'error');
+      submitBtn.innerHTML = origText;
+      submitBtn.disabled = false;
+    }
+});
+
+  // ═════════════════════════════════════════════════════════════
+  // CELERY TASK POLLER
+  // ═════════════════════════════════════════════════════════════
+
+  function pollTaskStatus(taskId, intervalMs = 1500, timeoutMs = 600000) {
+    return new Promise((resolve, reject) => {
+      const start = Date.now();
+      const iv = setInterval(async () => {
+        try {
+          if (Date.now() - start > timeoutMs) {
+            clearInterval(iv);
+            reject(new Error("Task timed out. Please check your records manually."));
+            return;
+          }
+          const json = await fetch(`/bulk-task-status/${taskId}/`).then(r => r.json());
+          if (json.state === "SUCCESS") { clearInterval(iv); resolve(json); }
+          else if (json.state === "FAILURE") { clearInterval(iv); reject(new Error(json.error || "Task failed")); }
+        } catch (err) { clearInterval(iv); reject(err); }
+      }, intervalMs);
+    });
+  }
+</script>

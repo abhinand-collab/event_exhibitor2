@@ -1,0 +1,138 @@
+# =========================
+
+# Python
+
+# =========================
+
+**pycache**/
+*.py[cod]
+*$py.class
+
+# C extensions
+
+*.so
+
+# Distribution / packaging
+
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# =========================
+
+# Virtual Environments
+
+# =========================
+
+venv/
+env/
+ENV/
+.venv/
+
+# =========================
+
+# Django
+
+# =========================
+
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Media & static (if generated)
+
+media/
+staticfiles/
+
+# Django migrations (optional)
+
+# Uncomment if you DON'T want migrations tracked
+
+# */migrations/*
+
+# !*/migrations/**init**.py
+
+# =========================
+
+# Environment variables
+
+# =========================
+
+.env
+.env.*
+*.env
+
+# =========================
+
+# IDE / Editor
+
+# =========================
+
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# =========================
+
+# OS files
+
+# =========================
+
+.DS_Store
+Thumbs.db
+
+# =========================
+
+# Testing / Coverage
+
+# =========================
+
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+pytest_cache/
+
+# =========================
+
+# Celery / Async
+
+# =========================
+
+celerybeat-schedule
+celerybeat.pid
+
+# =========================
+
+# Logs
+
+# =========================
+
+logs/
+*.log
+
+# =========================
+
+# Misc
+
+# =========================
+
+*.bak
+*.swp
+*.tmp

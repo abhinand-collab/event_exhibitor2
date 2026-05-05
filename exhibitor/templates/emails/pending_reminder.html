@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Complete Your Registration</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 40px 16px;
+      background: #f5f5f5;
+      font-family: Arial, sans-serif;
+      color: #222;
+    }
+    .wrap {
+      max-width: 520px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 8px;
+      padding: 40px 40px 32px;
+      border: 1px solid #e4e4e4;
+    }
+    .label {
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #999;
+      margin-bottom: 24px;
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 0 0 6px;
+      color: #111;
+    }
+    .event-name {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 28px;
+    }
+    p {
+      font-size: 14px;
+      line-height: 1.7;
+      color: #444;
+      margin: 0 0 16px;
+    }
+    .status {
+      display: inline-block;
+      background: #fffbea;
+      border: 1px solid #f0d060;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #996600;
+      padding: 3px 10px;
+      margin-bottom: 24px;
+    }
+    table.details {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 28px;
+      font-size: 13px;
+    }
+    table.details td {
+      padding: 8px 0;
+      border-bottom: 1px solid #f0f0f0;
+      vertical-align: top;
+    }
+    table.details td:first-child {
+      color: #999;
+      width: 110px;
+    }
+    table.details td:last-child {
+      color: #222;
+      font-weight: 500;
+    }
+    .btn {
+      display: inline-block;
+      background: #111;
+      color: #fff !important;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 12px 28px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+    }
+    .hint {
+      font-size: 12px;
+      color: #aaa;
+      margin-bottom: 28px;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #efefef;
+      margin: 0 0 20px;
+    }
+    .footer {
+      font-size: 11px;
+      color: #bbb;
+      line-height: 1.7;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <div class="label">Registration reminder</div>
+
+    <h1>Complete your registration</h1>
+    <div class="event-name">{{ event.name }}</div>
+
+    <p>Hi {{ attendee.first_name }}, your registration is still pending. Confirm your spot using the link below.</p>
+
+    <div class="status">⏳ Pending</div>
+
+    <table class="details">
+      <tr>
+        <td>Date</td>
+        <td>{{ event.start_date|date:"F j, Y" }}{% if event.end_date %} – {{ event.end_date|date:"F j, Y" }}{% endif %}</td>
+      </tr>
+      {% if event.venue %}
+      <tr>
+        <td>Venue</td>
+        <td>{{ event.venue }}</td>
+      </tr>
+      {% endif %}
+      <tr>
+        <td>Type</td>
+        <td>{{ attendee.get_attendee_type_display }}</td>
+      </tr>
+    </table>
+
+    <a href="{{ confirm_url }}" class="btn">Confirm Registration</a>
+
+    <p class="hint">This link is personal to you — do not share it.</p>
+
+    <hr />
+
+    <div class="footer">
+      You're receiving this because <strong>{{ attendee.email }}</strong> was used to register.<br>
+      &copy; {{ event.name }} &nbsp;&middot;&nbsp; <a href="#" style="color:#aaa;">Unsubscribe</a>
+    </div>
+
+  </div>
+</body>
+</html>

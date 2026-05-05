@@ -1,0 +1,120 @@
+{%load static%}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exhibitor Badge - GULFOOD 2026</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/css/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+    
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    
+    <!-- Intl Tel Input CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@23.1.0/build/css/intlTelInput.css">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    
+    <!-- Custom CSS -->
+</head>
+<body>
+
+      {% block content %}{% endblock %}
+
+    
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Select2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    
+    <!-- Intl Tel Input JS -->
+    <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@23.1.0/build/js/intlTelInput.min.js"></script>
+
+    {% block scripts %}{% endblock %}
+
+    <!-- Styling-only Scripts -->
+    <script>
+        $(document).ready(function() {
+
+            // Initialize Select2 for filter dropdowns (styling only)
+            $('.select2-filter').select2({
+                theme: 'bootstrap-5',
+                allowClear: true,
+                width: '100%',
+                minimumResultsForSearch: Infinity
+            });
+
+            // Initialize Select2 for modal dropdowns (styling only)
+            $('#createBadgeModal').on('shown.bs.modal', function() {
+                $('.select2-modal').select2({
+                    theme: 'bootstrap-5',
+                    dropdownParent: $('#createBadgeModal'),
+                    placeholder: 'Select an option',
+                    allowClear: true,
+                    width: '100%'
+                });
+
+                // Initialize intl-tel-input (styling only)
+                var input = document.querySelector("#mobileNumber");
+                if (input && !input.dataset.itiInitialized) {
+                    var iti = window.intlTelInput(input, {
+                        initialCountry: "ae",
+                        preferredCountries: ["ae", "sa", "kw", "qa", "bh", "om", "in", "pk", "gb", "us"],
+                        separateDialCode: true,
+                        formatOnDisplay: true,
+                        autoPlaceholder: "aggressive",
+                        utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@23.1.0/build/js/utils.js",
+                        // loadUtilsOnInit: "https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/utils.js"
+                        geoIpLookup: null,
+                    });
+                    input.dataset.itiInitialized = true;
+                    input.itiInstance = iti;
+                }
+            });
+
+            // Sidebar toggle (mobile)
+            $('#sidebarToggle').click(function() {
+                $('#sidebar').toggleClass('show');
+            });
+
+            // Badges submenu accordion toggle
+            $('#badgesMenu').click(function() {
+                $(this).toggleClass('open');
+                $('#badgesSubmenu').toggleClass('open');
+            });
+
+            // Countdown timer
+            let days = 16, hours = 17, minutes = 45, seconds = 19;
+            setInterval(function() {
+                seconds--;
+                if (seconds < 0) { seconds = 59; minutes--; }
+                if (minutes < 0) { minutes = 59; hours--; }
+                if (hours < 0)   { hours = 23; days--; }
+                $('#countdown').html(
+                    `<span>${days}<small>Days</small></span>
+                     <span>${hours}<small>Hours</small></span>
+                     <span>${minutes}<small>Mins</small></span>
+                     <span>${seconds}<small>Secs</small></span>`
+                );
+            }, 1000);
+
+        });
+    </script>
+</body>
+</html>

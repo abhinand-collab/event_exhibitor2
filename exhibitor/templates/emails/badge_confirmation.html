@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
+    .wrapper { max-width: 600px; margin: 30px auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+    .header { background: #1a56db; padding: 28px 32px; text-align: center; }
+    .header h1 { color: #fff; margin: 0; font-size: 22px; letter-spacing: .5px; }
+    .body { padding: 32px; color: #333; }
+    .body h2 { margin-top: 0; font-size: 18px; color: #111; }
+    .detail-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    .detail-table td { padding: 10px 14px; font-size: 14px; border-bottom: 1px solid #f0f0f0; }
+    .detail-table td:first-child { color: #6b7280; font-weight: 600; width: 40%; }
+    .badge-pill { display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 13px; font-weight: 700; }
+    .badge-vip      { background: #fef9c3; color: #854d0e; }
+    .badge-visitor  { background: #dbeafe; color: #1e40af; }
+    .badge-exhibitor{ background: #d1fae5; color: #065f46; }
+    .footer { background: #f9fafb; padding: 20px 32px; text-align: center; font-size: 12px; color: #9ca3af; border-top: 1px solid #e5e7eb; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="header">
+      <h1>🎟️ Badge Registration Confirmed</h1>
+    </div>
+    <div class="body">
+      <h2>Hello, {{ first_name }}!</h2>
+      <p>Your badge has been successfully registered for <strong>{{ event_name }}</strong>. Here are your details:</p>
+
+      <table class="detail-table">
+        <tr><td>Full Name</td><td>{{ first_name }} {{ last_name }}</td></tr>
+        <tr><td>Email</td><td>{{ email }}</td></tr>
+        <tr><td>Company</td><td>{{ company_name|default:"—" }}</td></tr>
+        <tr><td>Job Title</td><td>{{ job_title|default:"—" }}</td></tr>
+        <tr><td>Country</td><td>{{ country }}</td></tr>
+        <tr><td>Ticket Type</td>
+            <td>
+              <span class="badge-pill badge-{{ ticket_type|lower }}">
+                {{ ticket_type }}
+              </span>
+            </td>
+        </tr>
+      </table>
+
+      <p style="color:#6b7280;font-size:13px;">
+        If you have any questions, please contact the event organiser.
+      </p>
+    </div>
+    <div class="footer">
+      This is an automated message. Please do not reply to this email.
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,680 @@
+<!-- <style>
+    /* Ensure Select2 selection matches our custom form-control styling */
+    #createBadgeForm .select2-container--bootstrap-5 .select2-selection {
+        border: 1px solid #ddd !important;
+        min-height: 42px !important;
+        display: flex;
+        align-items: center;
+        padding: 0 12px !important;
+        border-radius: 0.375rem !important; /* Bootstrap 5 default */
+    }
+    #createBadgeForm .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+        padding: 0 !important;
+        line-height: 40px !important;
+        color: #333 !important;
+    }
+    #createBadgeForm .select2-container--bootstrap-5 .select2-selection--single .select2-selection__arrow {
+        height: 40px !important;
+    }
+    /* Fix mobile input padding and width */
+    #createBadgeForm .iti { width: 100%; }
+</style> -->
+
+<div class="modal-body" style="padding: 25px; max-height: 70vh; overflow-y: auto;">
+    <form method="POST" action="{% url 'create_single_badge' %}" id="createBadgeForm" novalidate>
+        {% csrf_token %}
+        <div id="globalFormError"
+            style="display:none; background:#fdf2f2; border:1px solid #e74c3c; color:#c0392b; padding:12px 16px; border-radius:6px; margin-bottom:16px; font-size:14px;">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <span id="globalFormErrorMsg"></span>
+        </div>
+        <div id="globalFormSuccess"
+            style="display:none; background:#f0fdf4; border:1px solid #2ecc71; color:#27ae60; padding:12px 16px; border-radius:6px; margin-bottom:16px; font-size:14px;">
+
+            <i class="fas fa-check-circle me-2"></i>
+            <span id="globalFormSuccessMsg"></span>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 600; color: #333;">First Name <span
+                        class="text-danger">*</span></label>
+                <input type="text" name="first_name" class="form-control" id="firstName"
+                    placeholder="Enter your firstname" required style="border: 1px solid #ddd; padding: 10px 12px;">
+                <div class="validation-error" id="firstNameError"><i class="fas fa-exclamation-circle"></i><span></span>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 600; color: #333;">Last Name
+                    <span class="text-danger"></span></label>
+                <input type="text" name="last_name" class="form-control" id="lastName" placeholder="Enter your lastname"
+                    style="border: 1px solid #ddd; padding: 10px 12px;">
+                <div class="validation-error" id="lastNameError"><i class="fas fa-exclamation-circle"></i><span></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 600; color: #333;">Job Title
+                    <span class="text-danger"></span></label>
+                <input type="text" name="job_title" class="form-control" id="jobTitle"
+                    placeholder="Enter your job title" style="border: 1px solid #ddd; padding: 10px 12px;">
+                <div class="validation-error" id="jobTitleError"><i class="fas fa-exclamation-circle"></i><span></span>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 600; color: #333;">Company Name
+                    <span class="text-danger"></span></label>
+                <input type="text" name="company_name" class="form-control" id="companyName"
+                    placeholder="Enter your company name" style="border: 1px solid #ddd; padding: 10px 12px;">
+                <div class="validation-error" id="companyNameError"><i
+                        class="fas fa-exclamation-circle"></i><span></span></div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 600; color: #333;">Country of Residence <span
+                        class="text-danger">*</span></label>
+                <select name="country_of_residence" class="form-select select2-country" id="countryResidence" required
+                    style="width: 100%;">
+                    <option value="">Select Country</option>
+                </select>
+                <div class="validation-error" id="countryResidenceError">
+                    <i class="fas fa-exclamation-circle"></i><span></span>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 600; color: #333;">Nationality <span
+                        class="text-danger">*</span></label>
+                <select name="nationality" class="form-select select2-country" id="nationality" required
+                    style="width: 100%;">
+                    <option value="">Select Nationality</option>
+                </select>
+                <div class="validation-error" id="nationalityError">
+                    <i class="fas fa-exclamation-circle"></i><span></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 600; color: #333;">Email <span
+                        class="text-danger">*</span></label>
+                <input type="email" name="email" class="form-control" id="email" placeholder="Enter email" required
+                    style="border: 1px solid #ddd; padding: 10px 12px; height: 42px;">
+                <div class="validation-error" id="emailError"><i class="fas fa-exclamation-circle"></i><span></span>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 600; color: #333;">Mobile Number
+                    <span class="text-danger"></span></label>
+                <div class="phone-input-wrapper">
+                    <input type="tel" class="form-control" name="mobile_number" id="mobileNumber"
+                        placeholder="Enter mobile number" style="border: 1px solid #ddd;">
+                </div>
+                <div class="validation-error" id="mobileNumberError"><i
+                        class="fas fa-exclamation-circle"></i><span></span></div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <label class="form-label" style="font-weight: 600; color: #333;">Ticket Type <span
+                        class="text-danger">*</span></label>
+                <select name="ticket_type" class="form-select select2-modal" id="ticketType" required
+                    style="width: 100%;">
+                    <option value="">Select Ticket Type</option>
+                    <option value="VIP">VIP Pass - 10.0 AED</option>
+                    <option value="EXHIBITOR">Exhibitor Pass - Free</option>
+                    <option value="VISITOR">Visitor Pass - Free</option>
+                </select>
+                <div class="validation-error" id="ticketTypeError"><i
+                        class="fas fa-exclamation-circle"></i><span></span></div>
+            </div>
+        </div>
+
+        <div class="consent-section" style="padding-top: 10px;">
+            <div class="form-check mb-3">
+                <input class="form-check-input" name="accepted_terms" type="checkbox" id="consent1" required
+                    style="margin-top: 3px;">
+                <label class="form-check-label" for="consent1" style="font-size: 13px; color: #555; line-height: 1.6;">
+                    I confirm that I am 21 years of age or older, and I have read and agree to the <a href="#"
+                        style="color: #e74c3c;">Terms & Conditions</a> and <a href="#" style="color: #e74c3c;">Privacy
+                        Policy</a>. I understand that my personal data will be processed and, where necessary, shared
+                    with contracted service providers, exhibitors, sponsors, and partners to deliver event services,
+                    facilitate my participation, and manage follow-ups or communications related to this event. <span
+                        class="text-danger">*</span>
+                </label>
+            </div>
+
+            <div class="form-check mb-3">
+                <input class="form-check-input" name="accepted_data_sharing" type="checkbox" id="consent2" required
+                    style="margin-top: 3px;">
+                <label class="form-check-label" for="consent2" style="font-size: 13px; color: #555; line-height: 1.6;">
+                    I understand that if I allow an exhibitor or sponsor at the event to scan my badge, whether physical
+                    or digital (e.g., via the Mobile App), I am providing them with my personal data. I acknowledge that
+                    the organizers have no control over any third-party use of this data and cannot be held liable for
+                    such use to the extent permitted by law. <span class="text-danger">*</span>
+                </label>
+            </div>
+
+            <div class="form-check">
+                <input class="form-check-input" name="accepted_marketing" type="checkbox" id="consent3"
+                    style="margin-top: 3px;">
+                <label class="form-check-label" for="consent3" style="font-size: 13px; color: #555; line-height: 1.6;">
+                    I consent to Kaoun International Limited and Dubai World Trade Centre, and where necessary their
+                    contracted service providers, exhibitors, sponsors, and partners, using my personal data for
+                    communications & marketing their products, services, and future events. I understand that I can
+                    withdraw my consent at any time.
+                </label>
+            </div>
+        </div>
+        <div class="modal-footer border-top justify-content-end" style="background: #f5f5f5; padding: 15px 25px;">
+            <button type="submit" class="btn px-4 py-2 me-2" id="submitBadgeBtn"
+                style="background: #e74c3c; color: white; border-radius: 6px; font-weight: 500; min-width: 120px;">
+                REGISTER
+            </button>
+            <button type="button" class="btn px-4 py-2" data-bs-dismiss="modal"
+                style="background: #6c757d; color: white; border-radius: 6px; font-weight: 500; min-width: 100px;">
+                CLOSE
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Success Modal -->
+<div class="modal fade" id="badgeSuccessModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+        <div class="modal-content" style="border:none;border-radius:12px;overflow:hidden;">
+
+            <div class="modal-body text-center" style="padding:40px 30px;">
+                <!-- Icon -->
+                <div style="width:72px;height:72px;background:#d1fae5;border-radius:50%;
+                    display:inline-flex;align-items:center;justify-content:center;margin-bottom:20px;">
+                    <i class="fas fa-check" style="font-size:32px;color:#059669;"></i>
+                </div>
+
+                <h5 style="font-weight:700;color:#111;margin-bottom:8px;">Registration Successful!</h5>
+                <p id="badgeSuccessMsg" style="color:#555;font-size:14px;margin-bottom:24px;"></p>
+
+                <button type="button" class="btn px-5 py-2" id="badgeSuccessOkBtn"
+                    style="background:#e74c3c;color:white;border:none;border-radius:6px;font-weight:600;">
+                    OK
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+
+        // ── Move success modal to body ──────────────────────────────────────────
+        const successModal = document.getElementById("badgeSuccessModal");
+        if (successModal && successModal.parentElement !== document.body) {
+            document.body.appendChild(successModal);
+        }
+
+        // ── Countries Data ──────────────────────────────────────────────────────
+        const COUNTRIES = [
+            { code: "AF", name: "Afghanistan", nationality: "Afghan" },
+            { code: "AL", name: "Albania", nationality: "Albanian" },
+            { code: "DZ", name: "Algeria", nationality: "Algerian" },
+            { code: "AD", name: "Andorra", nationality: "Andorran" },
+            { code: "AO", name: "Angola", nationality: "Angolan" },
+            { code: "AG", name: "Antigua and Barbuda", nationality: "Antiguan" },
+            { code: "AR", name: "Argentina", nationality: "Argentine" },
+            { code: "AM", name: "Armenia", nationality: "Armenian" },
+            { code: "AU", name: "Australia", nationality: "Australian" },
+            { code: "AT", name: "Austria", nationality: "Austrian" },
+            { code: "AZ", name: "Azerbaijan", nationality: "Azerbaijani" },
+            { code: "BS", name: "Bahamas", nationality: "Bahamian" },
+            { code: "BH", name: "Bahrain", nationality: "Bahraini" },
+            { code: "BD", name: "Bangladesh", nationality: "Bangladeshi" },
+            { code: "BB", name: "Barbados", nationality: "Barbadian" },
+            { code: "BY", name: "Belarus", nationality: "Belarusian" },
+            { code: "BE", name: "Belgium", nationality: "Belgian" },
+            { code: "BZ", name: "Belize", nationality: "Belizean" },
+            { code: "BJ", name: "Benin", nationality: "Beninese" },
+            { code: "BT", name: "Bhutan", nationality: "Bhutanese" },
+            { code: "BO", name: "Bolivia", nationality: "Bolivian" },
+            { code: "BA", name: "Bosnia and Herzegovina", nationality: "Bosnian" },
+            { code: "BW", name: "Botswana", nationality: "Motswana" },
+            { code: "BR", name: "Brazil", nationality: "Brazilian" },
+            { code: "BN", name: "Brunei", nationality: "Bruneian" },
+            { code: "BG", name: "Bulgaria", nationality: "Bulgarian" },
+            { code: "BF", name: "Burkina Faso", nationality: "Burkinabé" },
+            { code: "BI", name: "Burundi", nationality: "Burundian" },
+            { code: "CV", name: "Cabo Verde", nationality: "Cape Verdean" },
+            { code: "KH", name: "Cambodia", nationality: "Cambodian" },
+            { code: "CM", name: "Cameroon", nationality: "Cameroonian" },
+            { code: "CA", name: "Canada", nationality: "Canadian" },
+            { code: "CF", name: "Central African Republic", nationality: "Central African" },
+            { code: "TD", name: "Chad", nationality: "Chadian" },
+            { code: "CL", name: "Chile", nationality: "Chilean" },
+            { code: "CN", name: "China", nationality: "Chinese" },
+            { code: "CO", name: "Colombia", nationality: "Colombian" },
+            { code: "KM", name: "Comoros", nationality: "Comorian" },
+            { code: "CG", name: "Congo", nationality: "Congolese" },
+            { code: "CD", name: "Congo (DRC)", nationality: "Congolese" },
+            { code: "CR", name: "Costa Rica", nationality: "Costa Rican" },
+            { code: "CI", name: "Côte d'Ivoire", nationality: "Ivorian" },
+            { code: "HR", name: "Croatia", nationality: "Croatian" },
+            { code: "CU", name: "Cuba", nationality: "Cuban" },
+            { code: "CY", name: "Cyprus", nationality: "Cypriot" },
+            { code: "CZ", name: "Czech Republic", nationality: "Czech" },
+            { code: "DK", name: "Denmark", nationality: "Danish" },
+            { code: "DJ", name: "Djibouti", nationality: "Djiboutian" },
+            { code: "DM", name: "Dominica", nationality: "Dominican" },
+            { code: "DO", name: "Dominican Republic", nationality: "Dominican" },
+            { code: "EC", name: "Ecuador", nationality: "Ecuadorian" },
+            { code: "EG", name: "Egypt", nationality: "Egyptian" },
+            { code: "SV", name: "El Salvador", nationality: "Salvadoran" },
+            { code: "GQ", name: "Equatorial Guinea", nationality: "Equatoguinean" },
+            { code: "ER", name: "Eritrea", nationality: "Eritrean" },
+            { code: "EE", name: "Estonia", nationality: "Estonian" },
+            { code: "SZ", name: "Eswatini", nationality: "Swazi" },
+            { code: "ET", name: "Ethiopia", nationality: "Ethiopian" },
+            { code: "FJ", name: "Fiji", nationality: "Fijian" },
+            { code: "FI", name: "Finland", nationality: "Finnish" },
+            { code: "FR", name: "France", nationality: "French" },
+            { code: "GA", name: "Gabon", nationality: "Gabonese" },
+            { code: "GM", name: "Gambia", nationality: "Gambian" },
+            { code: "GE", name: "Georgia", nationality: "Georgian" },
+            { code: "DE", name: "Germany", nationality: "German" },
+            { code: "GH", name: "Ghana", nationality: "Ghanaian" },
+            { code: "GR", name: "Greece", nationality: "Greek" },
+            { code: "GD", name: "Grenada", nationality: "Grenadian" },
+            { code: "GT", name: "Guatemala", nationality: "Guatemalan" },
+            { code: "GN", name: "Guinea", nationality: "Guinean" },
+            { code: "GW", name: "Guinea-Bissau", nationality: "Guinean" },
+            { code: "GY", name: "Guyana", nationality: "Guyanese" },
+            { code: "HT", name: "Haiti", nationality: "Haitian" },
+            { code: "HN", name: "Honduras", nationality: "Honduran" },
+            { code: "HU", name: "Hungary", nationality: "Hungarian" },
+            { code: "IS", name: "Iceland", nationality: "Icelandic" },
+            { code: "IN", name: "India", nationality: "Indian" },
+            { code: "ID", name: "Indonesia", nationality: "Indonesian" },
+            { code: "IR", name: "Iran", nationality: "Iranian" },
+            { code: "IQ", name: "Iraq", nationality: "Iraqi" },
+            { code: "IE", name: "Ireland", nationality: "Irish" },
+            { code: "IL", name: "Israel", nationality: "Israeli" },
+            { code: "IT", name: "Italy", nationality: "Italian" },
+            { code: "JM", name: "Jamaica", nationality: "Jamaican" },
+            { code: "JP", name: "Japan", nationality: "Japanese" },
+            { code: "JO", name: "Jordan", nationality: "Jordanian" },
+            { code: "KZ", name: "Kazakhstan", nationality: "Kazakhstani" },
+            { code: "KE", name: "Kenya", nationality: "Kenyan" },
+            { code: "KI", name: "Kiribati", nationality: "I-Kiribati" },
+            { code: "KP", name: "Korea (North)", nationality: "North Korean" },
+            { code: "KR", name: "Korea (South)", nationality: "South Korean" },
+            { code: "KW", name: "Kuwait", nationality: "Kuwaiti" },
+            { code: "KG", name: "Kyrgyzstan", nationality: "Kyrgyz" },
+            { code: "LA", name: "Laos", nationality: "Lao" },
+            { code: "LV", name: "Latvia", nationality: "Latvian" },
+            { code: "LB", name: "Lebanon", nationality: "Lebanese" },
+            { code: "LS", name: "Lesotho", nationality: "Mosotho" },
+            { code: "LR", name: "Liberia", nationality: "Liberian" },
+            { code: "LY", name: "Libya", nationality: "Libyan" },
+            { code: "LI", name: "Liechtenstein", nationality: "Liechtenstein" },
+            { code: "LT", name: "Lithuania", nationality: "Lithuanian" },
+            { code: "LU", name: "Luxembourg", nationality: "Luxembourgish" },
+            { code: "MG", name: "Madagascar", nationality: "Malagasy" },
+            { code: "MW", name: "Malawi", nationality: "Malawian" },
+            { code: "MY", name: "Malaysia", nationality: "Malaysian" },
+            { code: "MV", name: "Maldives", nationality: "Maldivian" },
+            { code: "ML", name: "Mali", nationality: "Malian" },
+            { code: "MT", name: "Malta", nationality: "Maltese" },
+            { code: "MH", name: "Marshall Islands", nationality: "Marshallese" },
+            { code: "MR", name: "Mauritania", nationality: "Mauritanian" },
+            { code: "MU", name: "Mauritius", nationality: "Mauritian" },
+            { code: "MX", name: "Mexico", nationality: "Mexican" },
+            { code: "FM", name: "Micronesia", nationality: "Micronesian" },
+            { code: "MD", name: "Moldova", nationality: "Moldovan" },
+            { code: "MC", name: "Monaco", nationality: "Monégasque" },
+            { code: "MN", name: "Mongolia", nationality: "Mongolian" },
+            { code: "ME", name: "Montenegro", nationality: "Montenegrin" },
+            { code: "MA", name: "Morocco", nationality: "Moroccan" },
+            { code: "MZ", name: "Mozambique", nationality: "Mozambican" },
+            { code: "MM", name: "Myanmar", nationality: "Burmese" },
+            { code: "NA", name: "Namibia", nationality: "Namibian" },
+            { code: "NR", name: "Nauru", nationality: "Nauruan" },
+            { code: "NP", name: "Nepal", nationality: "Nepali" },
+            { code: "NL", name: "Netherlands", nationality: "Dutch" },
+            { code: "NZ", name: "New Zealand", nationality: "New Zealander" },
+            { code: "NI", name: "Nicaragua", nationality: "Nicaraguan" },
+            { code: "NE", name: "Niger", nationality: "Nigerien" },
+            { code: "NG", name: "Nigeria", nationality: "Nigerian" },
+            { code: "MK", name: "North Macedonia", nationality: "Macedonian" },
+            { code: "NO", name: "Norway", nationality: "Norwegian" },
+            { code: "OM", name: "Oman", nationality: "Omani" },
+            { code: "PK", name: "Pakistan", nationality: "Pakistani" },
+            { code: "PW", name: "Palau", nationality: "Palauan" },
+            { code: "PA", name: "Panama", nationality: "Panamanian" },
+            { code: "PG", name: "Papua New Guinea", nationality: "Papua New Guinean" },
+            { code: "PY", name: "Paraguay", nationality: "Paraguayan" },
+            { code: "PE", name: "Peru", nationality: "Peruvian" },
+            { code: "PH", name: "Philippines", nationality: "Filipino" },
+            { code: "PL", name: "Poland", nationality: "Polish" },
+            { code: "PT", name: "Portugal", nationality: "Portuguese" },
+            { code: "QA", name: "Qatar", nationality: "Qatari" },
+            { code: "RO", name: "Romania", nationality: "Romanian" },
+            { code: "RU", name: "Russia", nationality: "Russian" },
+            { code: "RW", name: "Rwanda", nationality: "Rwandan" },
+            { code: "KN", name: "Saint Kitts and Nevis", nationality: "Kittitian" },
+            { code: "LC", name: "Saint Lucia", nationality: "Saint Lucian" },
+            { code: "VC", name: "Saint Vincent and the Grenadines", nationality: "Vincentian" },
+            { code: "WS", name: "Samoa", nationality: "Samoan" },
+            { code: "SM", name: "San Marino", nationality: "Sammarinese" },
+            { code: "ST", name: "Sao Tome and Principe", nationality: "São Toméan" },
+            { code: "SA", name: "Saudi Arabia", nationality: "Saudi" },
+            { code: "SN", name: "Senegal", nationality: "Senegalese" },
+            { code: "RS", name: "Serbia", nationality: "Serbian" },
+            { code: "SC", name: "Seychelles", nationality: "Seychellois" },
+            { code: "SL", name: "Sierra Leone", nationality: "Sierra Leonean" },
+            { code: "SG", name: "Singapore", nationality: "Singaporean" },
+            { code: "SK", name: "Slovakia", nationality: "Slovak" },
+            { code: "SI", name: "Slovenia", nationality: "Slovenian" },
+            { code: "SB", name: "Solomon Islands", nationality: "Solomon Islander" },
+            { code: "SO", name: "Somalia", nationality: "Somali" },
+            { code: "ZA", name: "South Africa", nationality: "South African" },
+            { code: "SS", name: "South Sudan", nationality: "South Sudanese" },
+            { code: "ES", name: "Spain", nationality: "Spanish" },
+            { code: "LK", name: "Sri Lanka", nationality: "Sri Lankan" },
+            { code: "SD", name: "Sudan", nationality: "Sudanese" },
+            { code: "SR", name: "Suriname", nationality: "Surinamese" },
+            { code: "SE", name: "Sweden", nationality: "Swedish" },
+            { code: "CH", name: "Switzerland", nationality: "Swiss" },
+            { code: "SY", name: "Syria", nationality: "Syrian" },
+            { code: "TW", name: "Taiwan", nationality: "Taiwanese" },
+            { code: "TJ", name: "Tajikistan", nationality: "Tajik" },
+            { code: "TZ", name: "Tanzania", nationality: "Tanzanian" },
+            { code: "TH", name: "Thailand", nationality: "Thai" },
+            { code: "TL", name: "Timor-Leste", nationality: "Timorese" },
+            { code: "TG", name: "Togo", nationality: "Togolese" },
+            { code: "TO", name: "Tonga", nationality: "Tongan" },
+            { code: "TT", name: "Trinidad and Tobago", nationality: "Trinidadian" },
+            { code: "TN", name: "Tunisia", nationality: "Tunisian" },
+            { code: "TR", name: "Turkey", nationality: "Turkish" },
+            { code: "TM", name: "Turkmenistan", nationality: "Turkmen" },
+            { code: "TV", name: "Tuvalu", nationality: "Tuvaluan" },
+            { code: "UG", name: "Uganda", nationality: "Ugandan" },
+            { code: "UA", name: "Ukraine", nationality: "Ukrainian" },
+            { code: "AE", name: "United Arab Emirates", nationality: "Emirati" },
+            { code: "GB", name: "United Kingdom", nationality: "British" },
+            { code: "US", name: "United States", nationality: "American" },
+            { code: "UY", name: "Uruguay", nationality: "Uruguayan" },
+            { code: "UZ", name: "Uzbekistan", nationality: "Uzbekistani" },
+            { code: "VU", name: "Vanuatu", nationality: "Ni-Vanuatu" },
+            { code: "VE", name: "Venezuela", nationality: "Venezuelan" },
+            { code: "VN", name: "Vietnam", nationality: "Vietnamese" },
+            { code: "YE", name: "Yemen", nationality: "Yemeni" },
+            { code: "ZM", name: "Zambia", nationality: "Zambian" },
+            { code: "ZW", name: "Zimbabwe", nationality: "Zimbabwean" },
+        ];
+
+        // ── Populate selects BEFORE modal opens ─────────────────────────────────
+        function populateCountrySelect(selectId, useNationality = false) {
+            const select = document.getElementById(selectId);
+            if (!select || select.dataset.populated) return; // prevent double population
+            COUNTRIES.forEach(c => {
+                const opt = document.createElement("option");
+                opt.value = useNationality ? c.nationality : c.name;
+                opt.dataset.code = c.code;
+                opt.text = useNationality ? c.nationality : c.name;
+                select.appendChild(opt);
+            });
+            select.dataset.populated = "true";
+        }
+
+        populateCountrySelect("countryResidence", false);
+        populateCountrySelect("nationality", true);
+
+        // ── Flag image helper ───────────────────────────────────────────────────
+        function getFlagImg(code) {
+            return `<img src="https://flagcdn.com/20x15/${code.toLowerCase()}.png"
+                     width="20" height="15"
+                     style="margin-right:6px;vertical-align:middle;border-radius:2px;flex-shrink:0;"
+                     onerror="this.style.display='none'">`;
+        }
+
+        // ── Select2 templates ───────────────────────────────────────────────────
+        function countryTemplate(option) {
+            if (!option.id) return option.text;
+            const code = option.element && option.element.dataset.code;
+            if (!code) return option.text;
+            return $(`<span style="display:flex;align-items:center;">
+                    ${getFlagImg(code)}<span>${option.text}</span>
+                  </span>`);
+        }
+
+        function countrySelection(option) {
+            if (!option.id) return option.text;
+            const code = option.element && option.element.dataset.code;
+            if (!code) return option.text;
+            return $(`<span style="display:flex;align-items:center;">
+                    ${getFlagImg(code)}<span>${option.text}</span>
+                  </span>`);
+        }
+
+        // ── Key fix: init country Select2 on modal shown, AFTER base.html runs ──
+        // base.html runs its generic select2 init on shown.bs.modal.
+        // We re-init the country selects immediately after on the same event,
+        // which overrides the generic init with our custom templates.
+        const createModalEl = document.getElementById('createBadgeModal');
+
+        createModalEl.addEventListener('shown.bs.modal', function () {
+            // Destroy existing Select2 on country fields first
+            if ($('#countryResidence').hasClass('select2-hidden-accessible')) {
+                $('#countryResidence').select2('destroy');
+            }
+            if ($('#nationality').hasClass('select2-hidden-accessible')) {
+                $('#nationality').select2('destroy');
+            }
+
+            // Re-init with flag templates
+            $('#countryResidence').select2({
+                theme: 'bootstrap-5',
+                dropdownParent: $('#createBadgeModal'),
+                allowClear: true,
+                placeholder: "Select Country",
+                templateResult: countryTemplate,
+                templateSelection: countrySelection,
+                width: '100%'
+            });
+
+            $('#nationality').select2({
+                theme: 'bootstrap-5',
+                dropdownParent: $('#createBadgeModal'),
+                allowClear: true,
+                placeholder: "Select Nationality",
+                templateResult: countryTemplate,
+                templateSelection: countrySelection,
+                width: '100%'
+            });
+        });
+
+        // ── Remove select2-country from base.html's generic class ───────────────
+        // So base.html won't re-init these after our shown.bs.modal handler runs.
+        // Add this ONLY if your base.html targets '.select2-modal' class:
+        document.getElementById('countryResidence').classList.remove('select2-modal');
+        document.getElementById('nationality').classList.remove('select2-modal');
+
+        // ── Success OK button ───────────────────────────────────────────────────
+        document.getElementById("badgeSuccessOkBtn").addEventListener("click", function () {
+            const modalEl = document.getElementById("badgeSuccessModal");
+            const modal = bootstrap.Modal.getInstance(modalEl) || bootstrap.Modal.getOrCreateInstance(modalEl);
+            if (modal) modal.hide();
+            window.location.href = window.location.pathname;
+        });
+
+        // ── Form submit ─────────────────────────────────────────────────────────
+        document.getElementById("createBadgeForm").addEventListener("submit", function (e) {
+            e.preventDefault();
+
+            const form = this;
+            const formData = new FormData(form);
+
+            document.querySelectorAll(".validation-error span").forEach(el => el.innerText = "");
+            document.querySelectorAll(".form-control, .form-select").forEach(el => el.style.border = "1px solid #ddd");
+
+            const mobileInput = document.querySelector("#mobileNumber");
+            const itiInstance = mobileInput.itiInstance; // get instance stored on the element
+
+if (mobileInput.value.trim() !== "") {
+    if (!itiInstance) {
+        // fallback if instance missing (should not happen)
+        const phoneRegex = /^[0-9+\-\s()]{8,20}$/;
+        if (!phoneRegex.test(mobileInput.value)) {
+            document.getElementById("mobileNumberError").querySelector("span").innerText = "Invalid mobile number format.";
+            document.getElementById("mobileNumberError").style.display = "block";
+            mobileInput.style.border = "1px solid red";
+            return;
+        }
+        formData.set("mobile_number", mobileInput.value.trim());
+    } else {
+        if (!itiInstance.isValidNumber()) {
+            const errorMsg = itiInstance.getValidationError();
+            let message = "Invalid mobile number.";
+            if (errorMsg === 0) message = "Invalid number.";
+            else if (errorMsg === 1) message = "Invalid country code.";
+            else if (errorMsg === 2) message = "Number too short.";
+            else if (errorMsg === 3) message = "Number too long.";
+            document.getElementById("mobileNumberError").querySelector("span").innerText = message;
+            document.getElementById("mobileNumberError").style.display = "block";
+            mobileInput.style.border = "1px solid red";
+            return;
+        }
+        formData.set("mobile_number", itiInstance.getNumber());
+    }
+}
+
+            fetch(form.action, {
+                method: "POST",
+                body: formData,
+                headers: { "X-CSRFToken": getCSRFToken() }
+            })
+                .then(res => res.json().then(data => ({ status: res.status, body: data })))
+                .then(({ status, body }) => {
+                    document.getElementById("globalFormError").style.display = "none";
+                    document.getElementById("globalFormSuccess").style.display = "none";
+
+                    if (!body.success) {
+                        if (typeof body.errors === "string") {
+                            document.getElementById("globalFormErrorMsg").innerText = body.errors;
+                            document.getElementById("globalFormError").style.display = "block";
+                            document.getElementById("createBadgeModal").querySelector(".modal-body").scrollTop = 0;
+                            return;
+                        }
+                        for (let field in body.errors) {
+                            let errorDiv = document.getElementById(fieldMap[field]);
+                            if (errorDiv) {
+                                let span = errorDiv.querySelector("span");
+                                if (span) { span.innerText = body.errors[field]; errorDiv.style.display = "block"; }
+                            }
+                            highlightFieldError(field); // ✅ replaces the raw border line
+                        }
+                    } else {
+                        form.reset();
+                        // ✅ Reset intl-tel-input flag back to UAE
+                        if (itiInstance) itiInstance.setCountry("ae");
+
+                        // ✅ Clear any red borders on Select2 containers
+                        $('#countryResidence, #nationality, #ticketType')
+                            .next('.select2-container').find('.select2-selection')
+                            .css('border', '1px solid #ddd');
+
+                        // Reset all Select2 dropdowns including country ones
+                        $('#countryResidence, #nationality').val(null).trigger('change');
+                        $('.select2-modal').val(null).trigger('change');
+
+                        document.querySelectorAll(".validation-error").forEach(el => el.style.display = "none");
+                        document.querySelectorAll(".validation-error span").forEach(el => el.innerText = "");
+                        document.querySelectorAll(".form-control, .form-select").forEach(el => el.style.border = "1px solid #ddd");
+
+                        document.getElementById("badgeSuccessMsg").innerText = body.message || "Badge registered successfully.";
+
+                        createModalEl.addEventListener('hidden.bs.modal', function handler() {
+                            createModalEl.removeEventListener('hidden.bs.modal', handler);
+                            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+                            document.body.classList.remove('modal-open');
+                            document.body.style.removeProperty('overflow');
+                            document.body.style.removeProperty('padding-right');
+                            setTimeout(() => {
+                                const successModalEl = document.getElementById("badgeSuccessModal");
+                                bootstrap.Modal.getOrCreateInstance(successModalEl).show();
+                            }, 100);
+                        });
+
+                        bootstrap.Modal.getOrCreateInstance(createModalEl).hide();
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    document.getElementById("globalFormErrorMsg").innerText = "Something Went Wrong";
+                    document.getElementById("globalFormError").style.display = "block";
+                    document.getElementById("createBadgeModal").querySelector(".modal-body").scrollTop = 0;
+                });
+        });
+
+        function getCSRFToken() {
+            return document.cookie.split("; ").find(row => row.startsWith("csrftoken"))?.split("=")[1];
+        }
+
+        const fieldMap = {
+            first_name: "firstNameError",
+            last_name: "lastNameError",
+            job_title: "jobTitleError",
+            company_name: "companyNameError",
+            country_of_residence: "countryResidenceError",
+            nationality: "nationalityError",
+            email: "emailError",
+            mobile_number: "mobileNumberError",
+            ticket_type: "ticketTypeError"
+        };
+
+        document.querySelectorAll(".form-control").forEach(input => {
+            input.addEventListener("input", function () { clearFieldError(this.name); });
+        });
+        document.querySelectorAll(".form-select").forEach(input => {
+            input.addEventListener("change", function () { clearFieldError(this.name); });
+        });
+        $('#countryResidence, #nationality, .select2-modal').on('select2:select', function () {
+            clearFieldError(this.name);
+        });
+
+        function clearFieldError(fieldName) {
+            const errorId = fieldMap[fieldName];
+            if (!errorId) return;
+            const errorDiv = document.getElementById(errorId);
+            if (errorDiv) {
+                const span = errorDiv.querySelector("span");
+                if (span) span.innerText = "";
+                errorDiv.style.display = "none";
+            }
+            const input = document.querySelector(`[name="${fieldName}"]`);
+            if (!input) return;
+            if ($(input).hasClass('select2-hidden-accessible')) {
+                $(input).next('.select2-container').find('.select2-selection').css('border', '1px solid #ddd');
+            } else {
+                input.style.border = "1px solid #ddd";
+            }
+        }
+
+        function highlightFieldError(fieldName) {
+            const input = document.querySelector(`[name="${fieldName}"]`);
+            if (!input) return;
+            if ($(input).hasClass('select2-hidden-accessible')) {
+                $(input).next('.select2-container').find('.select2-selection').css({
+                    'border': '1px solid red',
+                    'border-radius': '4px'
+                });
+            } else {
+                input.style.border = "1px solid red";
+            }
+        }
+
+    });
+</script>

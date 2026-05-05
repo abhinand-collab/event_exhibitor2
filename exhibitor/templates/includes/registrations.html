@@ -1,0 +1,191 @@
+<!-- Registrations Section -->
+<div class="registrations-section animate-fade-in">
+    <div class="registrations-header">
+        <h5>Registrations</h5>
+        <a href="/export-registrations/" class="btn btn-export" id="exportBtn">
+    <i class="fas fa-file-excel me-2"></i>Export to Excel
+</a>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-section">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">Keyword</label>
+                <input type="text" class="form-control" placeholder="Search..." id="searchKeyword">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Status</label>
+                <select class="form-select select2-filter" id="filterStatus" style="width: 100%;">
+                    <option value="">All Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="invited">Invited</option>
+                    <option value="confirmed">Confirmed</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Tickets</label>
+                <select class="form-select select2-filter" id="filterTickets" style="width: 100%;">
+                    <option value="">All Tickets</option>
+                    <option value="VIP">VIP Pass</option>
+                    <option value="exhibitor">Exhibitor Pass</option>
+                    <option value="visitor">Visitor Pass</option>
+                </select>
+            </div>
+            <div class="col-md-auto">
+                <button class="btn btn-primary" id="applyFiltersBtn">
+                    <i class="fas fa-search me-1"></i> Search
+                </button>
+                <button class="btn btn-outline-secondary ms-2" id="clearFiltersBtn">
+                    <i class="fas fa-times me-1"></i> Clear
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Actions Bar -->
+    <div class="bulk-actions-bar" id="bulkActionsBar">
+        <div class="bulk-actions-left">
+            <i class="fas fa-check-circle text-primary me-2"></i>
+            <span><strong id="selectedCount">0</strong> items selected</span>
+        </div>
+        <div class="bulk-actions-right">
+            <button class="btn btn-bulk btn-primary" id="bulkSendInvites">
+                <i class="fas fa-paper-plane me-1"></i>Send Invites
+            </button>
+            <button class="btn btn-bulk btn-success" id="bulkActivate">
+                <i class="fas fa-check me-1"></i>Activate
+            </button>
+            <button class="btn btn-bulk btn-secondary" id="bulkDeactivate">
+                <i class="fas fa-pause me-1"></i>Deactivate
+            </button>
+            <button class="btn btn-bulk btn-info" id="bulkExport">
+                <i class="fas fa-download me-1"></i>Export Selected
+            </button>
+            <button class="btn btn-bulk btn-danger" id="bulkDelete">
+                <i class="fas fa-trash me-1"></i>Delete
+            </button>
+            <button class="btn btn-bulk btn-dark" id="bulkClear">
+                <i class="fas fa-times me-1"></i>Clear
+            </button>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-responsive">
+        <table class="table table-hover" id="registrationsTable">
+            <thead>
+                <tr>
+                    <th style="width: 40px;"><input type="checkbox" class="table-checkbox" id="selectAll"></th>
+                    <th>NAME</th>
+                    <th>JOB TITLE</th>
+                    <th>COUNTRY</th>
+                    <th>NATIONALITY</th>
+                    <th>PHONE NO</th>
+                    <th>SOURCE</th>
+                    <th>TICKET CLASS</th>
+                    <!-- <th>TICKET ID</th> -->
+                    <th>COMPANY NAME</th>
+                    <!-- <th>DIGITAL BADGE ISSUE</th>
+                    <th>ONSITE BADGE PRINTED</th> -->
+                    <th>STATUS</th>
+                    <th>ACTION</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for reg in registrations %}
+                <tr data-attendee-id="{{ reg.id }}">
+                    <td><input type="checkbox" class="table-checkbox row-checkbox"></td>
+                    <td>
+                        <a href="{% url 'attendee_audit_logs' reg.id %}" class="user-info" style="text-decoration:none;" >
+                            <span class="name">{{ reg.first_name }} {{ reg.last_name }}</span>
+                            <span class="email">{{ reg.email }}</span>
+                        </a>
+                    </td>
+                    <td>{{ reg.job_title }}</td>
+                    <td>{{ reg.country_of_residence }}</td>
+                    <td>{{ reg.nationality }}</td>
+                    <td>{{ reg.mobile_number }}</td>
+                    <td>{{ reg.source }}</td>
+                    <td>{% if reg.badge %}{{ reg.badge.badge_type }}{% else %}-{% endif %}</td>
+                    <!-- <td style="max-width:180px; word-break: break-word;">{% if reg.badge %}{{ reg.badge.ticket_id }}{% else %}-{% endif %}</td> -->
+                    <td>{{ reg.company_name }}</td>
+                    <!-- <td>{% if reg.digital_badge_issued %}<span class="label-yes">Yes</span>{% else %}<span class="label-no">No</span>{% endif %}</td>
+                    <td>{% if reg.onsite_badge_printed %}<span class="label-yes">Yes</span>{% else %}<span class="label-no">No</span>{% endif %}</td> -->
+                    <td><span class="status-badge {{ reg.status|lower }}">{{ reg.get_status_display }}</span></td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn-action-table edit" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-action-table email" title="Email">
+                                <i class="fas fa-envelope"></i>
+                            </button>
+                            <button class="btn-action-table download" title="Download">
+                                <i class="fas fa-download"></i>
+                            </button>
+                            <button class="btn-action-table print" title="Print">
+                                <i class="fas fa-print"></i>
+                            </button>
+                            <button class="btn-action-table delete" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination-wrapper" style="margin-top: 20px; padding: 15px 0; border-top: 1px solid #e5e7eb;">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <div class="pagination-info" style="color: #6b7280; font-size: 14px;">
+                    Showing {{ registrations.start_index }} to {{ registrations.end_index }} of {{ registrations.paginator.count }} entries
+                </div>
+            </div>
+            <div class="col-md-6">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-end" style="margin: 0; gap: 5px;">
+                        {% if registrations.has_previous %}
+                            <li class="page-item"><a class="page-link" href="?page=1"><i class="fas fa-angle-double-left"></i></a></li>
+                            <li class="page-item"><a class="page-link" href="?page={{ registrations.previous_page_number }}"><i class="fas fa-angle-left"></i></a></li>
+                        {% else %}
+                            <li class="page-item disabled"><span class="page-link"><i class="fas fa-angle-double-left"></i></span></li>
+                            <li class="page-item disabled"><span class="page-link"><i class="fas fa-angle-left"></i></span></li>
+                        {% endif %}
+
+                        {% for page_num in registrations.paginator.page_range %}
+                            {% if page_num == registrations.number %}
+                                <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+                            {% elif page_num > registrations.number|add:'-3' and page_num < registrations.number|add:'3' %}
+                                <li class="page-item"><a class="page-link" href="?page={{ page_num }}">{{ page_num }}</a></li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if registrations.has_next %}
+                            <li class="page-item"><a class="page-link" href="?page={{ registrations.next_page_number }}"><i class="fas fa-angle-right"></i></a></li>
+                            <li class="page-item"><a class="page-link" href="?page={{ registrations.paginator.num_pages }}"><i class="fas fa-angle-double-right"></i></a></li>
+                        {% else %}
+                            <li class="page-item disabled"><span class="page-link"><i class="fas fa-angle-right"></i></span></li>
+                            <li class="page-item disabled"><span class="page-link"><i class="fas fa-angle-double-right"></i></span></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-size-selector" style="margin-top: 10px; display: flex; justify-content: flex-end; align-items: center; gap: 10px;">
+        <label style="color: #6b7280; font-size: 14px; margin: 0;">Show</label>
+        <select id="pageSizeSelect" class="form-select form-select-sm" style="width: auto; border-radius: 6px;">
+            <option value="10" {% if current_page_size == 10 %}selected{% endif %}>10</option>
+            <option value="25" {% if current_page_size == 25 %}selected{% endif %}>25</option>
+            <option value="50" {% if current_page_size == 50 %}selected{% endif %}>50</option>
+            <option value="100" {% if current_page_size == 100 %}selected{% endif %}>100</option>
+        </select>
+        <span style="color: #6b7280; font-size: 14px;">entries per page</span>
+    </div>
+</div>

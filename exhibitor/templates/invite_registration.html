@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Your Registration – {{ attendee.event.name }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --red:      #e74c3c;
+            --red-dark: #c0392b;
+            --ink:      #1a1a2e;
+            --slate:    #4a4a6a;
+            --mist:     #f4f5f9;
+            --line:     #e2e4ee;
+            --white:    #ffffff;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--mist);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0 0 60px;
+        }
+
+        /* ── HERO BANNER ── */
+        .hero {
+            width: 100%;
+            background: linear-gradient(135deg, var(--ink) 0%, #16213e 60%, #0f3460 100%);
+            padding: 48px 24px 36px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+        .hero-badge-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(231,76,60,0.2);
+            border: 1px solid rgba(231,76,60,0.5);
+            color: #ff8a7a;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            padding: 6px 16px;
+            border-radius: 50px;
+            margin-bottom: 20px;
+        }
+        .hero h1 {
+            font-family: 'Playfair Display', serif;
+            color: var(--white);
+            font-size: clamp(26px, 5vw, 40px);
+            line-height: 1.2;
+            margin-bottom: 10px;
+            position: relative;
+        }
+        .hero p {
+            color: rgba(255,255,255,0.6);
+            font-size: 14px;
+            font-weight: 300;
+            position: relative;
+        }
+        .ticket-banner {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 22px;
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 50px;
+            padding: 10px 22px;
+            color: var(--white);
+            font-size: 14px;
+            font-weight: 500;
+            position: relative;
+        }
+        .ticket-dot {
+            width: 9px; height: 9px;
+            border-radius: 50%;
+            background: #2ecc71;
+            box-shadow: 0 0 0 3px rgba(46,204,113,0.25);
+        }
+
+        /* ── CARD ── */
+        .card {
+            width: 100%;
+            max-width: 680px;
+            background: var(--white);
+            border-radius: 20px;
+            box-shadow: 0 8px 40px rgba(26,26,46,0.10);
+            margin-top: -24px;
+            overflow: hidden;
+            position: relative;
+            z-index: 1;
+        }
+        .card-header-strip {
+            height: 4px;
+            background: linear-gradient(90deg, var(--red) 0%, #ff7043 100%);
+        }
+        .card-body { padding: 36px 40px; }
+
+        /* greeting */
+        .greeting {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--line);
+            margin-bottom: 28px;
+        }
+        .greeting-avatar {
+            width: 52px; height: 52px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--red) 0%, #ff7043 100%);
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 20px;
+            flex-shrink: 0;
+        }
+        .greeting-text h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 20px;
+            color: var(--ink);
+            line-height: 1.3;
+        }
+        .greeting-text p { font-size: 13px; color: var(--slate); margin-top: 3px; }
+
+        /* prefilled */
+        .prefilled-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-bottom: 28px;
+        }
+        .prefilled-item {
+            background: var(--mist);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 12px 16px;
+        }
+        .prefilled-item label {
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--slate);
+            display: block;
+            margin-bottom: 4px;
+        }
+        .prefilled-item span { font-size: 15px; font-weight: 500; color: var(--ink); }
+
+        /* section title */
+        .section-title {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--red);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section-title::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+
+        /* form */
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group.full { grid-column: 1 / -1; }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            color: var(--slate);
+            margin-bottom: 7px;
+        }
+        .form-group label .req { color: var(--red); margin-left: 2px; }
+
+        .form-control {
+            width: 100%;
+            border: 1.5px solid var(--line);
+            border-radius: 10px;
+            padding: 12px 15px;
+            font-size: 14px;
+            font-family: 'DM Sans', sans-serif;
+            color: var(--ink);
+            background: var(--white);
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+        }
+        .form-control:focus {
+            border-color: var(--red);
+            box-shadow: 0 0 0 3px rgba(231,76,60,0.12);
+        }
+        .form-control.error { border-color: var(--red); }
+        .error-msg { font-size: 12px; color: var(--red); margin-top: 5px; display: none; }
+        .error-msg.show { display: block; }
+
+        /* ── CONSENT ── */
+        .consent-block {
+            background: var(--mist);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 20px 22px;
+            margin-bottom: 22px;
+        }
+        .consent-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 14px 0;
+            border-bottom: 1px solid var(--line);
+        }
+        .consent-item:last-child { border-bottom: none; padding-bottom: 0; }
+        .consent-item:first-child { padding-top: 0; }
+
+        .consent-checkbox {
+            width: 20px; height: 20px;
+            border: 2px solid var(--line);
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            flex-shrink: 0;
+            margin-top: 1px;
+            accent-color: var(--red);
+            transition: border-color 0.2s;
+        }
+        .consent-checkbox:checked { border-color: var(--red); }
+        .consent-checkbox.error { border-color: var(--red); outline: 2px solid rgba(231,76,60,0.2); }
+
+        .consent-label {
+            font-size: 13px;
+            color: var(--slate);
+            line-height: 1.55;
+            cursor: pointer;
+            flex: 1;
+        }
+        .consent-label strong {
+            display: block;
+            color: var(--ink);
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        .req-badge {
+            display: inline-block;
+            background: rgba(231,76,60,0.1);
+            color: var(--red);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            padding: 2px 7px;
+            border-radius: 4px;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+        .opt-badge {
+            display: inline-block;
+            background: rgba(74,74,106,0.08);
+            color: var(--slate);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            padding: 2px 7px;
+            border-radius: 4px;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+        .consent-err { font-size: 11px; color: var(--red); margin-top: 4px; display: none; }
+        .consent-err.show { display: block; }
+
+        /* submit */
+        .btn-submit {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--red) 0%, var(--red-dark) 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .btn-submit:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(231,76,60,0.35); }
+        .btn-submit:active { transform: translateY(0); }
+        .btn-submit:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+
+        .terms-note { text-align: center; font-size: 12px; color: var(--slate); margin-top: 14px; }
+
+        /* ── SUCCESS ── */
+        .success-screen { display: none; text-align: center; padding: 60px 40px; }
+        .success-screen.show { display: block; }
+        .success-icon {
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 36px; color: white;
+            margin: 0 auto 24px;
+            animation: pop 0.4s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        @keyframes pop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .success-screen h2 { font-family: 'Playfair Display', serif; font-size: 28px; color: var(--ink); margin-bottom: 10px; }
+        .success-screen p { color: var(--slate); font-size: 15px; line-height: 1.6; }
+        .badge-preview {
+            display: inline-block;
+            margin-top: 28px;
+            background: var(--mist);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            padding: 20px 32px;
+            font-size: 13px;
+            color: var(--slate);
+        }
+        .badge-preview strong { display: block; font-size: 22px; color: var(--ink); font-family: 'Playfair Display', serif; margin-bottom: 4px; }
+
+        /* alerts */
+        .alert { border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; font-size: 13px; display: flex; align-items: flex-start; gap: 10px; }
+        .alert-danger { background: #fdf2f2; border: 1px solid #f5c6cb; color: #c0392b; }
+        .alert i { margin-top: 2px; flex-shrink: 0; }
+
+        @media (max-width: 640px) {
+            .card-body { padding: 24px 20px; }
+            .form-row { grid-template-columns: 1fr; }
+            .prefilled-grid { grid-template-columns: 1fr; }
+            .form-group.full { grid-column: 1; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── HERO ── -->
+<div class="hero">
+    <div class="hero-badge-pill">
+        <i class="fas fa-calendar-alt"></i>
+        You're Invited
+    </div>
+    <h1>{{ attendee.event.name }}</h1>
+    <p>
+        {% if attendee.event.start_date %}
+            {{ attendee.event.start_date|date:"M j, Y" }}
+            {% if attendee.event.end_date %} – {{ attendee.event.end_date|date:"M j, Y" }}{% endif %}
+        {% endif %}
+    </p>
+    <div class="ticket-banner">
+        <span class="ticket-dot"></span>
+        {{ attendee.get_attendee_type_display }} Pass
+    </div>
+</div>
+
+<!-- ── CARD ── -->
+<div class="card">
+    <div class="card-header-strip"></div>
+
+    <!-- FORM STATE -->
+    <div class="card-body" id="formSection">
+
+        <!-- Greeting -->
+        <div class="greeting">
+            <div class="greeting-avatar"><i class="fas fa-user"></i></div>
+            <div class="greeting-text">
+                <h2>Hello, {{ attendee.first_name }}!</h2>
+                <p>Please complete your registration to confirm your attendance.</p>
+            </div>
+        </div>
+
+        <!-- Pre-filled read-only info — now split first / last -->
+        <div class="section-title">Your Details</div>
+        <div class="prefilled-grid">
+            <div class="prefilled-item">
+                <label>First Name</label>
+                <span>{{ attendee.first_name }}</span>
+            </div>
+            <div class="prefilled-item">
+                <label>Last Name</label>
+                <span>{{ attendee.last_name|default:"—" }}</span>
+            </div>
+            <div class="prefilled-item" style="grid-column: 1 / -1;">
+                <label>Email Address</label>
+                <span style="word-break: break-all;">{{ attendee.email }}</span>
+            </div>
+        </div>
+
+        <!-- Global error -->
+        <div class="alert alert-danger" id="globalError" style="display:none;">
+            <i class="fas fa-exclamation-circle"></i>
+            <span id="globalErrorMsg"></span>
+        </div>
+
+        <!-- Form -->
+        <form method="POST" id="registrationForm" novalidate>
+            {% csrf_token %}
+
+            <div class="section-title" style="margin-bottom:20px;">Complete Your Profile</div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Mobile Number <span class="req">*</span></label>
+                    <input type="tel" name="mobile" class="form-control" id="fieldMobile"
+                           placeholder="+971 50 000 0000"
+                           value="{{ request.POST.mobile|default:'' }}">
+                    <div class="error-msg" id="errMobile"></div>
+                </div>
+                <div class="form-group">
+                    <label>Company / Organisation <span class="req">*</span></label>
+                    <input type="text" name="company" class="form-control" id="fieldCompany"
+                           placeholder="Your company name"
+                           value="{{ request.POST.company|default:'' }}">
+                    <div class="error-msg" id="errCompany"></div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Job Title</label>
+                    <input type="text" name="job_title" class="form-control" id="fieldJobTitle"
+                           placeholder="e.g. Head of Procurement"
+                           value="{{ request.POST.job_title|default:'' }}">
+                </div>
+                <div class="form-group">
+                    <!-- layout spacer -->
+                </div>
+            </div>
+
+            <div class="form-row">
+                <!-- Country now a text input, same as nationality -->
+                <div class="form-group">
+                    <label>Country of Residence <span class="req">*</span></label>
+                    <input type="text" name="country" class="form-control" id="fieldCountry"
+                           placeholder="e.g. United Arab Emirates"
+                           value="{{ request.POST.country|default:'' }}">
+                    <div class="error-msg" id="errCountry"></div>
+                </div>
+                <div class="form-group">
+                    <label>Nationality <span class="req">*</span></label>
+                    <input type="text" name="nationality" class="form-control" id="fieldNationality"
+                           placeholder="e.g. Emirati, British, Indian"
+                           value="{{ request.POST.nationality|default:'' }}">
+                    <div class="error-msg" id="errNationality"></div>
+                </div>
+            </div>
+
+            <!-- ── CONSENTS ── -->
+            <div class="section-title" style="margin-bottom:16px; margin-top:4px;">Terms & Consent</div>
+
+            <div class="consent-block">
+
+                <!-- T&C — REQUIRED -->
+                <div class="consent-item">
+                    <input type="checkbox" class="consent-checkbox" name="accepted_terms"
+                           id="chkTerms" {% if request.POST.accepted_terms %}checked{% endif %}>
+                    <div style="flex:1;">
+                        <label class="consent-label" for="chkTerms">
+                            <strong>
+                                Terms &amp; Conditions
+                                <span class="req-badge">Required</span>
+                            </strong>
+                            I agree to the event's <a href="#" style="color:var(--red); text-decoration:none; font-weight:500;">Terms and Conditions</a>.
+                            By registering, you confirm that the information provided is accurate and that you will
+                            comply with all event regulations, including health &amp; safety guidelines and the code
+                            of conduct applicable to all participants.
+                        </label>
+                        <div class="consent-err" id="errTerms">You must accept the Terms &amp; Conditions to continue.</div>
+                    </div>
+                </div>
+
+                <!-- Data Sharing — OPTIONAL -->
+                <div class="consent-item">
+                    <input type="checkbox" class="consent-checkbox" name="accepted_data_sharing"
+                           id="chkData" {% if request.POST.accepted_data_sharing %}checked{% endif %}>
+                    <div style="flex:1;">
+                        <label class="consent-label" for="chkData">
+                            <strong>
+                                Data Sharing Policy
+                                <span class="opt-badge">Optional</span>
+                            </strong>
+                            I consent to my registration details being shared with event organisers, exhibitors,
+                            and official partners for event management, networking, and post-event communication.
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Marketing — OPTIONAL -->
+                <div class="consent-item">
+                    <input type="checkbox" class="consent-checkbox" name="accepted_marketing"
+                           id="chkMarketing" {% if request.POST.accepted_marketing %}checked{% endif %}>
+                    <div style="flex:1;">
+                        <label class="consent-label" for="chkMarketing">
+                            <strong>
+                                Marketing Communications
+                                <span class="opt-badge">Optional</span>
+                            </strong>
+                            I would like to receive updates, offers, and news about upcoming events and partner
+                            promotions via email. You may unsubscribe at any time.
+                        </label>
+                    </div>
+                </div>
+
+            </div>
+
+            <button type="submit" class="btn-submit" id="submitBtn">
+                <i class="fas fa-check-circle"></i>
+                Confirm My Registration
+            </button>
+        </form>
+
+        <p class="terms-note">
+            <i class="fas fa-lock" style="margin-right:4px; color:#aaa;"></i>
+            Your information is stored securely and will only be used for event purposes.
+        </p>
+    </div>
+
+    <!-- SUCCESS STATE -->
+    <div class="success-screen" id="successSection">
+        <div class="success-icon"><i class="fas fa-check"></i></div>
+        <h2>You're Confirmed!</h2>
+        <p>Your registration is complete. Your badge will be ready at the event entrance.<br>
+        A confirmation email has been sent to <strong>{{ attendee.email }}</strong>.</p>
+        <div class="badge-preview">
+            <strong>{{ attendee.first_name }} {{ attendee.last_name }}</strong>
+            {{ attendee.get_attendee_type_display }} Pass &nbsp;·&nbsp; {{ attendee.event.name }}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const attendeeStatus = "{{ attendee.status|default:'' }}";
+    const errorMessages  = "{{ errors|join:', '|default:'' }}";
+
+    /* ── Show success screen if already confirmed ── */
+    if (attendeeStatus === "CONFIRMED") {
+        document.getElementById('formSection').style.display   = 'none';
+        document.getElementById('successSection').classList.add('show');
+    }
+
+    /* ── Shared validation helpers ── */
+    const NAME_RE = /^[a-zA-Z \-'.]+$/;
+
+    function setError(fieldId, errId, msg) {
+        const field = document.getElementById(fieldId);
+        const err   = document.getElementById(errId);
+        if (!field || !err) return;
+        if (msg) {
+            field.classList.add('error');
+            err.textContent = msg;
+            err.classList.add('show');
+            return false;
+        } else {
+            field.classList.remove('error');
+            err.classList.remove('show');
+            return true;
+        }
+    }
+
+    function setCheckboxError(chkId, errId, show) {
+        const chk = document.getElementById(chkId);
+        const err = document.getElementById(errId);
+        if (!chk || !err) return;
+        if (show) {
+            chk.classList.add('error');
+            err.classList.add('show');
+        } else {
+            chk.classList.remove('error');
+            err.classList.remove('show');
+        }
+    }
+
+    /* ── Live clear on input ── */
+    ['fieldMobile','fieldCompany','fieldJobTitle','fieldCountry','fieldNationality'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('input', () => {
+            el.classList.remove('error');
+            const errMap = {
+                fieldMobile:      'errMobile',
+                fieldCompany:     'errCompany',
+                fieldCountry:     'errCountry',
+                fieldNationality: 'errNationality',
+            };
+            if (errMap[id]) {
+                const errEl = document.getElementById(errMap[id]);
+                if (errEl) errEl.classList.remove('show');
+            }
+        });
+    });
+
+    /* ── Form submit validation ── */
+    const form = document.getElementById('registrationForm');
+    if (form) {
+        form.addEventListener('submit', function (e) {
+            let valid = true;
+
+            const mobile      = document.getElementById('fieldMobile')?.value.trim();
+            const company     = document.getElementById('fieldCompany')?.value.trim();
+            const country     = document.getElementById('fieldCountry')?.value.trim();
+            const nationality = document.getElementById('fieldNationality')?.value.trim();
+            const terms       = document.getElementById('chkTerms')?.checked;
+
+            /* mobile — required */
+            if (!mobile) {
+                setError('fieldMobile', 'errMobile', 'Mobile number is required.');
+                valid = false;
+            } else {
+                setError('fieldMobile', 'errMobile', null);
+            }
+
+            /* company — required */
+            if (!company) {
+                setError('fieldCompany', 'errCompany', 'Company name is required.');
+                valid = false;
+            } else if (company.length < 2) {
+                setError('fieldCompany', 'errCompany', 'Company name must be at least 2 characters.');
+                valid = false;
+            } else {
+                setError('fieldCompany', 'errCompany', null);
+            }
+
+            /* country — required, letters only */
+            if (!country) {
+                setError('fieldCountry', 'errCountry', 'Country of residence is required.');
+                valid = false;
+            } else if (country.length < 2) {
+                setError('fieldCountry', 'errCountry', 'Please enter a valid country.');
+                valid = false;
+            } else if (!NAME_RE.test(country)) {
+                setError('fieldCountry', 'errCountry', 'Country should only contain letters.');
+                valid = false;
+            } else {
+                setError('fieldCountry', 'errCountry', null);
+            }
+
+            /* nationality — required, letters only */
+            if (!nationality) {
+                setError('fieldNationality', 'errNationality', 'Nationality is required.');
+                valid = false;
+            } else if (nationality.length < 2) {
+                setError('fieldNationality', 'errNationality', 'Please enter a valid nationality.');
+                valid = false;
+            } else if (!NAME_RE.test(nationality)) {
+                setError('fieldNationality', 'errNationality', 'Nationality should only contain letters.');
+                valid = false;
+            } else {
+                setError('fieldNationality', 'errNationality', null);
+            }
+
+            /* terms — required only */
+            setCheckboxError('chkTerms', 'errTerms', !terms);
+            if (!terms) valid = false;
+
+            if (!valid) { e.preventDefault(); return; }
+
+            const btn = document.getElementById('submitBtn');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting…';
+            }
+        });
+    }
+
+    /* ── Show server-side errors ── */
+    if (errorMessages) {
+        const globalError    = document.getElementById('globalError');
+        const globalErrorMsg = document.getElementById('globalErrorMsg');
+        if (globalError && globalErrorMsg) {
+            globalError.style.display = 'flex';
+            globalErrorMsg.textContent = errorMessages;
+        }
+    }
+});
+</script>
+
+</body>
+</html>

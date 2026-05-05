@@ -1,0 +1,1063 @@
+{% extends 'base.html' %}
+{% block content %}
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+</div>
+
+<!-- Top Header -->
+<div class="top-header">
+    <div class="container-fluid px-4">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="search-wrapper">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" class="form-control search-input form-control-sm" placeholder="Search...">
+                    </div>
+                    <select class="form-select form-select-sm"
+                        style="width: 200px; background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3); color: white; height: 32px;">
+                        <option>GULFOOD 2026</option>
+                        <option>Tech Summit 2025</option>
+                        <option>Innovation Expo</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-6 text-end d-flex align-items-center justify-content-end">
+                <span class="me-3">Welcome, Mohamed Belson</span>
+                <button class="btn btn-sm btn-outline-light" style="height: 32px;">
+                    <i class="fas fa-sign-out-alt"></i> Sign Out
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sidebar Toggle Button (Mobile) -->
+<button class="sidebar-toggle" id="sidebarToggle">
+    <i class="fas fa-bars"></i>
+</button>
+
+<!-- App Wrapper -->
+<div class="app-wrapper">
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <div class="countdown-section">
+            <div class="countdown-title">Time Remaining</div>
+            <div class="countdown-display" id="countdown">
+                <span>16<small>Days</small></span>
+                <span>17<small>Hours</small></span>
+                <span>45<small>Mins</small></span>
+                <span>19<small>Secs</small></span>
+            </div>
+        </div>
+
+        <div class="nav-menu">
+            <a href="#" class="nav-item">
+                <i class="fas fa-home"></i>
+                <span>HOME</span>
+            </a>
+            <div class="nav-parent open" id="badgesMenu">
+                <div class="nav-parent-left">
+                    <i class="fas fa-id-badge"></i>
+                    <span>BADGES</span>
+                </div>
+                <i class="fas fa-chevron-right nav-arrow"></i>
+            </div>
+            <div class="nav-submenu open" id="badgesSubmenu">
+                <a href="exhibitor.html" class="nav-item active">
+                    <i class="fas fa-user-tie"></i>
+                    <span>EXHIBITOR BADGE</span>
+                </a>
+                <a href="visitor.html" class="nav-item">
+                    <i class="fas fa-user-plus"></i>
+                    <span>VISITOR</span>
+                </a>
+            </div>
+            <a href="#" class="nav-item">
+                <i class="fas fa-trophy"></i>
+                <span>VIP NOMINATION</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i class="fas fa-book"></i>
+                <span>MANUALS & GUIDES</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Badge Stats Card -->
+        <div class="badge-stats-card animate-fade-in">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="stats-left">
+                        <div class="stats-icon">
+                            <i class="fas fa-cog"></i>
+                        </div>
+                        <div>
+                            <div class="stats-number"> {{used_pass}} <span>/ {{total_pass}} </span></div>
+                            <div class="stats-label">VIP PASS</div>
+                        </div>
+                        <div class="stats-breakdown ms-4">
+                            <span>Confirmed {{confirmed_count}} </span>
+                            <span>Pending {{pending_count}}</span>
+                            <span>Invited {{invited_count}} </span>
+                        </div>
+                        <div class="circular-progress ms-3">
+                            <span>5</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Cards -->
+        <div class="row g-2 mb-4 animate-fade-in">
+            <div class="col-md-4 mb-3">
+                <div class="action-card">
+                    <div class="action-card-icon purple">
+                        <i class="fas fa-user-plus"></i>
+                    </div>
+                    <h5>Create Single Badge</h5>
+                    <p>Register an employee from your company instantly for their badge</p>
+                    <button class="btn btn-action-card" data-bs-toggle="modal" data-bs-target="#createBadgeModal">
+                        <i class="fas fa-plus-circle me-2"></i>Create Now
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="action-card">
+                    <div class="action-card-icon orange">
+                        <i class="fas fa-file-upload"></i>
+                    </div>
+                    <h5>Bulk Upload</h5>
+                    <p>Import multiple badges at once by uploading a completed Excel file containing all required badge
+                        details</p>
+                    <button class="btn btn-action-card yellow_btn" data-bs-toggle="modal"
+                        data-bs-target="#bulkUploadModal">
+                        <i class="fas fa-cloud-upload-alt me-2"></i>Upload File
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="action-card">
+                    <div class="action-card-icon pink">
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                    <h5>Send Invitations</h5>
+                    <p>Send one or multiple badges by entering their name and email.</p>
+                    <button class="btn btn-action-card green_btn" data-bs-toggle="modal"
+                        data-bs-target="#sendInvitationModal">
+                        <i class="fas fa-paper-plane me-2"></i>Send Invitation
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {% include 'includes/registrations.html' %}
+    </main>
+</div>
+
+<!-- Create Badge Modal -->
+<div class="modal fade" id="createBadgeModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius: 8px; overflow: hidden;">
+            <div class="modal-header border-bottom bg-white py-3">
+                <div class="d-flex align-items-center">
+                    <div
+                        style="width: 80px; height: 50px; border: 1px solid #eee; border-radius: 6px; display: flex; align-items: center; justify-content: center; margin-right: 15px; padding: 5px;">
+                        <img src="https://via.placeholder.com/70x40?text=Gulfood" alt="Gulfood"
+                            style="max-width: 100%; max-height: 100%;">
+                    </div>
+                    <div>
+                        <h5 class="modal-title mb-0" style="font-size: 20px; font-weight: 700; color: #333;">GULFOOD
+                            2026</h5>
+                        <p class="mb-0" style="font-size: 13px; color: #666;">
+                            <i class="fas fa-calendar-alt me-1"></i>Jan. 26, 2026 - Jan. 30, 2026
+                        </p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            {% include 'includes/singlebadge_model.html' %}
+
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Upload Modal -->
+{% include 'includes/bulk_upload.html' %}
+
+{% include 'includes/invitations.html' %}
+
+<!-- Send Email Confirmation Modal -->
+<div class="modal fade" id="sendEmailModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 12px;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+                <h5 class="modal-title text-white">Send Email</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <p>Are you sure you want to send email?</p>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmSendEmailBtn">Send</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 12px;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
+                <h5 class="modal-title text-white">
+                    <i class="fas fa-trash me-2"></i>Delete Record
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <i class="fas fa-exclamation-circle text-danger"
+                    style="font-size: 48px; margin-bottom: 16px; display: block;"></i>
+                <p class="mb-1" style="font-size: 16px; font-weight: 600;">Are you sure?</p>
+                <p class="text-muted mb-0" style="font-size: 14px;">This action cannot be undone.</p>
+                <!-- shows the attendee name for clarity -->
+                <p class="mt-2 fw-semibold" id="deleteTargetName" style="color: #dc3545;"></p>
+            </div>
+            <div class="modal-footer justify-content-center gap-2">
+                <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger px-4" id="confirmDeleteBtn">
+                    <span id="deleteBtnText">Delete</span>
+                    <span id="deleteBtnSpinner" style="display:none;">
+                        <i class="fas fa-spinner fa-spin me-1"></i> Deleting...
+                    </span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Registration Modal -->
+<!-- Edit Registration Modal -->
+<div class="modal fade" id="editBadgeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header" style="background: #1a56db; color: white; padding: 18px 25px;">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit me-2"></i>Edit Registration
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="padding: 25px;">
+                <form id="editBadgeForm" novalidate>
+                    {% csrf_token %}
+                    <input type="hidden" id="editAttendeeId">
+
+                    <div id="editGlobalError"
+                        style="display:none; background:#fdf2f2; border:1px solid #e74c3c; color:#c0392b; padding:12px 16px; border-radius:6px; margin-bottom:16px; font-size:14px;">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <span id="editGlobalErrorMsg"></span>
+                    </div>
+                    <div id="editGlobalSuccess"
+                        style="display:none; background:#f0fdf4; border:1px solid #2ecc71; color:#27ae60; padding:12px 16px; border-radius:6px; margin-bottom:16px; font-size:14px;">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <span id="editGlobalSuccessMsg"></span>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">First Name <span class="text-danger">*</span></label>
+                            <input type="text" id="editFirstName" name="first_name" class="form-control" required>
+                            <div class="text-danger mt-1 small" id="editFirstNameError" style="display:none;"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Last Name</label>
+                            <input type="text" id="editLastName" name="last_name" class="form-control">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Job Title</label>
+                            <input type="text" id="editJobTitle" name="job_title" class="form-control">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Company Name</label>
+                            <input type="text" id="editCompanyName" name="company_name" class="form-control">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Email <span class="text-danger">*</span></label>
+                            <input type="email" id="editEmail" name="email" class="form-control" required>
+                            <div class="text-danger mt-1 small" id="editEmailError" style="display:none;"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Mobile Number</label>
+                            <div class="phone-input-wrapper">
+                                <input type="tel" id="editMobileNumber" name="mobile_number" class="form-control">
+                            </div>
+                            <div class="text-danger mt-1 small" id="editMobileNumberError" style="display:none;"></div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Country of Residence <span
+                                    class="text-danger">*</span></label>
+                            <select id="editCountryResidence" name="country_of_residence"
+                                class="form-select select2-edit-country" required style="width:100%;">
+                                <option value="">Select Country</option>
+                            </select>
+                            <div class="text-danger mt-1 small" id="editCountryResidenceError" style="display:none;">
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Nationality <span class="text-danger">*</span></label>
+                            <select id="editNationality" name="nationality" class="form-select select2-edit-country"
+                                required style="width:100%;">
+                                <option value="">Select Nationality</option>
+                            </select>
+                            <div class="text-danger mt-1 small" id="editNationalityError" style="display:none;"></div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Ticket Type <span class="text-danger">*</span></label>
+                            <select id="editTicketType" name="ticket_type" class="form-select">
+                                <option value="">Select Ticket Type</option>
+                                <option value="VIP">VIP Pass</option>
+                                <option value="EXHIBITOR">Exhibitor Pass</option>
+                                <option value="VISITOR">Visitor Pass</option>
+                            </select>
+                            <div class="text-danger mt-1 small" id="editTicketTypeError" style="display:none;"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Status</label>
+                            <select id="editStatus" name="status" class="form-select">
+                                <option value="PENDING">Pending</option>
+                                <option value="INVITED">Invited</option>
+                                <option value="CONFIRMED">Confirmed</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer" style="background:#f5f5f5;">
+                <button type="button" class="btn btn-primary" id="saveEditBtn">
+                    <span id="saveEditBtnText">SAVE CHANGES</span>
+                    <span id="saveEditBtnSpinner" style="display:none;">
+                        <i class="fas fa-spinner fa-spin me-1"></i> Saving...
+                    </span>
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">CLOSE</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+
+    const COUNTRIES2 = [
+        { code: "AF", name: "Afghanistan", nationality: "Afghan" },
+        { code: "AL", name: "Albania", nationality: "Albanian" },
+        { code: "DZ", name: "Algeria", nationality: "Algerian" },
+        { code: "AD", name: "Andorra", nationality: "Andorran" },
+        { code: "AO", name: "Angola", nationality: "Angolan" },
+        { code: "AG", name: "Antigua and Barbuda", nationality: "Antiguan" },
+        { code: "AR", name: "Argentina", nationality: "Argentine" },
+        { code: "AM", name: "Armenia", nationality: "Armenian" },
+        { code: "AU", name: "Australia", nationality: "Australian" },
+        { code: "AT", name: "Austria", nationality: "Austrian" },
+        { code: "AZ", name: "Azerbaijan", nationality: "Azerbaijani" },
+        { code: "BS", name: "Bahamas", nationality: "Bahamian" },
+        { code: "BH", name: "Bahrain", nationality: "Bahraini" },
+        { code: "BD", name: "Bangladesh", nationality: "Bangladeshi" },
+        { code: "BB", name: "Barbados", nationality: "Barbadian" },
+        { code: "BY", name: "Belarus", nationality: "Belarusian" },
+        { code: "BE", name: "Belgium", nationality: "Belgian" },
+        { code: "BZ", name: "Belize", nationality: "Belizean" },
+        { code: "BJ", name: "Benin", nationality: "Beninese" },
+        { code: "BT", name: "Bhutan", nationality: "Bhutanese" },
+        { code: "BO", name: "Bolivia", nationality: "Bolivian" },
+        { code: "BA", name: "Bosnia and Herzegovina", nationality: "Bosnian" },
+        { code: "BW", name: "Botswana", nationality: "Motswana" },
+        { code: "BR", name: "Brazil", nationality: "Brazilian" },
+        { code: "BN", name: "Brunei", nationality: "Bruneian" },
+        { code: "BG", name: "Bulgaria", nationality: "Bulgarian" },
+        { code: "BF", name: "Burkina Faso", nationality: "Burkinabé" },
+        { code: "BI", name: "Burundi", nationality: "Burundian" },
+        { code: "CV", name: "Cabo Verde", nationality: "Cape Verdean" },
+        { code: "KH", name: "Cambodia", nationality: "Cambodian" },
+        { code: "CM", name: "Cameroon", nationality: "Cameroonian" },
+        { code: "CA", name: "Canada", nationality: "Canadian" },
+        { code: "CF", name: "Central African Republic", nationality: "Central African" },
+        { code: "TD", name: "Chad", nationality: "Chadian" },
+        { code: "CL", name: "Chile", nationality: "Chilean" },
+        { code: "CN", name: "China", nationality: "Chinese" },
+        { code: "CO", name: "Colombia", nationality: "Colombian" },
+        { code: "KM", name: "Comoros", nationality: "Comorian" },
+        { code: "CG", name: "Congo", nationality: "Congolese" },
+        { code: "CD", name: "Congo (DRC)", nationality: "Congolese" },
+        { code: "CR", name: "Costa Rica", nationality: "Costa Rican" },
+        { code: "CI", name: "Côte d'Ivoire", nationality: "Ivorian" },
+        { code: "HR", name: "Croatia", nationality: "Croatian" },
+        { code: "CU", name: "Cuba", nationality: "Cuban" },
+        { code: "CY", name: "Cyprus", nationality: "Cypriot" },
+        { code: "CZ", name: "Czech Republic", nationality: "Czech" },
+        { code: "DK", name: "Denmark", nationality: "Danish" },
+        { code: "DJ", name: "Djibouti", nationality: "Djiboutian" },
+        { code: "DM", name: "Dominica", nationality: "Dominican" },
+        { code: "DO", name: "Dominican Republic", nationality: "Dominican" },
+        { code: "EC", name: "Ecuador", nationality: "Ecuadorian" },
+        { code: "EG", name: "Egypt", nationality: "Egyptian" },
+        { code: "SV", name: "El Salvador", nationality: "Salvadoran" },
+        { code: "GQ", name: "Equatorial Guinea", nationality: "Equatoguinean" },
+        { code: "ER", name: "Eritrea", nationality: "Eritrean" },
+        { code: "EE", name: "Estonia", nationality: "Estonian" },
+        { code: "SZ", name: "Eswatini", nationality: "Swazi" },
+        { code: "ET", name: "Ethiopia", nationality: "Ethiopian" },
+        { code: "FJ", name: "Fiji", nationality: "Fijian" },
+        { code: "FI", name: "Finland", nationality: "Finnish" },
+        { code: "FR", name: "France", nationality: "French" },
+        { code: "GA", name: "Gabon", nationality: "Gabonese" },
+        { code: "GM", name: "Gambia", nationality: "Gambian" },
+        { code: "GE", name: "Georgia", nationality: "Georgian" },
+        { code: "DE", name: "Germany", nationality: "German" },
+        { code: "GH", name: "Ghana", nationality: "Ghanaian" },
+        { code: "GR", name: "Greece", nationality: "Greek" },
+        { code: "GD", name: "Grenada", nationality: "Grenadian" },
+        { code: "GT", name: "Guatemala", nationality: "Guatemalan" },
+        { code: "GN", name: "Guinea", nationality: "Guinean" },
+        { code: "GW", name: "Guinea-Bissau", nationality: "Guinean" },
+        { code: "GY", name: "Guyana", nationality: "Guyanese" },
+        { code: "HT", name: "Haiti", nationality: "Haitian" },
+        { code: "HN", name: "Honduras", nationality: "Honduran" },
+        { code: "HU", name: "Hungary", nationality: "Hungarian" },
+        { code: "IS", name: "Iceland", nationality: "Icelandic" },
+        { code: "IN", name: "India", nationality: "Indian" },
+        { code: "ID", name: "Indonesia", nationality: "Indonesian" },
+        { code: "IR", name: "Iran", nationality: "Iranian" },
+        { code: "IQ", name: "Iraq", nationality: "Iraqi" },
+        { code: "IE", name: "Ireland", nationality: "Irish" },
+        { code: "IL", name: "Israel", nationality: "Israeli" },
+        { code: "IT", name: "Italy", nationality: "Italian" },
+        { code: "JM", name: "Jamaica", nationality: "Jamaican" },
+        { code: "JP", name: "Japan", nationality: "Japanese" },
+        { code: "JO", name: "Jordan", nationality: "Jordanian" },
+        { code: "KZ", name: "Kazakhstan", nationality: "Kazakhstani" },
+        { code: "KE", name: "Kenya", nationality: "Kenyan" },
+        { code: "KI", name: "Kiribati", nationality: "I-Kiribati" },
+        { code: "KP", name: "Korea (North)", nationality: "North Korean" },
+        { code: "KR", name: "Korea (South)", nationality: "South Korean" },
+        { code: "KW", name: "Kuwait", nationality: "Kuwaiti" },
+        { code: "KG", name: "Kyrgyzstan", nationality: "Kyrgyz" },
+        { code: "LA", name: "Laos", nationality: "Lao" },
+        { code: "LV", name: "Latvia", nationality: "Latvian" },
+        { code: "LB", name: "Lebanon", nationality: "Lebanese" },
+        { code: "LS", name: "Lesotho", nationality: "Mosotho" },
+        { code: "LR", name: "Liberia", nationality: "Liberian" },
+        { code: "LY", name: "Libya", nationality: "Libyan" },
+        { code: "LI", name: "Liechtenstein", nationality: "Liechtenstein" },
+        { code: "LT", name: "Lithuania", nationality: "Lithuanian" },
+        { code: "LU", name: "Luxembourg", nationality: "Luxembourgish" },
+        { code: "MG", name: "Madagascar", nationality: "Malagasy" },
+        { code: "MW", name: "Malawi", nationality: "Malawian" },
+        { code: "MY", name: "Malaysia", nationality: "Malaysian" },
+        { code: "MV", name: "Maldives", nationality: "Maldivian" },
+        { code: "ML", name: "Mali", nationality: "Malian" },
+        { code: "MT", name: "Malta", nationality: "Maltese" },
+        { code: "MH", name: "Marshall Islands", nationality: "Marshallese" },
+        { code: "MR", name: "Mauritania", nationality: "Mauritanian" },
+        { code: "MU", name: "Mauritius", nationality: "Mauritian" },
+        { code: "MX", name: "Mexico", nationality: "Mexican" },
+        { code: "FM", name: "Micronesia", nationality: "Micronesian" },
+        { code: "MD", name: "Moldova", nationality: "Moldovan" },
+        { code: "MC", name: "Monaco", nationality: "Monégasque" },
+        { code: "MN", name: "Mongolia", nationality: "Mongolian" },
+        { code: "ME", name: "Montenegro", nationality: "Montenegrin" },
+        { code: "MA", name: "Morocco", nationality: "Moroccan" },
+        { code: "MZ", name: "Mozambique", nationality: "Mozambican" },
+        { code: "MM", name: "Myanmar", nationality: "Burmese" },
+        { code: "NA", name: "Namibia", nationality: "Namibian" },
+        { code: "NR", name: "Nauru", nationality: "Nauruan" },
+        { code: "NP", name: "Nepal", nationality: "Nepali" },
+        { code: "NL", name: "Netherlands", nationality: "Dutch" },
+        { code: "NZ", name: "New Zealand", nationality: "New Zealander" },
+        { code: "NI", name: "Nicaragua", nationality: "Nicaraguan" },
+        { code: "NE", name: "Niger", nationality: "Nigerien" },
+        { code: "NG", name: "Nigeria", nationality: "Nigerian" },
+        { code: "MK", name: "North Macedonia", nationality: "Macedonian" },
+        { code: "NO", name: "Norway", nationality: "Norwegian" },
+        { code: "OM", name: "Oman", nationality: "Omani" },
+        { code: "PK", name: "Pakistan", nationality: "Pakistani" },
+        { code: "PW", name: "Palau", nationality: "Palauan" },
+        { code: "PA", name: "Panama", nationality: "Panamanian" },
+        { code: "PG", name: "Papua New Guinea", nationality: "Papua New Guinean" },
+        { code: "PY", name: "Paraguay", nationality: "Paraguayan" },
+        { code: "PE", name: "Peru", nationality: "Peruvian" },
+        { code: "PH", name: "Philippines", nationality: "Filipino" },
+        { code: "PL", name: "Poland", nationality: "Polish" },
+        { code: "PT", name: "Portugal", nationality: "Portuguese" },
+        { code: "QA", name: "Qatar", nationality: "Qatari" },
+        { code: "RO", name: "Romania", nationality: "Romanian" },
+        { code: "RU", name: "Russia", nationality: "Russian" },
+        { code: "RW", name: "Rwanda", nationality: "Rwandan" },
+        { code: "KN", name: "Saint Kitts and Nevis", nationality: "Kittitian" },
+        { code: "LC", name: "Saint Lucia", nationality: "Saint Lucian" },
+        { code: "VC", name: "Saint Vincent and the Grenadines", nationality: "Vincentian" },
+        { code: "WS", name: "Samoa", nationality: "Samoan" },
+        { code: "SM", name: "San Marino", nationality: "Sammarinese" },
+        { code: "ST", name: "Sao Tome and Principe", nationality: "São Toméan" },
+        { code: "SA", name: "Saudi Arabia", nationality: "Saudi" },
+        { code: "SN", name: "Senegal", nationality: "Senegalese" },
+        { code: "RS", name: "Serbia", nationality: "Serbian" },
+        { code: "SC", name: "Seychelles", nationality: "Seychellois" },
+        { code: "SL", name: "Sierra Leone", nationality: "Sierra Leonean" },
+        { code: "SG", name: "Singapore", nationality: "Singaporean" },
+        { code: "SK", name: "Slovakia", nationality: "Slovak" },
+        { code: "SI", name: "Slovenia", nationality: "Slovenian" },
+        { code: "SB", name: "Solomon Islands", nationality: "Solomon Islander" },
+        { code: "SO", name: "Somalia", nationality: "Somali" },
+        { code: "ZA", name: "South Africa", nationality: "South African" },
+        { code: "SS", name: "South Sudan", nationality: "South Sudanese" },
+        { code: "ES", name: "Spain", nationality: "Spanish" },
+        { code: "LK", name: "Sri Lanka", nationality: "Sri Lankan" },
+        { code: "SD", name: "Sudan", nationality: "Sudanese" },
+        { code: "SR", name: "Suriname", nationality: "Surinamese" },
+        { code: "SE", name: "Sweden", nationality: "Swedish" },
+        { code: "CH", name: "Switzerland", nationality: "Swiss" },
+        { code: "SY", name: "Syria", nationality: "Syrian" },
+        { code: "TW", name: "Taiwan", nationality: "Taiwanese" },
+        { code: "TJ", name: "Tajikistan", nationality: "Tajik" },
+        { code: "TZ", name: "Tanzania", nationality: "Tanzanian" },
+        { code: "TH", name: "Thailand", nationality: "Thai" },
+        { code: "TL", name: "Timor-Leste", nationality: "Timorese" },
+        { code: "TG", name: "Togo", nationality: "Togolese" },
+        { code: "TO", name: "Tonga", nationality: "Tongan" },
+        { code: "TT", name: "Trinidad and Tobago", nationality: "Trinidadian" },
+        { code: "TN", name: "Tunisia", nationality: "Tunisian" },
+        { code: "TR", name: "Turkey", nationality: "Turkish" },
+        { code: "TM", name: "Turkmenistan", nationality: "Turkmen" },
+        { code: "TV", name: "Tuvalu", nationality: "Tuvaluan" },
+        { code: "UG", name: "Uganda", nationality: "Ugandan" },
+        { code: "UA", name: "Ukraine", nationality: "Ukrainian" },
+        { code: "AE", name: "United Arab Emirates", nationality: "Emirati" },
+        { code: "GB", name: "United Kingdom", nationality: "British" },
+        { code: "US", name: "United States", nationality: "American" },
+        { code: "UY", name: "Uruguay", nationality: "Uruguayan" },
+        { code: "UZ", name: "Uzbekistan", nationality: "Uzbekistani" },
+        { code: "VU", name: "Vanuatu", nationality: "Ni-Vanuatu" },
+        { code: "VE", name: "Venezuela", nationality: "Venezuelan" },
+        { code: "VN", name: "Vietnam", nationality: "Vietnamese" },
+        { code: "YE", name: "Yemen", nationality: "Yemeni" },
+        { code: "ZM", name: "Zambia", nationality: "Zambian" },
+        { code: "ZW", name: "Zimbabwe", nationality: "Zimbabwean" },
+    ];
+
+    // Helper functions
+    function populateEditSelect(selectId, useNationality = false) {
+        const select = document.getElementById(selectId);
+        if (!select || select.dataset.populated) return;
+        COUNTRIES2.forEach(c => {
+            const opt = document.createElement("option");
+            opt.value = useNationality ? c.nationality : c.name;
+            opt.dataset.code = c.code;
+            opt.text = useNationality ? c.nationality : c.name;
+            select.appendChild(opt);
+        });
+        select.dataset.populated = "true";
+    }
+
+    // Flag image helper (same as single badge)
+    function getFlagImg(code) {
+        return `<img src="https://flagcdn.com/20x15/${code.toLowerCase()}.png" width="20" height="15" style="margin-right:6px;border-radius:2px;" onerror="this.style.display='none'">`;
+    }
+
+    // Select2 templates
+    function editCountryTemplate(option) {
+        if (!option.id) return option.text;
+        const code = option.element?.dataset.code;
+        if (!code) return option.text;
+        return $(`<span>${getFlagImg(code)} ${option.text}</span>`);
+    }
+    function editCountrySelection(option) {
+        if (!option.id) return option.text;
+        const code = option.element?.dataset.code;
+        if (!code) return option.text;
+        return $(`<span>${getFlagImg(code)} ${option.text}</span>`);
+    }
+
+    // ========== EDIT MODAL GLOBALS ==========
+    let pendingAttendeeData = null;
+
+    // Field error mapping (same as before)
+    const editFieldErrorMap = {
+        first_name: 'editFirstNameError',
+        email: 'editEmailError',
+        ticket_type: 'editTicketTypeError',
+        country_of_residence: 'editCountryResidenceError',
+        nationality: 'editNationalityError',
+        mobile_number: 'editMobileNumberError'   // added mobile
+    };
+
+    // Helper to show field error (works like single badge)
+    function showEditFieldError(errorId, message) {
+        const errorDiv = document.getElementById(errorId);
+        if (errorDiv) {
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+        // Also highlight the input
+        const inputId = errorId.replace('Error', '');
+        const inputEl = document.getElementById(inputId);
+        if (inputEl) inputEl.style.borderColor = '#e74c3c';
+    }
+
+    function resetEditForm() {
+        document.getElementById('editGlobalError').style.display = 'none';
+        document.getElementById('editGlobalSuccess').style.display = 'none';
+        Object.values(editFieldErrorMap).forEach(id => {
+            const el = document.getElementById(id);
+            if (el) { el.textContent = ''; el.style.display = 'none'; }
+        });
+        ['editFirstName', 'editEmail', 'editTicketType', 'editMobileNumber',
+            'editCountryResidence', 'editNationality'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.borderColor = '';
+            });
+    }
+
+    function showEditGlobalError(msg) {
+        const el = document.getElementById('editGlobalError');
+        document.getElementById('editGlobalErrorMsg').textContent = msg;
+        el.style.display = 'block';
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function getCsrfToken() {
+        return document.cookie.split('; ')
+            .find(r => r.startsWith('csrftoken'))
+            ?.split('=')[1] || '';
+    }
+
+    // ── Open modal when edit button is clicked ──────────────────
+    document.querySelectorAll('.btn-action-table.edit').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const row = this.closest('tr');
+            const attendeeId = row.dataset.attendeeId;
+            document.getElementById('editAttendeeId').value = attendeeId;
+            resetEditForm();
+
+            fetch(`/get-attendee/${attendeeId}/`)
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.success) {
+                        alert('Could not load attendee data.');
+                        return;
+                    }
+                    pendingAttendeeData = data.attendee;
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('editBadgeModal')).show();
+                })
+                .catch(() => alert('Network error. Please try again.'));
+        });
+    });
+
+    // ── Initialise Select2 and intl-tel-input when modal opens ──
+    $('#editBadgeModal').on('shown.bs.modal', function () {
+        // Destroy previous instances
+        if ($('#editCountryResidence').hasClass('select2-hidden-accessible')) $('#editCountryResidence').select2('destroy');
+        if ($('#editNationality').hasClass('select2-hidden-accessible')) $('#editNationality').select2('destroy');
+
+        populateEditSelect('editCountryResidence', false);
+        populateEditSelect('editNationality', true);
+
+        $('#editCountryResidence, #editNationality').select2({
+            theme: 'bootstrap-5',
+            dropdownParent: $('#editBadgeModal'),
+            allowClear: true,
+            placeholder: 'Select',
+            templateResult: editCountryTemplate,
+            templateSelection: editCountrySelection,
+            width: '100%'
+        });
+
+        // Set selected values from pending data
+        if (pendingAttendeeData) {
+            const a = pendingAttendeeData;
+            $('#editCountryResidence').val(a.country_of_residence).trigger('change');
+            $('#editNationality').val(a.nationality).trigger('change');
+        }
+
+        // Initialise intl-tel-input (same as single badge)
+        const mobileInput = document.getElementById('editMobileNumber');
+        if (mobileInput) {
+            // Destroy previous instance cleanly
+            if (mobileInput.itiInstance) {
+                mobileInput.itiInstance.destroy();
+                mobileInput.itiInstance = null;
+            }
+            const iti = window.intlTelInput(mobileInput, {
+                initialCountry: "ae",
+                preferredCountries: ["ae", "sa", "kw", "qa", "bh", "om", "in", "pk", "gb", "us"],
+                separateDialCode: true,
+                formatOnDisplay: true,
+                autoPlaceholder: "aggressive",
+                utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@23.1.0/build/js/utils.js"
+            });
+            mobileInput.itiInstance = iti;
+        }
+
+        // Populate form fields (including mobile via ITI)
+        if (pendingAttendeeData) {
+            const a = pendingAttendeeData;
+            document.getElementById('editFirstName').value = a.first_name || '';
+            document.getElementById('editLastName').value = a.last_name || '';
+            document.getElementById('editJobTitle').value = a.job_title || '';
+            document.getElementById('editCompanyName').value = a.company_name || '';
+            document.getElementById('editEmail').value = a.email || '';
+            document.getElementById('editTicketType').value = a.ticket_type || '';
+            document.getElementById('editStatus').value = a.status || 'PENDING';
+
+            const mobileInputEl = document.getElementById('editMobileNumber');
+            if (mobileInputEl && mobileInputEl.itiInstance && a.mobile_number) {
+                // Wait for utils to load before setting number, so isValidNumber() works correctly
+                mobileInputEl.itiInstance.promise.then(() => {
+                    mobileInputEl.itiInstance.setNumber(a.mobile_number);
+                });
+            } else if (mobileInputEl) {
+                mobileInputEl.value = a.mobile_number || '';
+            }
+        }
+    });
+
+    // ── SAVE BUTTON – exact validation logic from single badge ──
+    document.getElementById('saveEditBtn').addEventListener('click', function () {
+        // Clear previous errors
+        resetEditForm();
+
+        const attendeeId = document.getElementById('editAttendeeId').value;
+        const mobileInput = document.getElementById('editMobileNumber');
+        const iti = mobileInput?.itiInstance;
+
+        // Mobile validation – exactly as in single badge
+        let mobileNumber = '';
+// Use getNumber() to check if anything was actually entered,
+// since mobileInput.value may only contain local digits without the dial code
+const rawE164 = iti ? iti.getNumber() : mobileInput.value.trim();
+if (rawE164 && rawE164.replace(/[+\s]/g, '') !== '') {
+    if (!iti) {
+        const phoneRegex = /^[0-9+\-\s()]{8,20}$/;
+        if (!phoneRegex.test(mobileInput.value.trim())) {
+            showEditFieldError('editMobileNumberError', 'Invalid mobile number format.');
+            return;
+        }
+        mobileNumber = mobileInput.value.trim();
+    } else {
+        if (!iti.isValidNumber()) {
+            const errorCode = iti.getValidationError();
+            let message = "Invalid mobile number.";
+            if (errorCode === 0) message = "Invalid number.";
+            else if (errorCode === 1) message = "Invalid country code.";
+            else if (errorCode === 2) message = "Number too short.";
+            else if (errorCode === 3) message = "Number too long.";
+            showEditFieldError('editMobileNumberError', message);
+            return;
+        }
+        mobileNumber = iti.getNumber();
+    }
+}
+
+        // Build payload
+        const payload = {
+            first_name: document.getElementById('editFirstName').value.trim(),
+            last_name: document.getElementById('editLastName').value.trim(),
+            job_title: document.getElementById('editJobTitle').value.trim(),
+            company_name: document.getElementById('editCompanyName').value.trim(),
+            email: document.getElementById('editEmail').value.trim(),
+            mobile_number: mobileNumber,
+            country_of_residence: $('#editCountryResidence').val(),
+            nationality: $('#editNationality').val(),
+            ticket_type: document.getElementById('editTicketType').value,
+            status: document.getElementById('editStatus').value,
+        };
+
+        // Show spinner
+        document.getElementById('saveEditBtnText').style.display = 'none';
+        document.getElementById('saveEditBtnSpinner').style.display = 'inline';
+
+        fetch(`/update-attendee/${attendeeId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken(),
+            },
+            body: JSON.stringify(payload),
+        })
+            .then(r => r.json().then(data => ({ ok: r.ok, body: data })))
+            .then(({ ok, body }) => {
+                if (!body.success) {
+                    if (typeof body.errors === 'string') {
+                        showEditGlobalError(body.errors);
+                    } else {
+                        Object.entries(body.errors).forEach(([field, msg]) => {
+                            const errId = editFieldErrorMap[field];
+                            if (errId) showEditFieldError(errId, msg);
+                        });
+                    }
+                    return;
+                }
+
+                // Success – show success modal and close edit modal
+                const editModalEl = document.getElementById('editBadgeModal');
+                const editModal = bootstrap.Modal.getOrCreateInstance(editModalEl);
+                document.getElementById('badgeSuccessMsg').innerText = body.message || 'Registration updated successfully.';
+
+                editModalEl.addEventListener('hidden.bs.modal', function handler() {
+                    editModalEl.removeEventListener('hidden.bs.modal', handler);
+                    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+                    document.body.classList.remove('modal-open');
+                    document.body.style.removeProperty('overflow');
+                    document.body.style.removeProperty('padding-right');
+                    setTimeout(() => {
+                        const successModalEl = document.getElementById('badgeSuccessModal');
+                        if (successModalEl) {
+                            bootstrap.Modal.getOrCreateInstance(successModalEl).show();
+                        } else {
+                            location.reload();
+                        }
+                    }, 100);
+                });
+                editModal.hide();
+            })
+            .catch(() => showEditGlobalError('Network error. Please try again.'))
+            .finally(() => {
+                document.getElementById('saveEditBtnText').style.display = 'inline';
+                document.getElementById('saveEditBtnSpinner').style.display = 'none';
+            });
+    });
+
+
+    // ── Helpers ───────────────────────────────────────────────────────────────────
+    function resetEditForm() {
+        document.getElementById('editGlobalError').style.display = 'none';
+        document.getElementById('editGlobalSuccess').style.display = 'none';
+
+        // Reset button state
+        const saveBtnText = document.getElementById('saveEditBtnText');
+        const saveBtnSpinner = document.getElementById('saveEditBtnSpinner');
+        if (saveBtnText) saveBtnText.style.display = 'inline';
+        if (saveBtnSpinner) saveBtnSpinner.style.display = 'none';
+
+        // Clear all field errors
+        Object.values(editFieldErrorMap).forEach(id => {
+            const el = document.getElementById(id);
+            if (el) { el.textContent = ''; el.style.display = 'none'; }
+        });
+        // Clear mobile error specifically
+        const mobileError = document.getElementById('editMobileNumberError');
+        if (mobileError) { mobileError.textContent = ''; mobileError.style.display = 'none'; }
+
+        // Reset border colors
+        ['editFirstName', 'editEmail', 'editTicketType', 'editMobileNumber'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.borderColor = '';
+        });
+    }
+
+    function showEditGlobalError(msg) {
+        const el = document.getElementById('editGlobalError');
+        document.getElementById('editGlobalErrorMsg').textContent = msg;
+        el.style.display = 'block';
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function showEditGlobalSuccess(msg) {
+        const el = document.getElementById('editGlobalSuccess');
+        document.getElementById('editGlobalSuccessMsg').textContent = msg;
+        el.style.display = 'block';
+    }
+
+    function getCsrfToken() {
+        return document.cookie.split('; ')
+            .find(r => r.startsWith('csrftoken'))
+            ?.split('=')[1] || '';
+    }
+
+    // ═══════════════════════════════════════════
+    //  DELETE REGISTRATION
+    // ═══════════════════════════════════════════
+    let deleteTargetId = null;
+    let deleteTargetRow = null;
+
+    // ── Open confirmation modal on delete button click ────────────────────────────
+    document.querySelectorAll('.btn-action-table.delete').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const row = this.closest('tr');
+            const attendeeId = row.dataset.attendeeId;
+            const name = row.querySelector('.name')?.textContent?.trim() || 'this record';
+
+            deleteTargetId = attendeeId;
+            deleteTargetRow = row;
+
+            // Show name in modal for clarity
+            document.getElementById('deleteTargetName').textContent = name;
+
+            // Reset button state
+            document.getElementById('deleteBtnText').style.display = 'inline';
+            document.getElementById('deleteBtnSpinner').style.display = 'none';
+            document.getElementById('confirmDeleteBtn').disabled = false;
+
+            bootstrap.Modal.getOrCreateInstance(
+                document.getElementById('deleteModal')
+            ).show();
+        });
+    });
+
+    // ── Confirm delete ─────────────────────────────────────────────────────────────
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function () {
+        if (!deleteTargetId) return;
+
+        // Show spinner
+        document.getElementById('deleteBtnText').style.display = 'none';
+        document.getElementById('deleteBtnSpinner').style.display = 'inline';
+        this.disabled = true;
+
+        fetch(`/delete-attendee/${deleteTargetId}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrfToken() },
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) {
+                    alert(data.error || 'Could not delete. Please try again.');
+                    return;
+                }
+
+                // Close modal
+                bootstrap.Modal.getInstance(
+                    document.getElementById('deleteModal')
+                ).hide();
+
+                // Remove row from table with a fade animation
+                if (deleteTargetRow) {
+                    deleteTargetRow.style.transition = 'opacity 0.3s ease';
+                    deleteTargetRow.style.opacity = '0';
+                    setTimeout(() => {
+                        deleteTargetRow.remove();
+                        deleteTargetId = null;
+                        deleteTargetRow = null;
+
+                        // Update "Showing X to Y of Z" count if visible
+                        updatePaginationInfo();
+                    }, 300);
+                }
+            })
+            .catch(() => alert('Network error. Please try again.'))
+            .finally(() => {
+                document.getElementById('deleteBtnText').style.display = 'inline';
+                document.getElementById('deleteBtnSpinner').style.display = 'none';
+                document.getElementById('confirmDeleteBtn').disabled = false;
+            });
+    });
+
+    // ── Decrement the "Showing X to Y of Z entries" count after delete ────────────
+    function updatePaginationInfo() {
+        const infoEl = document.querySelector('.pagination-info');
+        if (!infoEl) return;
+
+        // e.g. "Showing 1 to 10 of 42 entries"
+        const match = infoEl.textContent.match(/Showing (\d+) to (\d+) of (\d+)/);
+        if (!match) return;
+
+        const total = parseInt(match[3]) - 1;
+        const start = parseInt(match[1]);
+        const end = Math.max(start, parseInt(match[2]) - 1);
+
+        infoEl.textContent = `Showing ${start} to ${end} of ${total} entries`;
+    }
+
+    // ═══════════════════════════════════════════
+    //  FILTERS & PAGINATION
+    // ═══════════════════════════════════════════
+    $(document).ready(function () {
+        const searchInput = $('#searchKeyword');
+        const statusSelect = $('#filterStatus');
+        const ticketSelect = $('#filterTickets');
+        const pageSizeSelect = $('#pageSizeSelect');
+        const applyBtn = $('#applyFiltersBtn');
+        const clearBtn = $('#clearFiltersBtn');
+
+        // Pre-fill from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('search')) searchInput.val(urlParams.get('search'));
+        if (urlParams.has('status')) statusSelect.val(urlParams.get('status')).trigger('change');
+        if (urlParams.has('ticket_type')) ticketSelect.val(urlParams.get('ticket_type')).trigger('change');
+
+        function applyFilters() {
+            const params = new URLSearchParams();
+            const search = searchInput.val().trim();
+            const status = statusSelect.val();
+            const ticket = ticketSelect.val();
+            const pageSize = pageSizeSelect.val();
+
+            if (search) params.set('search', search);
+            if (status) params.set('status', status);
+            if (ticket) params.set('ticket_type', ticket);
+            if (pageSize && pageSize !== '10') params.set('page_size', pageSize);
+
+            window.location.href = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+        }
+
+        applyBtn.click(applyFilters);
+
+        searchInput.keypress(function (e) {
+            if (e.which == 13) {
+                applyFilters();
+            }
+        });
+
+        clearBtn.click(function () {
+            window.location.href = window.location.pathname;
+        });
+
+        pageSizeSelect.change(applyFilters);
+
+        // Handle pagination clicks to preserve filters
+        $('.pagination .page-link').click(function (e) {
+            const href = $(this).attr('href');
+            if (href && href.includes('page=')) {
+                e.preventDefault();
+                const urlParams = new URLSearchParams(window.location.search);
+                const linkParams = new URLSearchParams(href.substring(href.indexOf('?')));
+
+                // Update page parameter from the link
+                if (linkParams.has('page')) {
+                    urlParams.set('page', linkParams.get('page'));
+                }
+
+                window.location.href = window.location.pathname + '?' + urlParams.toString();
+            }
+        });
+    });
+    // Keep export link in sync with active filters
+    function syncExportLink() {
+        const params = new URLSearchParams(window.location.search);
+        // Drop pagination params — export should return ALL filtered rows
+        params.delete('page');
+        params.delete('page_size');
+        const qs = params.toString();
+        const exportBtn = document.getElementById('exportBtn');
+        if (exportBtn) {
+            exportBtn.href = '/export-registrations/' + (qs ? '?' + qs : '');
+        }
+    }
+    syncExportLink();
+</script>
+{% endblock %}

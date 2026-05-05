@@ -1,0 +1,51 @@
+======================================================
+  {{ event.name|upper }}  —  REGISTRATION REMINDER
+======================================================
+
+Hi {{ attendee.first_name }},
+
+Your registration for {{ event.name }} is still PENDING.
+
+Complete your registration now to secure your spot:
+
+  → {{ confirm_url }}
+
+------------------------------------------------------
+EVENT DETAILS
+------------------------------------------------------
+
+  Event   : {{ event.name }}
+  Date    : {{ event.start_date|date:"F j, Y" }}{% if event.end_date %} – {{ event.end_date|date:"F j, Y" }}{% endif %}
+
+  {% if event.venue %}
+  Venue   : {{ event.venue }}
+  {% endif %}
+  Type    : {{ attendee.get_attendee_type_display }}
+
+  Your status  : PENDING  (not yet confirmed)
+
+------------------------------------------------------
+WHAT HAPPENS NEXT
+------------------------------------------------------
+
+  1. Open your unique registration link above.
+  2. Review and accept the terms.
+  3. Submit — your status updates to Confirmed
+     and your digital badge will be issued.
+
+------------------------------------------------------
+
+This link is personal to you — please do not share it.
+
+Secure token  : {{ attendee.invite_token }}
+Registered as : {{ attendee.email }}
+
+Need help? Simply reply to this email.
+
+If you received this in error, you can safely ignore it.
+
+======================================================
+© {{ event.name }}
+This is an automated reminder sent hourly to attendees
+with a pending registration status.
+======================================================

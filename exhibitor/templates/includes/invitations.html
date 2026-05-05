@@ -1,0 +1,1032 @@
+<!-- ═══════════════════════════════════════════════════════════
+     SEND INVITATION MODAL
+═══════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="sendInvitationModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius:12px; overflow:hidden; border:none;">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title">
+                    <i class="fas fa-envelope me-2" style="color:#e74c3c;"></i>Send Invitations
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="padding:25px; background:#f8f9fa;">
+
+                <!-- Import from File Banner -->
+                <div style="background:#fff; border:1px solid #ddd; border-radius:10px; padding:18px 20px; margin-bottom:25px; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <h6 style="color:#333; margin:0 0 5px 0; font-size:15px; font-weight:600;">
+                            <i class="fas fa-file-upload me-2" style="color:#e74c3c;"></i>Import from File
+                        </h6>
+                        <p style="color:#666; margin:0; font-size:13px;">Upload a CSV or Excel file to import multiple contacts at once</p>
+                    </div>
+                    <input type="file" id="importFileInput" accept=".csv,.xlsx,.xls" style="display:none;">
+                    <button type="button" id="importFileBtn"
+                            style="background:#e74c3c; color:white; border:none; border-radius:8px; padding:8px 20px; font-weight:500; cursor:pointer;">
+                        <i class="fas fa-cloud-upload-alt me-2"></i>Upload
+                    </button>
+                </div>
+
+                <!-- Global alert -->
+                <div id="inviteAlert" style="display:none; border-radius:8px; padding:12px 16px; margin-bottom:18px; font-size:13px;"></div>
+
+                <!-- Manual Invitation Entries -->
+                <div id="invitationEntries" style="max-height:310px; overflow-y:auto; padding-right:6px;"></div>
+
+                <!-- Add Entry -->
+                <div class="text-center mt-3">
+                    <button type="button" id="addEntryBtn"
+                            style="background:#1a56db; color:white; border:none; border-radius:8px; padding:9px 22px; font-weight:500; cursor:pointer;">
+                        <i class="fas fa-plus me-2"></i>Add Another
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer border-top" style="background:white; padding:15px 25px; justify-content:space-between;">
+                <div>
+                    <button type="button" id="sendInviteBtn"
+                            style="background:linear-gradient(135deg,#e74c3c 0%,#c0392b 100%); color:white; border:none; border-radius:8px; padding:9px 22px; font-weight:500; margin-right:8px; cursor:pointer;">
+                        <i class="fas fa-paper-plane me-2"></i>Send Invitation
+                    </button>
+                    <button type="button" class="btn" data-bs-dismiss="modal"
+                            style="background:white; color:#333; border:1px solid #ddd; border-radius:8px; padding:9px 22px; font-weight:500;">
+                        <i class="fas fa-times me-2"></i>Close
+                    </button>
+                </div>
+                <span style="color:#888; font-size:13px;"><i class="fas fa-info-circle me-1"></i>All fields required</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     COLUMN MAPPING MODAL
+═══════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="mappingModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius:12px; overflow:hidden; border:none;">
+            <div class="modal-header" style="background:linear-gradient(135deg,#1a56db,#0c3a9e); color:white; padding:18px 25px;">
+                <div>
+                    <h5 class="modal-title mb-0"><i class="fas fa-columns me-2"></i>Map Your Columns</h5>
+                    <small style="opacity:.75; font-size:12px;">Tell us which column in your file maps to each field</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="padding:28px; background:#f8f9fa;">
+                <p style="color:#555; font-size:13px; margin-bottom:22px;">
+                    Match your file columns to our fields. Fields marked <span style="color:#e74c3c; font-weight:700;">*</span> are required.
+                    We've auto-detected the best matches — review and adjust if needed.
+                </p>
+                <div id="mappingRows" style="display:flex; flex-direction:column; gap:10px;"></div>
+            </div>
+            <div class="modal-footer" style="background:white; border-top:1px solid #eee; padding:15px 25px; justify-content:space-between; align-items:center;">
+                <span id="mappingFileInfo" style="color:#888; font-size:12px;"></span>
+                <div>
+                    <button type="button" class="btn" data-bs-dismiss="modal"
+                            style="border:1px solid #ddd; color:#333; border-radius:8px; padding:8px 18px; margin-right:8px; background:white;">
+                        Cancel
+                    </button>
+                    <button type="button" id="applyMappingBtn"
+                            style="background:linear-gradient(135deg,#1a56db,#0c3a9e); color:white; border:none; border-radius:8px; padding:9px 22px; font-weight:500; cursor:pointer;">
+                        <i class="fas fa-check me-2"></i>Apply &amp; Preview
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     BULK PREVIEW MODAL
+═══════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="bulkPreviewModal2" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content" style="border-radius:12px; overflow:hidden; border:none;">
+
+            <!-- Header -->
+            <div class="modal-header" style="background:linear-gradient(135deg,#1a56db,#0c3a9e); color:white; padding:18px 25px;">
+                <div>
+                    <h5 class="modal-title mb-0"><i class="fas fa-table me-2"></i>Preview &amp; Review</h5>
+                    <small id="invitePreviewSubtitle" style="opacity:.75; font-size:12px;"></small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <!-- Summary Bar -->
+            <div style="background:#fff; border-bottom:1px solid #e8ecf0; padding:13px 25px; display:flex; gap:24px; flex-wrap:wrap; align-items:center;">
+                <div style="display:flex; align-items:center; gap:7px;">
+                    <span style="width:10px;height:10px;background:#2ecc71;border-radius:50%;flex-shrink:0;"></span>
+                    <span style="font-size:13px; color:#333;">Valid: <strong id="inviteStatValid">0</strong></span>
+                </div>
+                <div style="display:flex; align-items:center; gap:7px;">
+                    <span style="width:10px;height:10px;background:#e74c3c;border-radius:50%;flex-shrink:0;"></span>
+                    <span style="font-size:13px; color:#333;">Invalid: <strong id="inviteStatInvalid">0</strong></span>
+                </div>
+                <div style="display:flex; align-items:center; gap:7px;">
+                    <span style="width:10px;height:10px;background:#f39c12;border-radius:50%;flex-shrink:0;"></span>
+                    <span style="font-size:13px; color:#333;">Duplicates: <strong id="inviteStatDupe">0</strong></span>
+                </div>
+                <div style="display:flex; align-items:center; gap:7px;">
+                    <span style="width:10px;height:10px;background:#95a5a6;border-radius:50%;flex-shrink:0;"></span>
+                    <span style="font-size:13px; color:#333;">Total: <strong id="inviteStatTotal">0</strong></span>
+                </div>
+                <!-- Filter pills -->
+                <div style="margin-left:auto; display:flex; gap:7px;">
+                    <button class="preview-filter-btn" data-filter="all"
+                            style="border:1px solid #1a56db; background:#1a56db; color:white; border-radius:20px; padding:4px 14px; font-size:12px; cursor:pointer; font-weight:500;">All</button>
+                    <button class="preview-filter-btn" data-filter="valid"
+                            style="border:1px solid #2ecc71; color:#27ae60; background:white; border-radius:20px; padding:4px 14px; font-size:12px; cursor:pointer; font-weight:500;">Valid</button>
+                    <button class="preview-filter-btn" data-filter="invalid"
+                            style="border:1px solid #e74c3c; color:#c0392b; background:white; border-radius:20px; padding:4px 14px; font-size:12px; cursor:pointer; font-weight:500;">Errors Only</button>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div style="max-height:380px; overflow-y:auto;">
+                <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                    <thead>
+                        <tr style="background:#f0f4ff; position:sticky; top:0; z-index:2;">
+                            <th style="padding:11px 14px; text-align:left; color:#555; font-weight:600; border-bottom:2px solid #dde3f0; white-space:nowrap;">#</th>
+                            <th style="padding:11px 14px; text-align:left; color:#555; font-weight:600; border-bottom:2px solid #dde3f0; white-space:nowrap;">First Name</th>
+                            <th style="padding:11px 14px; text-align:left; color:#555; font-weight:600; border-bottom:2px solid #dde3f0; white-space:nowrap;">Last Name</th>
+                            <th style="padding:11px 14px; text-align:left; color:#555; font-weight:600; border-bottom:2px solid #dde3f0; white-space:nowrap;">Email</th>
+                            <th style="padding:11px 14px; text-align:left; color:#555; font-weight:600; border-bottom:2px solid #dde3f0; white-space:nowrap;">Ticket</th>
+                            <th style="padding:11px 14px; text-align:left; color:#555; font-weight:600; border-bottom:2px solid #dde3f0; white-space:nowrap;">Status</th>
+                            <th style="padding:11px 14px; text-align:left; color:#555; font-weight:600; border-bottom:2px solid #dde3f0;">Issues / Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invitePreviewTableBody"></tbody>
+                </table>
+                <div id="invitePreviewEmpty" style="text-align:center; padding:40px; color:#aaa; display:none;">
+                    <i class="fas fa-filter" style="font-size:28px; margin-bottom:10px; display:block;"></i>
+                    No rows match this filter.
+                </div>
+            </div>
+
+            <!-- Pagination bar -->
+            <div style="background:#fff; border-top:1px solid #eee; padding:11px 25px; display:flex; justify-content:space-between; align-items:center;">
+                <span id="invitePaginationInfo" style="font-size:12px; color:#777;"></span>
+                <div id="invitePaginationBtns" style="display:flex; gap:5px;"></div>
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer" style="background:#f8f9fa; border-top:1px solid #eee; padding:14px 25px; justify-content:space-between; align-items:center;">
+                <button type="button" id="backToMappingBtn"
+                        style="background:white; color:#333; border:1px solid #ddd; border-radius:8px; padding:8px 18px; cursor:pointer;">
+                    <i class="fas fa-arrow-left me-2"></i>Back
+                </button>
+                <div style="display:flex; align-items:center; gap:14px;">
+                    <span id="inviteSubmitHint" style="font-size:12px; color:#666; font-weight:500;"></span>
+                    <button type="button" id="bulkSendBtn"
+                            style="background:linear-gradient(135deg,#e74c3c 0%,#c0392b 100%); color:white; border:none; border-radius:8px; padding:10px 26px; font-weight:600; cursor:pointer; font-size:14px;">
+                        <i class="fas fa-paper-plane me-2"></i>Send Valid Invitations
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     RESULTS MODAL
+═══════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="resultsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+        <div class="modal-content" style="border-radius:14px; overflow:hidden; border:none;">
+            <div class="modal-header" style="background:linear-gradient(135deg,#1a56db,#0c3a9e); color:white; padding:18px 24px;">
+                <h5 class="modal-title"><i class="fas fa-chart-bar me-2"></i>Invitation Results</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="padding:28px 24px;">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:22px;">
+                    <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:20px; text-align:center;">
+                        <div style="font-size:40px; font-weight:700; color:#16a34a;" id="resSent">0</div>
+                        <div style="font-size:12px; color:#166534; margin-top:4px; font-weight:600;">
+                            <i class="fas fa-check-circle me-1"></i>Sent
+                        </div>
+                    </div>
+                    <div style="background:#fdf4ff; border:1px solid #e9d5ff; border-radius:12px; padding:20px; text-align:center;">
+                        <div style="font-size:40px; font-weight:700; color:#7c3aed;" id="resSkipped">0</div>
+                        <div style="font-size:12px; color:#5b21b6; margin-top:4px; font-weight:600;">
+                            <i class="fas fa-forward me-1"></i>Skipped
+                        </div>
+                    </div>
+                </div>
+                <div id="resBreakdown" style="background:#f8f9fa; border-radius:10px; padding:16px; font-size:13px; color:#555; line-height:2;"></div>
+            </div>
+            <div class="modal-footer" style="justify-content:center; background:#f8f9fa; border-top:1px solid #eee;">
+                <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     SUCCESS MODAL
+═══════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="successModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:360px;">
+        <div class="modal-content" style="border-radius:12px; overflow:hidden; border:none; text-align:center;">
+            <div class="modal-body" style="padding:36px 28px 28px;">
+                <div style="width:60px; height:60px; background:#f0fdf4; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 18px;">
+                    <i class="fas fa-check" style="font-size:26px; color:#16a34a;"></i>
+                </div>
+                <h5 style="color:#1e293b; font-weight:600; font-size:18px; margin-bottom:8px;">Invitations Sent!</h5>
+                <p style="color:#64748b; font-size:14px; margin-bottom:24px;">
+                    <strong id="successModalCount" style="color:#1e293b;">0</strong> invitation(s) have been sent successfully.
+                </p>
+                <button type="button" id="successModalOkBtn"
+                        style="background:#16a34a; color:white; border:none; border-radius:8px; padding:10px 0; font-weight:600; font-size:14px; cursor:pointer; width:100%;">
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCRIPTS
+═══════════════════════════════════════════════════════════ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+(function () {
+'use strict';
+
+/* ── CONSTANTS ─────────────────────────────────────────────── */
+const OUR_FIELDS = [
+    { key: 'first_name',  label: 'First Name',  required: true  },
+    { key: 'last_name',   label: 'Last Name',   required: false },
+    { key: 'email',       label: 'Email',       required: true  },
+    { key: 'ticket_type', label: 'Ticket Type', required: true  },
+];
+const VALID_TICKETS = ['VIP', 'EXHIBITOR', 'VISITOR'];
+const EMAIL_RE      = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const NAME_RE       = /^[a-zA-Z \-'.]+$/;
+const PAGE_SIZE     = 10;
+
+/* ── STATE ─────────────────────────────────────────────────── */
+let fileHeaders   = [];
+let fileRows      = [];
+let parsedData    = [];
+let currentFilter = 'all';
+let currentPage   = 1;
+
+/* ── UTILS ─────────────────────────────────────────────────── */
+function getCsrf() {
+    return document.cookie.split('; ').find(r => r.startsWith('csrftoken'))?.split('=')[1] || '';
+}
+function getModal(id) {
+    return bootstrap.Modal.getOrCreateInstance(document.getElementById(id));
+}
+function normaliseTicket(val) {
+    if (!val) return '';
+    const v = String(val).toUpperCase().trim();
+    if (v.includes('VIP'))       return 'VIP';
+    if (v.includes('EXHIBITOR')) return 'EXHIBITOR';
+    if (v.includes('VISITOR'))   return 'VISITOR';
+    return v;
+}
+function escHtml(str) {
+    return String(str || '')
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── SHARED VALIDATION ─────────────────────────────────────── */
+function validateRowData(first_name, last_name, email, ticket_type, ticket_raw, otherEmails) {
+    const issues = [];
+
+    // first_name
+    if (!first_name) {
+        issues.push('Missing first name');
+    } else if (first_name.length < 2) {
+        issues.push('First name must be at least 2 characters');
+    } else if (!NAME_RE.test(first_name)) {
+        issues.push('First name should only contain letters');
+    }
+
+    // last_name (optional, validated only if provided)
+    if (last_name) {
+        if (last_name.length < 2) {
+            issues.push('Last name must be at least 2 characters');
+        } else if (!NAME_RE.test(last_name)) {
+            issues.push('Last name should only contain letters');
+        }
+    }
+
+    // email
+    if (!email) {
+        issues.push('Missing email');
+    } else if (!EMAIL_RE.test(email)) {
+        issues.push('Invalid email format');
+    }
+
+    // ticket_type
+    if (!ticket_type) {
+        issues.push('Missing ticket type');
+    } else if (!VALID_TICKETS.includes(ticket_type)) {
+        issues.push('Unknown ticket: "' + (ticket_raw||ticket_type) + '" (use VIP / EXHIBITOR / VISITOR)');
+    }
+
+    // duplicate against other rows
+    let isDupe = false;
+    if (email && EMAIL_RE.test(email) && otherEmails && otherEmails.includes(email)) {
+        issues.push('Duplicate email in this file');
+        isDupe = true;
+    }
+
+    return { issues, isDupe, valid: issues.length === 0 };
+}
+
+/* ── SUCCESS MODAL ─────────────────────────────────────────── */
+function openSuccessModal(count) {
+    document.getElementById('successModalCount').textContent = count;
+    getModal('successModal').show();
+}
+document.getElementById('successModalOkBtn').addEventListener('click', () => {
+    location.reload();
+});
+
+/* ══════════════════════════════════════════════════════════════
+   MANUAL ROWS
+══════════════════════════════════════════════════════════════ */
+function createEntryRow() {
+    const row = document.createElement('div');
+    row.className = 'invitation-entry-row';
+    row.style.cssText = 'display:flex; gap:10px; align-items:flex-start; margin-bottom:12px; flex-wrap:wrap;';
+    row.innerHTML = `
+        <div style="flex:1; min-width:110px;">
+            <input type="text" class="form-control inv-first-name" placeholder="First Name"
+                   style="border-radius:8px; border:1.5px solid #ddd; padding:10px 13px; width:100%;">
+            <div class="inv-err-first" style="color:#e74c3c; font-size:11px; margin-top:3px; display:none;"></div>
+        </div>
+        <div style="flex:1; min-width:110px;">
+            <input type="text" class="form-control inv-last-name" placeholder="Last Name"
+                   style="border-radius:8px; border:1.5px solid #ddd; padding:10px 13px; width:100%;">
+            <div class="inv-err-last" style="color:#e74c3c; font-size:11px; margin-top:3px; display:none;"></div>
+        </div>
+        <div style="flex:1.4; min-width:150px;">
+            <input type="email" class="form-control inv-email" placeholder="Email Address"
+                   style="border-radius:8px; border:1.5px solid #ddd; padding:10px 13px; width:100%;">
+            <div class="inv-err-email" style="color:#e74c3c; font-size:11px; margin-top:3px; display:none;"></div>
+        </div>
+        <div style="flex:1; min-width:130px;">
+            <select class="form-select inv-ticket"
+                    style="border-radius:8px; border:1.5px solid #ddd; padding:10px 13px; width:100%;">
+                <option value="">Select Ticket</option>
+                <option value="VIP">VIP Pass</option>
+                <option value="EXHIBITOR">Exhibitor Pass</option>
+                <option value="VISITOR">Visitor Pass</option>
+            </select>
+            <div class="inv-err-ticket" style="color:#e74c3c; font-size:11px; margin-top:3px; display:none;"></div>
+        </div>
+        <button type="button" class="remove-entry-btn"
+                style="background:none; border:none; color:#e74c3c; font-size:17px; cursor:pointer; padding:10px 4px; flex-shrink:0;">
+            <i class="fas fa-trash-alt"></i>
+        </button>`;
+    return row;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('invitationEntries').appendChild(createEntryRow());
+});
+
+document.getElementById('sendInvitationModal').addEventListener('show.bs.modal', () => {
+    const c = document.getElementById('invitationEntries');
+    c.innerHTML = '';
+    c.appendChild(createEntryRow());
+    hideAlert();
+});
+
+document.getElementById('addEntryBtn').addEventListener('click', () => {
+    const c = document.getElementById('invitationEntries');
+    c.appendChild(createEntryRow());
+    c.scrollTop = c.scrollHeight;
+});
+
+document.getElementById('invitationEntries').addEventListener('click', e => {
+    const btn = e.target.closest('.remove-entry-btn');
+    if (!btn) return;
+    if (document.querySelectorAll('.invitation-entry-row').length === 1) return;
+    btn.closest('.invitation-entry-row').remove();
+});
+
+/* Manual send */
+document.getElementById('sendInviteBtn').addEventListener('click', () => {
+    hideAlert();
+    const entries = [];
+    let allOk = true;
+
+    document.querySelectorAll('.invitation-entry-row').forEach(row => {
+        const fEl = row.querySelector('.inv-first-name');
+        const lEl = row.querySelector('.inv-last-name');
+        const eEl = row.querySelector('.inv-email');
+        const tEl = row.querySelector('.inv-ticket');
+        const ef  = row.querySelector('.inv-err-first');
+        const el  = row.querySelector('.inv-err-last');
+        const ee  = row.querySelector('.inv-err-email');
+        const et  = row.querySelector('.inv-err-ticket');
+
+        [fEl, lEl, eEl, tEl].forEach(el => el.style.borderColor = '#ddd');
+        [ef, el, ee, et].forEach(el => { if(el){ el.textContent = ''; el.style.display = 'none'; } });
+
+        const first  = fEl.value.trim();
+        const last   = lEl.value.trim();
+        const email  = eEl.value.trim();
+        const ticket = tEl.value;
+
+        let ok = true;
+
+        // first_name
+        if (!first) {
+            fEl.style.borderColor='#e74c3c'; ef.textContent='Required.'; ef.style.display='block'; ok=false;
+        } else if (first.length < 2) {
+            fEl.style.borderColor='#e74c3c'; ef.textContent='At least 2 characters.'; ef.style.display='block'; ok=false;
+        } else if (!NAME_RE.test(first)) {
+            fEl.style.borderColor='#e74c3c'; ef.textContent='Letters only.'; ef.style.display='block'; ok=false;
+        }
+
+        // last_name (optional but validated if filled)
+        if (last) {
+            if (last.length < 2) {
+                lEl.style.borderColor='#e74c3c';
+                if(el){ el.textContent='At least 2 characters.'; el.style.display='block'; }
+                ok=false;
+            } else if (!NAME_RE.test(last)) {
+                lEl.style.borderColor='#e74c3c';
+                if(el){ el.textContent='Letters only.'; el.style.display='block'; }
+                ok=false;
+            }
+        }
+
+        // email
+        if (!email) {
+            eEl.style.borderColor='#e74c3c'; ee.textContent='Required.'; ee.style.display='block'; ok=false;
+        } else if (!EMAIL_RE.test(email)) {
+            eEl.style.borderColor='#e74c3c'; ee.textContent='Invalid email.'; ee.style.display='block'; ok=false;
+        }
+
+        // ticket
+        if (!ticket) {
+            tEl.style.borderColor='#e74c3c'; et.textContent='Required.'; et.style.display='block'; ok=false;
+        }
+
+        if (ok) entries.push({ first_name:first, last_name:last, email, ticket_type:ticket });
+        else allOk = false;
+    });
+
+    if (!allOk) { showAlert('danger','<i class="fas fa-exclamation-triangle me-2"></i>Please fix the highlighted fields.'); return; }
+
+    const btn = document.getElementById('sendInviteBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Sending...';
+
+    fetch('/send-invitations/', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+        body: JSON.stringify({ entries }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            getModal('sendInvitationModal').hide();
+            setTimeout(() => openSuccessModal(entries.length), 420);
+        } else {
+            showAlert('danger', '<i class="fas fa-times-circle me-2"></i>' + (data.error || 'Something went wrong.'));
+        }
+    })
+    .catch(() => showAlert('danger','<i class="fas fa-wifi me-2"></i>Network error. Please try again.'))
+    .finally(() => { btn.disabled=false; btn.innerHTML='<i class="fas fa-paper-plane me-2"></i>Send Invitation'; });
+});
+
+/* ══════════════════════════════════════════════════════════════
+   FILE UPLOAD & PARSING
+══════════════════════════════════════════════════════════════ */
+document.getElementById('importFileBtn').addEventListener('click', () => {
+    document.getElementById('importFileInput').click();
+});
+
+document.getElementById('importFileInput').addEventListener('change', function () {
+    if (!this.files.length) return;
+    const file = this.files[0];
+    this.value = '';
+
+    const reader = new FileReader();
+    reader.onload = e => {
+        try {
+            const wb   = XLSX.read(e.target.result, { type: 'array' });
+            const ws   = wb.Sheets[wb.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+            if (!rows.length) { showAlert('danger','<i class="fas fa-times-circle me-2"></i>File appears to be empty.'); return; }
+
+            fileHeaders = Object.keys(rows[0]);
+            fileRows    = rows;
+
+            buildMappingModal(file.name, rows.length);
+            getModal('sendInvitationModal').hide();
+            setTimeout(() => getModal('mappingModal').show(), 420);
+        } catch (err) {
+            showAlert('danger','<i class="fas fa-times-circle me-2"></i>Could not parse file — please use CSV or XLSX.');
+        }
+    };
+    reader.readAsArrayBuffer(file);
+});
+
+/* ══════════════════════════════════════════════════════════════
+   MAPPING MODAL
+══════════════════════════════════════════════════════════════ */
+function buildMappingModal(fileName, rowCount) {
+    document.getElementById('mappingFileInfo').textContent =
+        '📄 ' + fileName + '  ·  ' + rowCount + ' data rows  ·  ' + fileHeaders.length + ' columns detected';
+
+    const container = document.getElementById('mappingRows');
+    container.innerHTML = '';
+
+    OUR_FIELDS.forEach(field => {
+        const autoMatch = fileHeaders.find(h => {
+            const hn = h.toLowerCase().replace(/[\s_\-]/g,'');
+            const fk = field.key.toLowerCase().replace(/[\s_\-]/g,'');
+            return hn === fk || hn.includes(fk) || fk.includes(hn);
+        }) || '';
+
+        const div = document.createElement('div');
+        div.style.cssText = 'display:grid; grid-template-columns:1fr 44px 1fr; gap:12px; align-items:center; background:white; border:1px solid #e2e8f0; border-radius:10px; padding:14px 18px;';
+        div.innerHTML =
+            '<div>' +
+                '<div style="font-weight:600; font-size:14px; color:#1e293b;">' +
+                    field.label + (field.required ? ' <span style="color:#e74c3c;">*</span>' : '') +
+                '</div>' +
+                '<div style="font-size:11px; color:#94a3b8; margin-top:3px;">' +
+                    (field.required ? 'Required field' : 'Optional') +
+                '</div>' +
+            '</div>' +
+            '<div style="text-align:center; font-size:18px; color:#94a3b8;">→</div>' +
+            '<select data-field="' + field.key + '" style="border:1.5px solid ' + (autoMatch ? '#2ecc71' : '#e2e8f0') + '; border-radius:8px; padding:9px 12px; font-size:13px; width:100%; outline:none; background:white; cursor:pointer;">' +
+                '<option value="">— Skip this field —</option>' +
+                fileHeaders.map(h => '<option value="' + escHtml(h) + '"' + (h === autoMatch ? ' selected' : '') + '>' + escHtml(h) + '</option>').join('') +
+            '</select>';
+
+        const sel = div.querySelector('select');
+        sel.addEventListener('change', () => {
+            sel.style.borderColor = sel.value ? '#2ecc71' : '#e2e8f0';
+        });
+        container.appendChild(div);
+    });
+}
+
+document.getElementById('applyMappingBtn').addEventListener('click', () => {
+    const mapping = {};
+    document.querySelectorAll('#mappingRows select').forEach(sel => {
+        if (sel.value) mapping[sel.dataset.field] = sel.value;
+    });
+
+    const missing = OUR_FIELDS.filter(f => f.required && !mapping[f.key]).map(f => f.label);
+    if (missing.length) {
+        alert('Please map these required field(s): ' + missing.join(', '));
+        return;
+    }
+
+    applyMappingAndBuildPreview(mapping);
+});
+
+function applyMappingAndBuildPreview(mapping) {
+    const seenEmails = {};
+
+    parsedData = fileRows.map((row, idx) => {
+        const first_name  = String(row[mapping.first_name]  || '').trim();
+        const last_name   = String(row[mapping.last_name]   || '').trim();
+        const email       = String(row[mapping.email]       || '').trim().toLowerCase();
+        const ticket_raw  = String(row[mapping.ticket_type] || '').trim();
+        const ticket_type = normaliseTicket(ticket_raw);
+
+        const issues = [];
+
+        if (!first_name) {
+            issues.push('Missing first name');
+        } else if (first_name.length < 2) {
+            issues.push('First name must be at least 2 characters');
+        } else if (!NAME_RE.test(first_name)) {
+            issues.push('First name should only contain letters');
+        }
+
+        if (last_name) {
+            if (last_name.length < 2) {
+                issues.push('Last name must be at least 2 characters');
+            } else if (!NAME_RE.test(last_name)) {
+                issues.push('Last name should only contain letters');
+            }
+        }
+
+        if (!email) {
+            issues.push('Missing email');
+        } else if (!EMAIL_RE.test(email)) {
+            issues.push('Invalid email format');
+        }
+
+        if (!ticket_type) {
+            issues.push('Missing ticket type');
+        } else if (!VALID_TICKETS.includes(ticket_type)) {
+            issues.push('Unknown ticket: "' + ticket_raw + '" (use VIP / EXHIBITOR / VISITOR)');
+        }
+
+        let isDupe = false;
+        if (email && EMAIL_RE.test(email)) {
+            if (seenEmails[email]) { issues.push('Duplicate email in this file'); isDupe = true; }
+            else seenEmails[email] = true;
+        }
+
+        return { _row: idx + 1, first_name, last_name, email, ticket_type, _issues: issues, _valid: issues.length === 0, _isDupe: isDupe };
+    });
+
+    currentFilter = 'all';
+    currentPage   = 1;
+
+    getModal('mappingModal').hide();
+    setTimeout(() => {
+        renderSummaryBar();
+        renderPreviewTable();
+        getModal('bulkPreviewModal2').show();
+    }, 420);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SUMMARY BAR
+══════════════════════════════════════════════════════════════ */
+function renderSummaryBar() {
+    const valid   = parsedData.filter(r => r._valid).length;
+    const invalid = parsedData.filter(r => !r._valid).length;
+    const dupe    = parsedData.filter(r => r._isDupe).length;
+
+    document.getElementById('inviteStatValid').textContent   = valid;
+    document.getElementById('inviteStatInvalid').textContent = invalid;
+    document.getElementById('inviteStatDupe').textContent    = dupe;
+    document.getElementById('inviteStatTotal').textContent   = parsedData.length;
+    document.getElementById('invitePreviewSubtitle').textContent = parsedData.length + ' rows from file';
+    document.getElementById('inviteSubmitHint').textContent  =
+        valid ? ('✓ ' + valid + ' valid row(s) ready to send') : '⚠ No valid rows to send';
+    document.getElementById('inviteSubmitHint').style.color = valid ? '#16a34a' : '#dc2626';
+}
+
+function getFilteredData() {
+    if (currentFilter === 'valid')   return parsedData.filter(r => r._valid);
+    if (currentFilter === 'invalid') return parsedData.filter(r => !r._valid);
+    return parsedData;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   INLINE EDIT ROW
+══════════════════════════════════════════════════════════════ */
+const CELL_INPUT_STYLE = 'width:100%;padding:4px 7px;border:1.5px solid #ddd;border-radius:6px;font-size:12px;color:#1e293b;background:white;box-sizing:border-box;';
+
+function buildEditRow(tr, r, dataIndex) {
+    const ticketOpts = VALID_TICKETS
+        .map(t => '<option value="' + t + '"' + (r.ticket_type === t ? ' selected' : '') + '>' + t + '</option>')
+        .join('');
+
+    tr.style.background = '#fffbeb';
+
+    tr.innerHTML =
+        '<td style="padding:8px 10px;color:#aaa;font-size:12px;vertical-align:top;">' + r._row + '</td>' +
+
+        '<td style="padding:6px 8px;vertical-align:top;">' +
+            '<input class="ep-first" value="' + escHtml(r.first_name) + '" placeholder="First Name" style="' + CELL_INPUT_STYLE + '">' +
+            '<div class="ep-err ep-err-first" style="color:#dc2626;font-size:11px;margin-top:2px;display:none;"></div>' +
+        '</td>' +
+
+        '<td style="padding:6px 8px;vertical-align:top;">' +
+            '<input class="ep-last" value="' + escHtml(r.last_name) + '" placeholder="Last Name" style="' + CELL_INPUT_STYLE + '">' +
+            '<div class="ep-err ep-err-last" style="color:#dc2626;font-size:11px;margin-top:2px;display:none;"></div>' +
+        '</td>' +
+
+        '<td style="padding:6px 8px;vertical-align:top;">' +
+            '<input class="ep-email" value="' + escHtml(r.email) + '" placeholder="Email" style="' + CELL_INPUT_STYLE + 'font-family:monospace;">' +
+            '<div class="ep-err ep-err-email" style="color:#dc2626;font-size:11px;margin-top:2px;display:none;"></div>' +
+        '</td>' +
+
+        '<td style="padding:6px 8px;vertical-align:top;">' +
+            '<select class="ep-ticket" style="' + CELL_INPUT_STYLE + 'padding:5px 7px;">' +
+                '<option value="">Select...</option>' +
+                ticketOpts +
+            '</select>' +
+            '<div class="ep-err ep-err-ticket" style="color:#dc2626;font-size:11px;margin-top:2px;display:none;"></div>' +
+        '</td>' +
+
+        '<td style="padding:6px 8px;vertical-align:middle;">' +
+            '<span style="background:#fef9c3;color:#854d0e;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">Editing</span>' +
+        '</td>' +
+
+        '<td style="padding:6px 10px;vertical-align:middle;white-space:nowrap;">' +
+            '<button class="ep-done-btn" style="background:#16a34a;color:white;border:none;border-radius:6px;padding:5px 13px;font-size:12px;font-weight:600;cursor:pointer;margin-right:5px;">' +
+                '<i class="fas fa-check me-1"></i>Done' +
+            '</button>' +
+            '<button class="ep-cancel-btn" style="background:white;color:#555;border:1px solid #ddd;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;">' +
+                'Cancel' +
+            '</button>' +
+        '</td>';
+
+    /* ── Done click ── */
+    tr.querySelector('.ep-done-btn').addEventListener('click', () => {
+        const first     = tr.querySelector('.ep-first').value.trim();
+        const last      = tr.querySelector('.ep-last').value.trim();
+        const email     = tr.querySelector('.ep-email').value.trim().toLowerCase();
+        const ticketRaw = tr.querySelector('.ep-ticket').value;
+        const ticket    = normaliseTicket(ticketRaw);
+
+        /* reset inline error state */
+        tr.querySelectorAll('.ep-err').forEach(el => { el.textContent = ''; el.style.display = 'none'; });
+        tr.querySelectorAll('.ep-first,.ep-last,.ep-email,.ep-ticket').forEach(el => el.style.borderColor = '#ddd');
+
+        /* collect all OTHER rows' emails for dupe check */
+        const otherEmails = parsedData
+            .filter((_, i) => i !== dataIndex)
+            .map(d => d.email)
+            .filter(e => e && EMAIL_RE.test(e));
+
+        const { issues, isDupe, valid } = validateRowData(first, last, email, ticket, ticketRaw, otherEmails);
+
+        if (!valid) {
+            /* map issue messages to input + error div pairs */
+            const fieldMap = {
+                'Missing first name'                       : ['ep-first',  'ep-err-first'],
+                'First name must be at least 2 characters' : ['ep-first',  'ep-err-first'],
+                'First name should only contain letters'   : ['ep-first',  'ep-err-first'],
+                'Last name must be at least 2 characters'  : ['ep-last',   'ep-err-last'],
+                'Last name should only contain letters'    : ['ep-last',   'ep-err-last'],
+                'Missing email'                            : ['ep-email',  'ep-err-email'],
+                'Invalid email format'                     : ['ep-email',  'ep-err-email'],
+                'Duplicate email in this file'             : ['ep-email',  'ep-err-email'],
+                'Missing ticket type'                      : ['ep-ticket', 'ep-err-ticket'],
+            };
+
+            issues.forEach(msg => {
+                let pair = fieldMap[msg];
+                if (!pair && msg.indexOf('Unknown ticket') === 0) pair = ['ep-ticket','ep-err-ticket'];
+                if (!pair) return;
+                tr.querySelector('.' + pair[0]).style.borderColor = '#e74c3c';
+                const errEl = tr.querySelector('.' + pair[1]);
+                errEl.textContent = msg;
+                errEl.style.display = 'block';
+            });
+            return; /* stay in edit mode */
+        }
+
+        /* ✅ commit to parsedData */
+        parsedData[dataIndex] = Object.assign({}, parsedData[dataIndex], {
+            first_name : first,
+            last_name  : last,
+            email      : email,
+            ticket_type: ticket,
+            _issues    : [],
+            _valid     : true,
+            _isDupe    : false,
+        });
+
+        renderSummaryBar();
+        renderPreviewTable();
+    });
+
+    /* ── Cancel click ── */
+    tr.querySelector('.ep-cancel-btn').addEventListener('click', () => {
+        renderPreviewTable();
+    });
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PREVIEW TABLE
+══════════════════════════════════════════════════════════════ */
+function renderPreviewTable() {
+    const data     = getFilteredData();
+    const total    = data.length;
+    const pages    = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    if (currentPage > pages) currentPage = 1;
+
+    const start    = (currentPage - 1) * PAGE_SIZE;
+    const pageData = data.slice(start, start + PAGE_SIZE);
+
+    const tbody = document.getElementById('invitePreviewTableBody');
+    const empty = document.getElementById('invitePreviewEmpty');
+    tbody.innerHTML = '';
+
+    if (!pageData.length) {
+        empty.style.display = 'block';
+    } else {
+        empty.style.display = 'none';
+
+        pageData.forEach(r => {
+            const dataIndex = parsedData.indexOf(r);
+            const bg = r._valid ? '#ffffff' : '#fff8f8';
+
+            const statusPill = r._valid
+                ? '<span style="background:#dcfce7;color:#15803d;padding:3px 11px;border-radius:20px;font-size:11px;font-weight:700;">✓ Valid</span>'
+                : '<span style="background:#fee2e2;color:#dc2626;padding:3px 11px;border-radius:20px;font-size:11px;font-weight:700;">✗ Error</span>';
+
+            const ticketMap = { VIP:'VIP Pass', EXHIBITOR:'Exhibitor Pass', VISITOR:'Visitor Pass' };
+            const ticketDisplay = ticketMap[r.ticket_type] || (r.ticket_type || '<em style="color:#aaa">—</em>');
+
+            const issueText = r._issues.length
+                ? '<span style="color:#dc2626;font-size:12px;"><i class="fas fa-exclamation-triangle" style="margin-right:4px;"></i>' + escHtml(r._issues.join('; ')) + '</span>'
+                : '<span style="color:#16a34a;font-size:12px;"><i class="fas fa-check" style="margin-right:4px;"></i>—</span>';
+
+            const tr = document.createElement('tr');
+            tr.style.cssText = 'background:' + bg + '; border-bottom:1px solid #f0f0f0;';
+            tr.innerHTML =
+                '<td style="padding:10px 14px;color:#aaa;font-size:12px;">' + r._row + '</td>' +
+                '<td style="padding:10px 14px;font-weight:500;color:#1e293b;">' + (escHtml(r.first_name) || '<em style="color:#ddd">—</em>') + '</td>' +
+                '<td style="padding:10px 14px;color:#475569;">' + (escHtml(r.last_name) || '<em style="color:#ddd">—</em>') + '</td>' +
+                '<td style="padding:10px 14px;color:#475569;font-family:monospace;font-size:12px;">' + (escHtml(r.email) || '<em style="color:#ddd">—</em>') + '</td>' +
+                '<td style="padding:10px 14px;color:#475569;">' + ticketDisplay + '</td>' +
+                '<td style="padding:10px 14px;">' + statusPill + '</td>' +
+                '<td style="padding:10px 12px;max-width:280px;word-break:break-word;">' +
+                    '<div style="display:flex;align-items:flex-start;gap:8px;">' +
+                        '<span style="flex:1;font-size:12px;">' + issueText + '</span>' +
+                        '<button class="row-edit-btn" style="flex-shrink:0;background:white;color:#1a56db;border:1px solid #1a56db;border-radius:6px;padding:3px 11px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">' +
+                            '<i class="fas fa-pencil-alt me-1"></i>Edit' +
+                        '</button>' +
+                    '</div>' +
+                '</td>';
+
+            tr.querySelector('.row-edit-btn').addEventListener('click', () => {
+                buildEditRow(tr, r, dataIndex);
+            });
+
+            tbody.appendChild(tr);
+        });
+    }
+
+    /* Pagination info */
+    document.getElementById('invitePaginationInfo').textContent =
+        total ? ('Showing ' + (start+1) + '–' + Math.min(start+PAGE_SIZE, total) + ' of ' + total + ' rows') : '';
+
+    /* Pagination buttons */
+    const btnWrap = document.getElementById('invitePaginationBtns');
+    btnWrap.innerHTML = '';
+    if (pages > 1) {
+        const prev = document.createElement('button');
+        prev.innerHTML = '‹';
+        prev.disabled  = currentPage === 1;
+        stylePageBtn(prev, false);
+        prev.addEventListener('click', () => { currentPage--; renderPreviewTable(); });
+        btnWrap.appendChild(prev);
+
+        let pageNums = [];
+        if (pages <= 7) {
+            pageNums = Array.from({length:pages}, (_,i)=>i+1);
+        } else {
+            pageNums = [1];
+            if (currentPage > 3) pageNums.push('…');
+            for (let p = Math.max(2, currentPage-1); p <= Math.min(pages-1, currentPage+1); p++) pageNums.push(p);
+            if (currentPage < pages - 2) pageNums.push('…');
+            pageNums.push(pages);
+        }
+
+        pageNums.forEach(p => {
+            const b = document.createElement('button');
+            if (p === '…') { b.textContent='…'; b.disabled=true; stylePageBtn(b,false); }
+            else {
+                b.textContent = p;
+                stylePageBtn(b, p === currentPage);
+                b.addEventListener('click', () => { currentPage = p; renderPreviewTable(); });
+            }
+            btnWrap.appendChild(b);
+        });
+
+        const next = document.createElement('button');
+        next.innerHTML = '›';
+        next.disabled  = currentPage === pages;
+        stylePageBtn(next, false);
+        next.addEventListener('click', () => { currentPage++; renderPreviewTable(); });
+        btnWrap.appendChild(next);
+    }
+
+    /* Sync filter pill active states */
+    document.querySelectorAll('.preview-filter-btn').forEach(btn => {
+        const active = btn.dataset.filter === currentFilter;
+        if (active) {
+            btn.style.background  = '#1a56db';
+            btn.style.color       = 'white';
+            btn.style.borderColor = '#1a56db';
+        } else {
+            btn.style.background = 'white';
+            const colorMap = { valid:'#2ecc71', invalid:'#e74c3c', all:'#ddd' };
+            btn.style.borderColor = colorMap[btn.dataset.filter] || '#ddd';
+            btn.style.color       = btn.dataset.filter === 'valid' ? '#27ae60' : btn.dataset.filter === 'invalid' ? '#c0392b' : '#333';
+        }
+    });
+}
+
+function stylePageBtn(btn, active) {
+    btn.style.cssText = 'border:1px solid ' + (active?'#1a56db':'#ddd') + '; background:' + (active?'#1a56db':'white') + '; color:' + (active?'white':'#555') + '; border-radius:6px; padding:4px 10px; font-size:12px; cursor:pointer; min-width:30px;';
+}
+
+/* Filter pills */
+document.querySelectorAll('.preview-filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        currentFilter = btn.dataset.filter;
+        currentPage   = 1;
+        renderPreviewTable();
+    });
+});
+
+/* Back button */
+document.getElementById('backToMappingBtn').addEventListener('click', () => {
+    getModal('bulkPreviewModal2').hide();
+    setTimeout(() => getModal('mappingModal').show(), 420);
+});
+
+/* ══════════════════════════════════════════════════════════════
+   BULK SEND
+══════════════════════════════════════════════════════════════ */
+document.getElementById('bulkSendBtn').addEventListener('click', () => {
+    const validEntries = parsedData.filter(r => r._valid).map(r => ({
+        first_name  : r.first_name,
+        last_name   : r.last_name,
+        email       : r.email,
+        ticket_type : r.ticket_type,
+    }));
+
+    if (!validEntries.length) {
+        alert('No valid rows to send. Fix the errors shown in the table and try again.');
+        return;
+    }
+
+    const btn = document.getElementById('bulkSendBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Sending...';
+
+    fetch('/send-invitations/', {
+        method : 'POST',
+        headers: { 'Content-Type':'application/json', 'X-CSRFToken': getCsrf() },
+        body   : JSON.stringify({ entries: validEntries }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        getModal('bulkPreviewModal2').hide();
+        setTimeout(() => openSuccessModal(validEntries.length), 420);
+    })
+    .catch(() => alert('Network error. Please try again.'))
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Send Valid Invitations';
+    });
+});
+
+/* ══════════════════════════════════════════════════════════════
+   RESULTS MODAL (kept for reference)
+══════════════════════════════════════════════════════════════ */
+function openResultsModal(data, attempted) {
+    const sent        = data.sent_count    != null ? data.sent_count    : attempted;
+    const serverSkip  = data.skipped_count != null ? data.skipped_count : (attempted - sent);
+    const clientSkip  = parsedData.filter(r => !r._valid).length;
+    const totalSkip   = clientSkip + serverSkip;
+    const serverErrors = Array.isArray(data.errors) ? data.errors : [];
+
+    document.getElementById('resSent').textContent    = sent;
+    document.getElementById('resSkipped').textContent = totalSkip;
+
+    let html =
+        '<div><i class="fas fa-check-circle me-2" style="color:#16a34a;"></i><strong>' + sent + '</strong> invitation(s) sent successfully</div>' +
+        '<div><i class="fas fa-filter me-2" style="color:#94a3b8;"></i><strong>' + clientSkip + '</strong> row(s) skipped — failed local validation</div>';
+
+    if (serverSkip > 0) {
+        html += '<div><i class="fas fa-server me-2" style="color:#f59e0b;"></i><strong>' + serverSkip + '</strong> row(s) rejected by server</div>';
+    }
+    if (serverErrors.length) {
+        html += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:12px;color:#888;"><strong style="color:#555;">Server messages:</strong><br>' +
+            serverErrors.slice(0,8).map(e => '<div style="margin-top:3px;">• ' + escHtml(e) + '</div>').join('') +
+            (serverErrors.length > 8 ? '<div style="color:#aaa;margin-top:4px;">…and ' + (serverErrors.length-8) + ' more</div>' : '') +
+            '</div>';
+    }
+
+    document.getElementById('resBreakdown').innerHTML = html;
+    getModal('resultsModal').show();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   ALERT HELPERS
+══════════════════════════════════════════════════════════════ */
+function showAlert(type, html) {
+    const el = document.getElementById('inviteAlert');
+    const s = {
+        success : { bg:'#f0fdf4', border:'#2ecc71', color:'#1e8449' },
+        danger  : { bg:'#fdf2f2', border:'#e74c3c', color:'#c0392b' },
+        info    : { bg:'#eef5ff', border:'#3498db', color:'#1a5276' },
+    }[type] || {};
+    el.style.cssText = 'display:flex; align-items:flex-start; gap:8px; background:' + s.bg + '; border:1px solid ' + s.border + '; color:' + s.color + '; border-radius:8px; padding:12px 16px; margin-bottom:18px; font-size:13px;';
+    el.innerHTML = html;
+}
+function hideAlert() {
+    const el = document.getElementById('inviteAlert');
+    el.style.display = 'none';
+    el.innerHTML = '';
+}
+
+/* expose validateRowData for potential external use */
+window._validateInviteRow = validateRowData;
+
+})();
+</script>

@@ -1,0 +1,357 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<!-- Top Header -->
+<div class="top-header">
+    <div class="container-fluid px-4">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="search-wrapper">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" class="form-control search-input form-control-sm" placeholder="Search...">
+                    </div>
+                    <select class="form-select form-select-sm"
+                        style="width: 200px; background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3); color: white; height: 32px;">
+                        <option>GULFOOD 2026</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-6 text-end d-flex align-items-center justify-content-end">
+                <span class="me-3">Welcome, {{ request.user.get_full_name|default:request.user.username }}</span>
+                <button class="btn btn-sm btn-outline-light" style="height: 32px;">
+                    <i class="fas fa-sign-out-alt"></i> Sign Out
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sidebar Toggle Button (Mobile) -->
+<button class="sidebar-toggle" id="sidebarToggle">
+    <i class="fas fa-bars"></i>
+</button>
+
+<!-- App Wrapper -->
+<div class="app-wrapper">
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <div class="countdown-section">
+            <div class="countdown-title">Time Remaining</div>
+            <div class="countdown-display" id="countdown">
+                <span>16<small>Days</small></span>
+                <span>17<small>Hours</small></span>
+                <span>45<small>Mins</small></span>
+                <span>19<small>Secs</small></span>
+            </div>
+        </div>
+
+        <div class="nav-menu">
+            <a href="{% url 'home' %}" class="nav-item">
+                <i class="fas fa-home"></i>
+                <span>HOME</span>
+            </a>
+            <div class="nav-parent open" id="badgesMenu">
+                <div class="nav-parent-left">
+                    <i class="fas fa-id-badge"></i>
+                    <span>BADGES</span>
+                </div>
+                <i class="fas fa-chevron-right nav-arrow"></i>
+            </div>
+            <div class="nav-submenu open" id="badgesSubmenu">
+                <a href="#" class="nav-item active">
+                    <i class="fas fa-user-tie"></i>
+                    <span>EXHIBITOR BADGE</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container-fluid">
+            <!-- Header with Breadcrumb and Action -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0" style="background: transparent; padding: 0;">
+                        <li class="breadcrumb-item"><a href="{% url 'home' %}"
+                                style="color: #e74c3c;text-decoration:none;">Home</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'home' %}"
+                                style="color: #e74c3c;text-decoration:none;">Attendees</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">{{ attendee.first_name }} {{attendee.last_name }}</li>
+                    </ol>
+                </nav>
+                <a href="{% url 'home' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Back to Registrations
+                </a>
+            </div>
+
+            <!-- Hero/Summary Card -->
+            <div class="action-card mb-4" style="border-left: 4px solid #e74c3c;">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <div
+                            style="width: 80px; height: 80px; background: #fdf2f2; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            <span style="font-size: 32px; font-weight: 700; color: #e74c3c;">{{attendee.first_name|slice:":1" }} {{ attendee.last_name|slice:":1" }}</span>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <h3 class="mb-1" style="font-weight: 700; color: #111;">{{ attendee.first_name }} {{ attendee.last_name }}</h3>
+                        <p class="text-muted mb-0">
+                            <i class="fas fa-envelope me-2"></i>{{ attendee.email }}
+                            {% if attendee.mobile_number %}
+                            <span class="ms-3"><i class="fas fa-phone me-2"></i>{{ attendee.mobile_number }}</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-auto text-end">
+                        <div class="mb-2">
+                            {% if attendee.status == "CONFIRMED" %}
+                            <span class="status-badge confirmed">Confirmed</span>
+                            {% elif attendee.status == "INVITED" %}
+                            <span class="status-badge invited">Invited</span>
+                            {% else %}
+                            <span class="status-badge pending">Pending</span>
+                            {% endif %}
+                        </div>
+                        <div>
+                            {% if attendee.attendee_type == "VIP" %}
+                            <span class="status-badge" style="background: #fef3c7; color: #92400e;">★ VIP</span>
+                            {% elif attendee.attendee_type == "EXHIBITOR" %}
+                            <span class="status-badge" style="background: #dbeafe; color: #1e40af;">Exhibitor</span>
+                            {% else %}
+                            <span class="status-badge" style="background: #f3f4f6; color: #374151;">Visitor</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Left Column: Details -->
+                <div class="col-lg-8">
+                    <!-- Personal & Event Info -->
+                    <div class="registrations-section p-4 mb-4 shadow-sm">
+                        <h5 class="mb-4"
+                            style="font-weight: 700; color: #333; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;">
+                            <i class="fas fa-user-circle me-2 text-primary"></i>Registration Information
+                        </h5>
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <label class="text-muted small text-uppercase fw-bold mb-1">Job Title</label>
+                                <p class="mb-0 fw-semibold">{{ attendee.job_title|default:"—" }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small text-uppercase fw-bold mb-1">Company</label>
+                                <p class="mb-0 fw-semibold">{{ attendee.company_name|default:"—" }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small text-uppercase fw-bold mb-1">Country</label>
+                                <p class="mb-0 fw-semibold">{{ attendee.country_of_residence|default:"—" }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small text-uppercase fw-bold mb-1">Nationality</label>
+                                <p class="mb-0 fw-semibold">{{ attendee.nationality|default:"—" }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small text-uppercase fw-bold mb-1">Event</label>
+                                <p class="mb-0 fw-semibold">{{ attendee.event.name }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small text-uppercase fw-bold mb-1">Source</label>
+                                <p class="mb-0 fw-semibold">{{ attendee.source|default:"—" }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Audit Trail -->
+                    <div class="registrations-section p-0 mb-4 shadow-sm overflow-hidden">
+                        <div class="p-4 border-bottom d-flex justify-content-between align-items-center bg-light">
+                            <h5 class="mb-0" style="font-weight: 700; color: #333;">
+                                <i class="fas fa-history me-2 text-primary"></i>Audit Trail
+                            </h5>
+                            <span class="badge bg-secondary">{{ logs.count }} Entries</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Action</th>
+                                        <th>Actor</th>
+                                        <th>Timestamp</th>
+                                        <th>Changes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for log in logs %}
+                                    <tr>
+                                        <td>
+                                            {% if log.action == 0 %}
+                                            <span class="badge bg-success-subtle text-success px-2 py-1">Created</span>
+                                            {% elif log.action == 1 %}
+                                            <span class="badge bg-warning-subtle text-warning px-2 py-1">Updated</span>
+                                            {% elif log.action == 2 %}
+                                            <span class="badge bg-danger-subtle text-danger px-2 py-1">Deleted</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="rounded-circle bg-secondary-subtle d-flex align-items-center justify-content-center me-2"
+                                                    style="width: 24px; height: 24px; font-size: 10px;">
+                                                    {{ log.actor.username|slice:":1"|upper|default:"S" }}
+                                                </div>
+                                                <span class="small">{{ log.actor.username|default:"System" }}</span>
+                                            </div>
+                                        </td>
+                                        <td class="small text-muted">
+                                            {{ log.timestamp|date:"Y-m-d H:i:s" }}
+                                        </td>
+                                        <td>
+    {% if log.resolved_changes %}
+    <div class="changes-list small">
+        {% for field, vals in log.resolved_changes.items %}
+        <div class="mb-1">
+            <span class="fw-bold text-dark">{{ field }}:</span>
+            {% if vals|length == 2 %}
+                {% if vals.0 is not None %}
+                    <span class="text-danger text-decoration-line-through">{{ vals.0 }}</span>
+                {% else %}
+                    <span class="text-muted fst-italic text-decoration-line-through">empty</span>
+                {% endif %}
+                <i class="fas fa-long-arrow-alt-right mx-1 text-muted"></i>
+                {% if vals.1 is not None %}
+                    <span class="text-success">{{ vals.1 }}</span>
+                {% else %}
+                    <span class="text-muted fst-italic">empty</span>
+                {% endif %}
+            {% else %}
+                <span class="text-success">{{ vals }}</span>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <span class="text-muted small">—</span>
+    {% endif %}
+</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center py-5 text-muted">No audit logs found.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Sidebar Stats/Info -->
+                <div class="col-lg-4">
+                    <!-- Badge Stats Card -->
+                    <div class="registrations-section p-4 mb-4 shadow-sm">
+                        <h5 class="mb-3" style="font-weight: 700; color: #333;">Badge Details</h5>
+                        {% if attendee.badge %}
+                        <div class="mb-3 p-3 bg-light rounded border">
+                            <label class="text-muted small text-uppercase fw-bold d-block mb-1">Ticket ID</label>
+                            <code class="text-dark fw-bold"
+                                style="font-size: 0.9rem;">{{ attendee.badge.ticket_id }}</code>
+                        </div>
+                        <ul class="list-unstyled mb-0">
+                            <li class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">Digital Badge:</span>
+                                {% if attendee.digital_badge_issued %}
+                                <span class="text-success fw-bold"><i class="fas fa-check-circle me-1"></i>Issued</span>
+                                {% else %}
+                                <span class="text-muted fw-bold">Not Issued</span>
+                                {% endif %}
+                            </li>
+                            <li class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">Onsite Print:</span>
+                                {% if attendee.onsite_badge_printed %}
+                                <span class="text-success fw-bold"><i
+                                        class="fas fa-check-circle me-1"></i>Printed</span>
+                                {% else %}
+                                <span class="text-muted fw-bold">Not Printed</span>
+                                {% endif %}
+                            </li>
+                            <li class="d-flex justify-content-between border-top pt-2 mt-2">
+                                <span class="text-muted">Issued At:</span>
+                                <span class="fw-semibold">{{ attendee.badge.issued_at|date:"Y-m-d" }}</span>
+                            </li>
+                        </ul>
+                        {% else %}
+                        <div class="alert alert-warning mb-0">No badge issued yet.</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Invite Token Card -->
+                    <div class="registrations-section p-4 mb-4 shadow-sm border-top border-4 border-primary">
+                        <h5 class="mb-3" style="font-weight: 700; color: #333;">Invite Token</h5>
+                        <p class="small text-muted mb-3">Copy this token to share a direct registration link.</p>
+                        <div class="input-group mb-0">
+                            <input type="text" class="form-control form-control-sm bg-light" id="token-val"
+                                value="{{ attendee.invite_token }}" readonly>
+                            <button class="btn btn-primary btn-sm" onclick="copyToken()">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                        <div id="copy-status" class="mt-2 text-success small fw-bold" style="display: none;">Copied to
+                            clipboard!</div>
+                    </div>
+
+                    <!-- Consents -->
+                    <div class="registrations-section p-4 shadow-sm">
+                        <h5 class="mb-3" style="font-weight: 700; color: #333;">Agreements</h5>
+                        <div class="d-flex flex-column gap-2">
+                            <div class="d-flex align-items-center">
+                                <i
+                                    class="fas {% if attendee.accepted_terms %}fa-check-circle text-success{% else %}fa-times-circle text-muted{% endif %} me-2"></i>
+                                <span
+                                    class="small {% if attendee.accepted_terms %}fw-bold text-dark{% else %}text-muted{% endif %}">Terms
+                                    & Conditions</span>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <i
+                                    class="fas {% if attendee.accepted_data_sharing %}fa-check-circle text-success{% else %}fa-times-circle text-muted{% endif %} me-2"></i>
+                                <span
+                                    class="small {% if attendee.accepted_data_sharing %}fw-bold text-dark{% else %}text-muted{% endif %}">Data
+                                    Sharing</span>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <i
+                                    class="fas {% if attendee.accepted_marketing %}fa-check-circle text-success{% else %}fa-times-circle text-muted{% endif %} me-2"></i>
+                                <span
+                                    class="small {% if attendee.accepted_marketing %}fw-bold text-dark{% else %}text-muted{% endif %}">Marketing
+                                    Consent</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function copyToken() {
+        const val = document.getElementById('token-val').value;
+        navigator.clipboard.writeText(val).then(() => {
+            const status = document.getElementById('copy-status');
+            status.style.display = 'block';
+            setTimeout(() => {
+                status.style.display = 'none';
+            }, 2000);
+        });
+    }
+
+    $(document).ready(function () {
+        // Sync sidebar active state if needed
+        $('.nav-item').removeClass('active');
+        $('.nav-item i.fa-user-tie').parent().addClass('active');
+    });
+</script>
+{% endblock %}
