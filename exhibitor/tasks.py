@@ -6,27 +6,35 @@ import logging
 from django.utils import timezone
 from .utils.emails import send_pending_reminder_email
 from .utils.redis_lock import acquire_lock,release_lock
+from collections import Counter
+from django.db.models import Count
 
 
 logger = logging.getLogger(__name__)
 
-@shared_task
-def bulk_upload_save_task(rows, exhibitor_id):
+@shared_task(bind=True)
+def bulk_upload_save_task(self, rows, exhibitor_id):
     import re
     import threading
     from django.core.validators import validate_email
     from django.core.exceptions import ValidationError
-    from .models import Exhibitor
 
-    lock_name = f"exhibitor_lock_{exhibitor_id}"
-
-   
     try:
-
         exhibitor = Exhibitor.objects.get(id=exhibitor_id)
         event     = exhibitor.event
 
-        already_used = Badge.objects.filter(attendee__exhibitor=exhibitor).count()
+        # Initial progress
+        self.update_state(state='PROGRESS', meta={'current': 0, 'total': len(rows), 'created': 0, 'skipped': 0})
+
+        # ── Live per-type counters (DB state at task start) ──────────────────
+        used_at_start = exhibitor.passes_used_by_type()
+        limits = {
+            "VIP":      exhibitor.vip_pass_limit,
+            "EXHIBITOR": exhibitor.exhibitor_pass_limit,
+            "VISITOR":  exhibitor.visitor_pass_limit,
+        }
+        # Track how many we've created per type in this task run
+        created_by_type = {"VIP": 0, "EXHIBITOR": 0, "VISITOR": 0}
 
         created     = 0
         skipped     = 0
@@ -41,12 +49,11 @@ def bulk_upload_save_task(rows, exhibitor_id):
             .values_list("email", flat=True)
         )
 
-        def is_valid_row(row, email):
-            first_name  = str(row.get("first_name") or "").strip()
-            last_name   = str(row.get("last_name")  or "").strip()
-            country     = str(row.get("country")     or "").strip()
-            nationality = str(row.get("nationality") or "").strip()
-            ticket_type = str(row.get("ticket_type") or "").strip().upper()
+        def is_valid_row(row, email, ticket_type):
+            first_name   = str(row.get("first_name")  or "").strip()
+            last_name    = str(row.get("last_name")   or "").strip()
+            country      = str(row.get("country")     or "").strip()
+            nationality  = str(row.get("nationality") or "").strip()
             accepted_terms = row.get("accepted_terms", False)
 
             if not first_name:
@@ -86,32 +93,38 @@ def bulk_upload_save_task(rows, exhibitor_id):
             if not accepted_terms:
                 return False, "Terms & Conditions must be accepted"
 
+            # ── Per-type limit check ──────────────────────────────────────────
+            total_used_for_type = used_at_start[ticket_type] + created_by_type[ticket_type]
+            if total_used_for_type >= limits[ticket_type]:
+                return False, f"{ticket_type} pass limit reached ({limits[ticket_type]})"
+
             return True, None
 
-        # ── Collect attendees to email AFTER all DB writes succeed ──────────────
-        # We batch them and send after the transaction so a mail failure
-        # never rolls back a committed badge.
-        emails_to_send = []   # list of (attendee, ticket_type) tuples
+        emails_to_send = []
 
         for i in range(0, len(rows), BATCH_SIZE):
             batch = rows[i:i + BATCH_SIZE]
+            
+            # Update progress
+            self.update_state(state='PROGRESS', meta={
+                'current': i,
+                'total': len(rows),
+                'created': created,
+                'skipped': skipped
+            })
 
             with transaction.atomic():
-                batch_emails = []   # track within this atomic block only
+                batch_emails = []
 
                 for row in batch:
-                    raw_email = row.get("email") or ""
-                    email     = raw_email.strip().lower()
+                    raw_email   = row.get("email") or ""
+                    email       = raw_email.strip().lower()
+                    ticket_type = str(row.get("ticket_type") or "").strip().upper()
 
-                    if already_used + created >= exhibitor.pass_limit:
-                        skipped += 1
-                        logger.warning(f"Pass limit reached at {exhibitor.pass_limit}. Skipping {email}.")
-                        continue
-
-                    valid, reason = is_valid_row(row, email)
+                    valid, reason = is_valid_row(row, email, ticket_type)
                     if not valid:
                         skipped += 1
-                        logger.warning(f"Row skipped — {reason} | email={email} | row={row}")
+                        logger.warning(f"Row skipped — {reason} | email={email}")
                         continue
 
                     seen_emails.add(email)
@@ -128,65 +141,54 @@ def bulk_upload_save_task(rows, exhibitor_id):
                             company_name         = row.get("company_name")  or None,
                             country_of_residence = str(row.get("country")     or "").strip(),
                             nationality          = str(row.get("nationality") or "").strip(),
-                            attendee_type        = str(row.get("ticket_type") or "").strip().upper(),
+                            attendee_type        = ticket_type,
                             source               = "Bulk Upload",
                             status               = "CONFIRMED",
-                            accepted_terms       = bool(row.get("accepted_terms",        False)),
-                            accepted_data_sharing= bool(row.get("accepted_data_sharing", False)),
-                            accepted_marketing   = bool(row.get("accepted_marketing",    False)),
-                            digital_badge_issued = bool(row.get("digital_badge_issued",  False)),
-                            onsite_badge_printed = bool(row.get("onsite_badge_printed",  False)),
+                            accepted_terms        = bool(row.get("accepted_terms",         False)),
+                            accepted_data_sharing = bool(row.get("accepted_data_sharing",  False)),
+                            accepted_marketing    = bool(row.get("accepted_marketing",      False)),
+                            digital_badge_issued  = bool(row.get("digital_badge_issued",   False)),
+                            onsite_badge_printed  = bool(row.get("onsite_badge_printed",   False)),
                         )
 
                         Badge.objects.create(
                             attendee   = attendee,
-                            badge_type = str(row.get("ticket_type") or "").strip().upper(),
+                            badge_type = ticket_type,
                         )
 
                         created += 1
-                        # Stage for emailing — only after both DB writes succeed
-                        batch_emails.append((attendee, str(row.get("ticket_type") or "").strip().upper()))
+                        created_by_type[ticket_type] += 1
+                        batch_emails.append((attendee, ticket_type))
 
                     except IntegrityError as e:
-                        logger.warning(f"IntegrityError for email {email}: {e}", exc_info=True)
+                        logger.warning(f"IntegrityError for {email}: {e}", exc_info=True)
                         skipped += 1
-
                     except Exception as e:
                         logger.error(f"Unexpected error for row {row}: {e}", exc_info=True)
                         skipped += 1
 
-            # ── Transaction committed — now safe to queue emails for this batch ──
             emails_to_send.extend(batch_emails)
 
-        # ── Send all confirmation emails in a single background thread ──────────
-        # One thread per task keeps overhead low; individual send errors are
-        # caught and logged without affecting any other attendee's email.
         def send_all_emails(pairs):
             for attendee, ticket_type in pairs:
                 try:
                     send_badge_confirmation_email(attendee, ticket_type)
-
                 except Exception as exc:
-                    logger.error(
-                        "Bulk confirmation email failed for %s: %s",
-                        attendee.email, exc
-                    )
+                    logger.error("Bulk confirmation email failed for %s: %s", attendee.email, exc)
 
         if emails_to_send:
-            threading.Thread(
-                target=send_all_emails,
-                args=(emails_to_send,),
-                daemon=True,
-            ).start()
-    
+            threading.Thread(target=send_all_emails, args=(emails_to_send,), daemon=True).start()
+
     finally:
-        release_lock(lock_name)
+        pass
 
     return {
-            "created"    : created,
-            "skipped"    : skipped,
-            "total_valid": len(rows),
-        }
+        "created":     created,
+        "skipped":     skipped,
+        "total_valid": len(rows),
+        # ── Return per-type summary for the frontend ──────────
+        "created_by_type": created_by_type,
+    }
 
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
@@ -257,108 +259,113 @@ def send_invite_email(self,email, token):
 @shared_task(bind=True)
 def process_invitations_batch(self, entries, exhibitor_id):
     from .models import Attendee, Exhibitor
-    from django.db import transaction
 
-    lock_name = f"exhibitor_lock_{exhibitor_id}"
-
-    if not acquire_lock(lock_name, timeout=1800):
-        logger.warning(f"Invite batch skipped — lock active for exhibitor {exhibitor_id}")
-        return
-    
     try:
-
         exhibitor = Exhibitor.objects.get(id=exhibitor_id)
         event = exhibitor.event
 
-        # 1️⃣ Collect emails
         incoming_emails = {
             (e.get("email") or "").strip().lower()
             for e in entries if (e.get("email") or "").strip()
         }
 
-        # 2️⃣ Fetch existing attendees
-        existing_qs = Attendee.objects.filter(
-            event=event,
-            email__in=incoming_emails
-        )
+        # ── Fix: chunk the email__in query to avoid SQLite's 999 variable limit ──
+        SQLITE_CHUNK = 900  # safe margin under 999
 
-        existing_map = {a.email: a for a in existing_qs}
+        incoming_emails_list = list(incoming_emails)
+        existing_emails = set()
 
-        # 3️⃣ Prepare lists
+        for i in range(0, len(incoming_emails_list), SQLITE_CHUNK):
+            chunk = incoming_emails_list[i:i + SQLITE_CHUNK]
+            existing_emails.update(
+                Attendee.objects.filter(event=event, email__in=chunk)
+                .values_list("email", flat=True)
+            )
+
         to_create = []
-        to_email_existing = []
+        skipped_count = 0
 
         for entry in entries:
-            email = (entry.get("email") or "").strip().lower()
+            email      = (entry.get("email") or "").strip().lower()
             first_name = (entry.get("first_name") or "").strip()
-            last_name = (entry.get("last_name") or "").strip()
-            ticket_type= (entry.get("ticket_type") or "").strip()
+            last_name  = (entry.get("last_name") or "").strip()
+            ticket_type=(entry.get("ticket_type") or "").strip()
 
-            if not email or not first_name or not last_name:
+            if not email or not first_name:
+                skipped_count += 1
                 continue
 
-            if email in existing_map:
-                attendee = existing_map[email]
+            if email in existing_emails:
+                logger.info(f"Skipping {email} — already exists.")
+                skipped_count += 1
+                continue
 
-                # OPTIONAL: reset status if you want re-invite behavior
-                if attendee.status != Attendee.Status.INVITED:
-                    attendee.status = Attendee.Status.INVITED
-                    attendee.save(update_fields=["status"])
-
-                to_email_existing.append(attendee)
-
-            else:
-                to_create.append(Attendee(
-                    event=event,
-                    exhibitor=exhibitor,
-                    email=email,
-                    first_name=first_name,
-                    last_name=last_name,
-                    status=Attendee.Status.INVITED
-                ))
-
-        # 4️⃣ Bulk insert new attendees
-        created = []
-        CHUNK = 500
-
-        logger.info(f"Attempting to bulk create {len(to_create)} attendees.")
-
-        for i in range(0, len(to_create), CHUNK):
-            created_batch = Attendee.objects.bulk_create(
-                to_create[i:i+CHUNK]
-            )
-            created += created_batch
-
-        logger.info(f"Successfully created {len(created)} attendees.")
-
-        # 5️⃣ Combine ALL for email (THIS WAS MISSING)
-        all_for_email = created + to_email_existing
+            to_create.append(Attendee(
+                event=event,
+                exhibitor=exhibitor,
+                email=email,
+                first_name=first_name,
+                last_name=last_name,
+                attendee_type=ticket_type,
+                status=Attendee.Status.INVITED,
+            ))
         
-        print(all_for_email,"----------all emaill")
 
-        logger.info(f"Total emails to send: {len(all_for_email)}")
+         # ── Ticket type limit validation ──────────────────────────
+        ticket_counts = Counter(att.attendee_type for att in to_create)
 
-        # 6️⃣ Send emails
+        existing_counts = dict(
+            Attendee.objects.filter(exhibitor=exhibitor)
+            .values_list('attendee_type')
+            .annotate(cnt=Count('id'))
+            .values_list('attendee_type', 'cnt')
+        )
+
+        remaining = {
+            "VIP":       max(0, exhibitor.vip_pass_limit       - existing_counts.get("VIP", 0)),
+            "EXHIBITOR": max(0, exhibitor.exhibitor_pass_limit - existing_counts.get("EXHIBITOR", 0)),
+            "VISITOR":   max(0, exhibitor.visitor_pass_limit   - existing_counts.get("VISITOR", 0)),
+        }
+
+        errors = []
+        for ticket_type, needed in ticket_counts.items():
+            available = remaining.get(ticket_type, 0)
+            if needed > available:
+                limit = getattr(exhibitor, f"{ticket_type.lower()}_pass_limit", 0)
+                errors.append(
+                    f"{ticket_type}: requested {needed}, only {available} remaining (limit {limit})"
+                )
+
+        if errors:
+            raise ValueError("Ticket type limits exceeded: " + "; ".join(errors))
+
+        created = []
+        for i in range(0, len(to_create), 500):
+            created += Attendee.objects.bulk_create(to_create[i:i + 500])
+
         sent_count = 0
+        for attendee in created:
+            if attendee.pk:
+                send_invite_email.delay(attendee.email, str(attendee.invite_token))
+                sent_count += 1
+            else:
+                skipped_count += 1
 
-        for i in range(0, len(all_for_email), 100):
-            batch = all_for_email[i:i+100]
+        logger.info(f"✅ Batch complete — Sent: {sent_count} | Skipped: {skipped_count}")
 
-            for attendee in batch:
-                if attendee.pk:
-                    send_invite_email.delay(
-                        attendee.email,
-                        str(attendee.invite_token)
-                    )
-                    sent_count += 1
-                else:
-                    logger.warning(
-                        f"Attendee {attendee.email} has no PK, skipping email."
-                    )
+        # 👇 This is what makes the result available to poll
+        return {
+            "sent_count":    sent_count,
+            "skipped_count": skipped_count,
+        }
 
-        logger.info(f"Queued {sent_count} invitation emails.")
-    finally:
-        release_lock(lock_name)
+    except Exhibitor.DoesNotExist:
+        logger.error(f"Exhibitor {exhibitor_id} not found.")
+        raise
+    except Exception as e:
+        logger.exception(f"Unexpected error: {e}")
+        raise
+
 
 @shared_task(bind=True,max_tries=3)
 def send_pending_attendee_reminders(self):

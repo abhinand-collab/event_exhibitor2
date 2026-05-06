@@ -8,5 +8,15 @@ from django.contrib.auth.admin import UserAdmin
 admin.site.register(User,UserAdmin)
 admin.site.register(Event)
 admin.site.register(Exhibitor)
-admin.site.register(Attendee)
+# admin.site.register(Attendee)
 admin.site.register(Badge)
+
+@admin.register(Attendee)
+class AttendeeAdmin(admin.ModelAdmin):
+    list_display = (
+        "first_name",
+        "email",
+        "attendee_type",
+        "status",
+        "invite_token",   # 👈 add here
+    )

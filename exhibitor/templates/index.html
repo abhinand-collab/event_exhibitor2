@@ -88,27 +88,34 @@
     <!-- Main Content -->
     <main class="main-content">
         <!-- Badge Stats Card -->
-        <div class="badge-stats-card animate-fade-in">
-            <div class="row align-items-center">
-                <div class="col-md-8">
-                    <div class="stats-left">
-                        <div class="stats-icon">
-                            <i class="fas fa-cog"></i>
+        <div class="badge-stats-card animate-fade-in" style="background: linear-gradient(45deg, #3f0e60, #891487); border: none; padding: 25px;">
+            <div class="row g-3">
+                {% for stat in badge_stats %}
+                <div class="col-lg-4 col-md-6">
+                    <div class="stats-item p-3 rounded" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); height: 100%; transition: all 0.3s;">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="stats-icon me-3" style="width: 48px; height: 48px; background: #fff; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #891487; font-size: 22px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
+                                <i class="fas {% if 'VIP' in stat.label %}fa-crown{% elif 'EXHIBITOR' in stat.label %}fa-id-badge{% else %}fa-user{% endif %}"></i>
+                            </div>
+                            <div>
+                                <div class="stats-label" style="font-size: 11px; color: rgba(255,255,255,0.7); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">{{ stat.label }}</div>
+                                <div class="stats-number" style="font-size: 26px; font-weight: 700; color: #fff; line-height: 1.2;">{{ stat.used }} <span style="font-size: 15px; opacity: 0.6; font-weight: 400;">/ {{ stat.limit }}</span></div>
+                            </div>
                         </div>
-                        <div>
-                            <div class="stats-number"> {{used_pass}} <span>/ {{total_pass}} </span></div>
-                            <div class="stats-label">VIP PASS</div>
-                        </div>
-                        <div class="stats-breakdown ms-4">
-                            <span>Confirmed {{confirmed_count}} </span>
-                            <span>Pending {{pending_count}}</span>
-                            <span>Invited {{invited_count}} </span>
-                        </div>
-                        <div class="circular-progress ms-3">
-                            <span>5</span>
+                        <div class="d-flex justify-content-between align-items-end">
+                            <div class="stats-breakdown" style="font-size: 12px; color: #fff;">
+                                <div class="mb-2 d-flex align-items-center"><i class="fas fa-check-circle me-2" style="color: #2ecc71;"></i> Confirmed: <strong class="ms-1">{{ stat.confirmed }}</strong></div>
+                                <div class="mb-2 d-flex align-items-center"><i class="fas fa-clock me-2" style="color: #f1c40f;"></i> Pending: <strong class="ms-1">{{ stat.pending }}</strong></div>
+                                <div class="d-flex align-items-center"><i class="fas fa-paper-plane me-2" style="color: #3498db;"></i> Invited: <strong class="ms-1">{{ stat.invited }}</strong></div>
+                            </div>
+                            <div class="circular-progress" style="width: 50px; height: 50px; background: conic-gradient(#2ecc71 0deg {{ stat.percent }}%, rgba(255,255,255,0.15) {{ stat.percent }}% 360deg); border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative;">
+                                <div style="position: absolute; width: 38px; height: 38px; background: #5c1274; border-radius: 50%;"></div>
+                                <span style="position: relative; z-index: 1; font-size: 11px; color: #fff; font-weight: 700;">{{ stat.percent }}%</span>
+                            </div>
                         </div>
                     </div>
                 </div>
+                {% endfor %}
             </div>
         </div>
 
@@ -159,17 +166,21 @@
     </main>
 </div>
 
+<!-- Task Progress Container (Floating) -->
+<div id="taskProgressContainer" style="position: fixed; bottom: 20px; right: 20px; z-index: 1050; width: 320px; display: flex; flex-direction: column; gap: 10px;"></div>
+
+
 <!-- Create Badge Modal -->
 <div class="modal fade" id="createBadgeModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content" style="border-radius: 8px; overflow: hidden;">
             <div class="modal-header border-bottom bg-white py-3">
                 <div class="d-flex align-items-center">
-                    <div
+                    <!-- <div
                         style="width: 80px; height: 50px; border: 1px solid #eee; border-radius: 6px; display: flex; align-items: center; justify-content: center; margin-right: 15px; padding: 5px;">
                         <img src="https://via.placeholder.com/70x40?text=Gulfood" alt="Gulfood"
                             style="max-width: 100%; max-height: 100%;">
-                    </div>
+                    </div> -->
                     <div>
                         <h5 class="modal-title mb-0" style="font-size: 20px; font-weight: 700; color: #333;">GULFOOD
                             2026</h5>
@@ -242,647 +253,129 @@
     </div>
 </div>
 
-<!-- Edit Registration Modal -->
-<!-- Edit Registration Modal -->
-<div class="modal fade" id="editBadgeModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header" style="background: #1a56db; color: white; padding: 18px 25px;">
-                <h5 class="modal-title">
-                    <i class="fas fa-edit me-2"></i>Edit Registration
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" style="padding: 25px;">
-                <form id="editBadgeForm" novalidate>
-                    {% csrf_token %}
-                    <input type="hidden" id="editAttendeeId">
-
-                    <div id="editGlobalError"
-                        style="display:none; background:#fdf2f2; border:1px solid #e74c3c; color:#c0392b; padding:12px 16px; border-radius:6px; margin-bottom:16px; font-size:14px;">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        <span id="editGlobalErrorMsg"></span>
-                    </div>
-                    <div id="editGlobalSuccess"
-                        style="display:none; background:#f0fdf4; border:1px solid #2ecc71; color:#27ae60; padding:12px 16px; border-radius:6px; margin-bottom:16px; font-size:14px;">
-                        <i class="fas fa-check-circle me-2"></i>
-                        <span id="editGlobalSuccessMsg"></span>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">First Name <span class="text-danger">*</span></label>
-                            <input type="text" id="editFirstName" name="first_name" class="form-control" required>
-                            <div class="text-danger mt-1 small" id="editFirstNameError" style="display:none;"></div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">Last Name</label>
-                            <input type="text" id="editLastName" name="last_name" class="form-control">
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">Job Title</label>
-                            <input type="text" id="editJobTitle" name="job_title" class="form-control">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">Company Name</label>
-                            <input type="text" id="editCompanyName" name="company_name" class="form-control">
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">Email <span class="text-danger">*</span></label>
-                            <input type="email" id="editEmail" name="email" class="form-control" required>
-                            <div class="text-danger mt-1 small" id="editEmailError" style="display:none;"></div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">Mobile Number</label>
-                            <div class="phone-input-wrapper">
-                                <input type="tel" id="editMobileNumber" name="mobile_number" class="form-control">
-                            </div>
-                            <div class="text-danger mt-1 small" id="editMobileNumberError" style="display:none;"></div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">Country of Residence <span
-                                    class="text-danger">*</span></label>
-                            <select id="editCountryResidence" name="country_of_residence"
-                                class="form-select select2-edit-country" required style="width:100%;">
-                                <option value="">Select Country</option>
-                            </select>
-                            <div class="text-danger mt-1 small" id="editCountryResidenceError" style="display:none;">
-                            </div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">Nationality <span class="text-danger">*</span></label>
-                            <select id="editNationality" name="nationality" class="form-select select2-edit-country"
-                                required style="width:100%;">
-                                <option value="">Select Nationality</option>
-                            </select>
-                            <div class="text-danger mt-1 small" id="editNationalityError" style="display:none;"></div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">Ticket Type <span class="text-danger">*</span></label>
-                            <select id="editTicketType" name="ticket_type" class="form-select">
-                                <option value="">Select Ticket Type</option>
-                                <option value="VIP">VIP Pass</option>
-                                <option value="EXHIBITOR">Exhibitor Pass</option>
-                                <option value="VISITOR">Visitor Pass</option>
-                            </select>
-                            <div class="text-danger mt-1 small" id="editTicketTypeError" style="display:none;"></div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">Status</label>
-                            <select id="editStatus" name="status" class="form-select">
-                                <option value="PENDING">Pending</option>
-                                <option value="INVITED">Invited</option>
-                                <option value="CONFIRMED">Confirmed</option>
-                            </select>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer" style="background:#f5f5f5;">
-                <button type="button" class="btn btn-primary" id="saveEditBtn">
-                    <span id="saveEditBtnText">SAVE CHANGES</span>
-                    <span id="saveEditBtnSpinner" style="display:none;">
-                        <i class="fas fa-spinner fa-spin me-1"></i> Saving...
-                    </span>
-                </button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">CLOSE</button>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+    // ═══════════════════════════════════════════
+    //  TASK TRACKING (Live Progress)
+    // ═══════════════════════════════════════════
+    window.startTrackingTask = function(taskId, label) {
+        const container = document.getElementById('taskProgressContainer');
+        const cardId = `task-${taskId}`;
+        
+        // Prevent duplicate cards for same task
+        if (document.getElementById(cardId)) return;
 
-
-    const COUNTRIES2 = [
-        { code: "AF", name: "Afghanistan", nationality: "Afghan" },
-        { code: "AL", name: "Albania", nationality: "Albanian" },
-        { code: "DZ", name: "Algeria", nationality: "Algerian" },
-        { code: "AD", name: "Andorra", nationality: "Andorran" },
-        { code: "AO", name: "Angola", nationality: "Angolan" },
-        { code: "AG", name: "Antigua and Barbuda", nationality: "Antiguan" },
-        { code: "AR", name: "Argentina", nationality: "Argentine" },
-        { code: "AM", name: "Armenia", nationality: "Armenian" },
-        { code: "AU", name: "Australia", nationality: "Australian" },
-        { code: "AT", name: "Austria", nationality: "Austrian" },
-        { code: "AZ", name: "Azerbaijan", nationality: "Azerbaijani" },
-        { code: "BS", name: "Bahamas", nationality: "Bahamian" },
-        { code: "BH", name: "Bahrain", nationality: "Bahraini" },
-        { code: "BD", name: "Bangladesh", nationality: "Bangladeshi" },
-        { code: "BB", name: "Barbados", nationality: "Barbadian" },
-        { code: "BY", name: "Belarus", nationality: "Belarusian" },
-        { code: "BE", name: "Belgium", nationality: "Belgian" },
-        { code: "BZ", name: "Belize", nationality: "Belizean" },
-        { code: "BJ", name: "Benin", nationality: "Beninese" },
-        { code: "BT", name: "Bhutan", nationality: "Bhutanese" },
-        { code: "BO", name: "Bolivia", nationality: "Bolivian" },
-        { code: "BA", name: "Bosnia and Herzegovina", nationality: "Bosnian" },
-        { code: "BW", name: "Botswana", nationality: "Motswana" },
-        { code: "BR", name: "Brazil", nationality: "Brazilian" },
-        { code: "BN", name: "Brunei", nationality: "Bruneian" },
-        { code: "BG", name: "Bulgaria", nationality: "Bulgarian" },
-        { code: "BF", name: "Burkina Faso", nationality: "Burkinabé" },
-        { code: "BI", name: "Burundi", nationality: "Burundian" },
-        { code: "CV", name: "Cabo Verde", nationality: "Cape Verdean" },
-        { code: "KH", name: "Cambodia", nationality: "Cambodian" },
-        { code: "CM", name: "Cameroon", nationality: "Cameroonian" },
-        { code: "CA", name: "Canada", nationality: "Canadian" },
-        { code: "CF", name: "Central African Republic", nationality: "Central African" },
-        { code: "TD", name: "Chad", nationality: "Chadian" },
-        { code: "CL", name: "Chile", nationality: "Chilean" },
-        { code: "CN", name: "China", nationality: "Chinese" },
-        { code: "CO", name: "Colombia", nationality: "Colombian" },
-        { code: "KM", name: "Comoros", nationality: "Comorian" },
-        { code: "CG", name: "Congo", nationality: "Congolese" },
-        { code: "CD", name: "Congo (DRC)", nationality: "Congolese" },
-        { code: "CR", name: "Costa Rica", nationality: "Costa Rican" },
-        { code: "CI", name: "Côte d'Ivoire", nationality: "Ivorian" },
-        { code: "HR", name: "Croatia", nationality: "Croatian" },
-        { code: "CU", name: "Cuba", nationality: "Cuban" },
-        { code: "CY", name: "Cyprus", nationality: "Cypriot" },
-        { code: "CZ", name: "Czech Republic", nationality: "Czech" },
-        { code: "DK", name: "Denmark", nationality: "Danish" },
-        { code: "DJ", name: "Djibouti", nationality: "Djiboutian" },
-        { code: "DM", name: "Dominica", nationality: "Dominican" },
-        { code: "DO", name: "Dominican Republic", nationality: "Dominican" },
-        { code: "EC", name: "Ecuador", nationality: "Ecuadorian" },
-        { code: "EG", name: "Egypt", nationality: "Egyptian" },
-        { code: "SV", name: "El Salvador", nationality: "Salvadoran" },
-        { code: "GQ", name: "Equatorial Guinea", nationality: "Equatoguinean" },
-        { code: "ER", name: "Eritrea", nationality: "Eritrean" },
-        { code: "EE", name: "Estonia", nationality: "Estonian" },
-        { code: "SZ", name: "Eswatini", nationality: "Swazi" },
-        { code: "ET", name: "Ethiopia", nationality: "Ethiopian" },
-        { code: "FJ", name: "Fiji", nationality: "Fijian" },
-        { code: "FI", name: "Finland", nationality: "Finnish" },
-        { code: "FR", name: "France", nationality: "French" },
-        { code: "GA", name: "Gabon", nationality: "Gabonese" },
-        { code: "GM", name: "Gambia", nationality: "Gambian" },
-        { code: "GE", name: "Georgia", nationality: "Georgian" },
-        { code: "DE", name: "Germany", nationality: "German" },
-        { code: "GH", name: "Ghana", nationality: "Ghanaian" },
-        { code: "GR", name: "Greece", nationality: "Greek" },
-        { code: "GD", name: "Grenada", nationality: "Grenadian" },
-        { code: "GT", name: "Guatemala", nationality: "Guatemalan" },
-        { code: "GN", name: "Guinea", nationality: "Guinean" },
-        { code: "GW", name: "Guinea-Bissau", nationality: "Guinean" },
-        { code: "GY", name: "Guyana", nationality: "Guyanese" },
-        { code: "HT", name: "Haiti", nationality: "Haitian" },
-        { code: "HN", name: "Honduras", nationality: "Honduran" },
-        { code: "HU", name: "Hungary", nationality: "Hungarian" },
-        { code: "IS", name: "Iceland", nationality: "Icelandic" },
-        { code: "IN", name: "India", nationality: "Indian" },
-        { code: "ID", name: "Indonesia", nationality: "Indonesian" },
-        { code: "IR", name: "Iran", nationality: "Iranian" },
-        { code: "IQ", name: "Iraq", nationality: "Iraqi" },
-        { code: "IE", name: "Ireland", nationality: "Irish" },
-        { code: "IL", name: "Israel", nationality: "Israeli" },
-        { code: "IT", name: "Italy", nationality: "Italian" },
-        { code: "JM", name: "Jamaica", nationality: "Jamaican" },
-        { code: "JP", name: "Japan", nationality: "Japanese" },
-        { code: "JO", name: "Jordan", nationality: "Jordanian" },
-        { code: "KZ", name: "Kazakhstan", nationality: "Kazakhstani" },
-        { code: "KE", name: "Kenya", nationality: "Kenyan" },
-        { code: "KI", name: "Kiribati", nationality: "I-Kiribati" },
-        { code: "KP", name: "Korea (North)", nationality: "North Korean" },
-        { code: "KR", name: "Korea (South)", nationality: "South Korean" },
-        { code: "KW", name: "Kuwait", nationality: "Kuwaiti" },
-        { code: "KG", name: "Kyrgyzstan", nationality: "Kyrgyz" },
-        { code: "LA", name: "Laos", nationality: "Lao" },
-        { code: "LV", name: "Latvia", nationality: "Latvian" },
-        { code: "LB", name: "Lebanon", nationality: "Lebanese" },
-        { code: "LS", name: "Lesotho", nationality: "Mosotho" },
-        { code: "LR", name: "Liberia", nationality: "Liberian" },
-        { code: "LY", name: "Libya", nationality: "Libyan" },
-        { code: "LI", name: "Liechtenstein", nationality: "Liechtenstein" },
-        { code: "LT", name: "Lithuania", nationality: "Lithuanian" },
-        { code: "LU", name: "Luxembourg", nationality: "Luxembourgish" },
-        { code: "MG", name: "Madagascar", nationality: "Malagasy" },
-        { code: "MW", name: "Malawi", nationality: "Malawian" },
-        { code: "MY", name: "Malaysia", nationality: "Malaysian" },
-        { code: "MV", name: "Maldives", nationality: "Maldivian" },
-        { code: "ML", name: "Mali", nationality: "Malian" },
-        { code: "MT", name: "Malta", nationality: "Maltese" },
-        { code: "MH", name: "Marshall Islands", nationality: "Marshallese" },
-        { code: "MR", name: "Mauritania", nationality: "Mauritanian" },
-        { code: "MU", name: "Mauritius", nationality: "Mauritian" },
-        { code: "MX", name: "Mexico", nationality: "Mexican" },
-        { code: "FM", name: "Micronesia", nationality: "Micronesian" },
-        { code: "MD", name: "Moldova", nationality: "Moldovan" },
-        { code: "MC", name: "Monaco", nationality: "Monégasque" },
-        { code: "MN", name: "Mongolia", nationality: "Mongolian" },
-        { code: "ME", name: "Montenegro", nationality: "Montenegrin" },
-        { code: "MA", name: "Morocco", nationality: "Moroccan" },
-        { code: "MZ", name: "Mozambique", nationality: "Mozambican" },
-        { code: "MM", name: "Myanmar", nationality: "Burmese" },
-        { code: "NA", name: "Namibia", nationality: "Namibian" },
-        { code: "NR", name: "Nauru", nationality: "Nauruan" },
-        { code: "NP", name: "Nepal", nationality: "Nepali" },
-        { code: "NL", name: "Netherlands", nationality: "Dutch" },
-        { code: "NZ", name: "New Zealand", nationality: "New Zealander" },
-        { code: "NI", name: "Nicaragua", nationality: "Nicaraguan" },
-        { code: "NE", name: "Niger", nationality: "Nigerien" },
-        { code: "NG", name: "Nigeria", nationality: "Nigerian" },
-        { code: "MK", name: "North Macedonia", nationality: "Macedonian" },
-        { code: "NO", name: "Norway", nationality: "Norwegian" },
-        { code: "OM", name: "Oman", nationality: "Omani" },
-        { code: "PK", name: "Pakistan", nationality: "Pakistani" },
-        { code: "PW", name: "Palau", nationality: "Palauan" },
-        { code: "PA", name: "Panama", nationality: "Panamanian" },
-        { code: "PG", name: "Papua New Guinea", nationality: "Papua New Guinean" },
-        { code: "PY", name: "Paraguay", nationality: "Paraguayan" },
-        { code: "PE", name: "Peru", nationality: "Peruvian" },
-        { code: "PH", name: "Philippines", nationality: "Filipino" },
-        { code: "PL", name: "Poland", nationality: "Polish" },
-        { code: "PT", name: "Portugal", nationality: "Portuguese" },
-        { code: "QA", name: "Qatar", nationality: "Qatari" },
-        { code: "RO", name: "Romania", nationality: "Romanian" },
-        { code: "RU", name: "Russia", nationality: "Russian" },
-        { code: "RW", name: "Rwanda", nationality: "Rwandan" },
-        { code: "KN", name: "Saint Kitts and Nevis", nationality: "Kittitian" },
-        { code: "LC", name: "Saint Lucia", nationality: "Saint Lucian" },
-        { code: "VC", name: "Saint Vincent and the Grenadines", nationality: "Vincentian" },
-        { code: "WS", name: "Samoa", nationality: "Samoan" },
-        { code: "SM", name: "San Marino", nationality: "Sammarinese" },
-        { code: "ST", name: "Sao Tome and Principe", nationality: "São Toméan" },
-        { code: "SA", name: "Saudi Arabia", nationality: "Saudi" },
-        { code: "SN", name: "Senegal", nationality: "Senegalese" },
-        { code: "RS", name: "Serbia", nationality: "Serbian" },
-        { code: "SC", name: "Seychelles", nationality: "Seychellois" },
-        { code: "SL", name: "Sierra Leone", nationality: "Sierra Leonean" },
-        { code: "SG", name: "Singapore", nationality: "Singaporean" },
-        { code: "SK", name: "Slovakia", nationality: "Slovak" },
-        { code: "SI", name: "Slovenia", nationality: "Slovenian" },
-        { code: "SB", name: "Solomon Islands", nationality: "Solomon Islander" },
-        { code: "SO", name: "Somalia", nationality: "Somali" },
-        { code: "ZA", name: "South Africa", nationality: "South African" },
-        { code: "SS", name: "South Sudan", nationality: "South Sudanese" },
-        { code: "ES", name: "Spain", nationality: "Spanish" },
-        { code: "LK", name: "Sri Lanka", nationality: "Sri Lankan" },
-        { code: "SD", name: "Sudan", nationality: "Sudanese" },
-        { code: "SR", name: "Suriname", nationality: "Surinamese" },
-        { code: "SE", name: "Sweden", nationality: "Swedish" },
-        { code: "CH", name: "Switzerland", nationality: "Swiss" },
-        { code: "SY", name: "Syria", nationality: "Syrian" },
-        { code: "TW", name: "Taiwan", nationality: "Taiwanese" },
-        { code: "TJ", name: "Tajikistan", nationality: "Tajik" },
-        { code: "TZ", name: "Tanzania", nationality: "Tanzanian" },
-        { code: "TH", name: "Thailand", nationality: "Thai" },
-        { code: "TL", name: "Timor-Leste", nationality: "Timorese" },
-        { code: "TG", name: "Togo", nationality: "Togolese" },
-        { code: "TO", name: "Tonga", nationality: "Tongan" },
-        { code: "TT", name: "Trinidad and Tobago", nationality: "Trinidadian" },
-        { code: "TN", name: "Tunisia", nationality: "Tunisian" },
-        { code: "TR", name: "Turkey", nationality: "Turkish" },
-        { code: "TM", name: "Turkmenistan", nationality: "Turkmen" },
-        { code: "TV", name: "Tuvalu", nationality: "Tuvaluan" },
-        { code: "UG", name: "Uganda", nationality: "Ugandan" },
-        { code: "UA", name: "Ukraine", nationality: "Ukrainian" },
-        { code: "AE", name: "United Arab Emirates", nationality: "Emirati" },
-        { code: "GB", name: "United Kingdom", nationality: "British" },
-        { code: "US", name: "United States", nationality: "American" },
-        { code: "UY", name: "Uruguay", nationality: "Uruguayan" },
-        { code: "UZ", name: "Uzbekistan", nationality: "Uzbekistani" },
-        { code: "VU", name: "Vanuatu", nationality: "Ni-Vanuatu" },
-        { code: "VE", name: "Venezuela", nationality: "Venezuelan" },
-        { code: "VN", name: "Vietnam", nationality: "Vietnamese" },
-        { code: "YE", name: "Yemen", nationality: "Yemeni" },
-        { code: "ZM", name: "Zambia", nationality: "Zambian" },
-        { code: "ZW", name: "Zimbabwe", nationality: "Zimbabwean" },
-    ];
-
-    // Helper functions
-    function populateEditSelect(selectId, useNationality = false) {
-        const select = document.getElementById(selectId);
-        if (!select || select.dataset.populated) return;
-        COUNTRIES2.forEach(c => {
-            const opt = document.createElement("option");
-            opt.value = useNationality ? c.nationality : c.name;
-            opt.dataset.code = c.code;
-            opt.text = useNationality ? c.nationality : c.name;
-            select.appendChild(opt);
-        });
-        select.dataset.populated = "true";
-    }
-
-    // Flag image helper (same as single badge)
-    function getFlagImg(code) {
-        return `<img src="https://flagcdn.com/20x15/${code.toLowerCase()}.png" width="20" height="15" style="margin-right:6px;border-radius:2px;" onerror="this.style.display='none'">`;
-    }
-
-    // Select2 templates
-    function editCountryTemplate(option) {
-        if (!option.id) return option.text;
-        const code = option.element?.dataset.code;
-        if (!code) return option.text;
-        return $(`<span>${getFlagImg(code)} ${option.text}</span>`);
-    }
-    function editCountrySelection(option) {
-        if (!option.id) return option.text;
-        const code = option.element?.dataset.code;
-        if (!code) return option.text;
-        return $(`<span>${getFlagImg(code)} ${option.text}</span>`);
-    }
-
-    // ========== EDIT MODAL GLOBALS ==========
-    let pendingAttendeeData = null;
-
-    // Field error mapping (same as before)
-    const editFieldErrorMap = {
-        first_name: 'editFirstNameError',
-        email: 'editEmailError',
-        ticket_type: 'editTicketTypeError',
-        country_of_residence: 'editCountryResidenceError',
-        nationality: 'editNationalityError',
-        mobile_number: 'editMobileNumberError'   // added mobile
-    };
-
-    // Helper to show field error (works like single badge)
-    function showEditFieldError(errorId, message) {
-        const errorDiv = document.getElementById(errorId);
-        if (errorDiv) {
-            errorDiv.textContent = message;
-            errorDiv.style.display = 'block';
-        }
-        // Also highlight the input
-        const inputId = errorId.replace('Error', '');
-        const inputEl = document.getElementById(inputId);
-        if (inputEl) inputEl.style.borderColor = '#e74c3c';
-    }
-
-    function resetEditForm() {
-        document.getElementById('editGlobalError').style.display = 'none';
-        document.getElementById('editGlobalSuccess').style.display = 'none';
-        Object.values(editFieldErrorMap).forEach(id => {
-            const el = document.getElementById(id);
-            if (el) { el.textContent = ''; el.style.display = 'none'; }
-        });
-        ['editFirstName', 'editEmail', 'editTicketType', 'editMobileNumber',
-            'editCountryResidence', 'editNationality'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.style.borderColor = '';
-            });
-    }
-
-    function showEditGlobalError(msg) {
-        const el = document.getElementById('editGlobalError');
-        document.getElementById('editGlobalErrorMsg').textContent = msg;
-        el.style.display = 'block';
-        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-
-    function getCsrfToken() {
-        return document.cookie.split('; ')
-            .find(r => r.startsWith('csrftoken'))
-            ?.split('=')[1] || '';
-    }
-
-    // ── Open modal when edit button is clicked ──────────────────
-    document.querySelectorAll('.btn-action-table.edit').forEach(btn => {
-        btn.addEventListener('click', function () {
-            const row = this.closest('tr');
-            const attendeeId = row.dataset.attendeeId;
-            document.getElementById('editAttendeeId').value = attendeeId;
-            resetEditForm();
-
-            fetch(`/get-attendee/${attendeeId}/`)
-                .then(r => r.json())
-                .then(data => {
-                    if (!data.success) {
-                        alert('Could not load attendee data.');
-                        return;
-                    }
-                    pendingAttendeeData = data.attendee;
-                    bootstrap.Modal.getOrCreateInstance(document.getElementById('editBadgeModal')).show();
-                })
-                .catch(() => alert('Network error. Please try again.'));
-        });
-    });
-
-    // ── Initialise Select2 and intl-tel-input when modal opens ──
-    $('#editBadgeModal').on('shown.bs.modal', function () {
-        // Destroy previous instances
-        if ($('#editCountryResidence').hasClass('select2-hidden-accessible')) $('#editCountryResidence').select2('destroy');
-        if ($('#editNationality').hasClass('select2-hidden-accessible')) $('#editNationality').select2('destroy');
-
-        populateEditSelect('editCountryResidence', false);
-        populateEditSelect('editNationality', true);
-
-        $('#editCountryResidence, #editNationality').select2({
-            theme: 'bootstrap-5',
-            dropdownParent: $('#editBadgeModal'),
-            allowClear: true,
-            placeholder: 'Select',
-            templateResult: editCountryTemplate,
-            templateSelection: editCountrySelection,
-            width: '100%'
-        });
-
-        // Set selected values from pending data
-        if (pendingAttendeeData) {
-            const a = pendingAttendeeData;
-            $('#editCountryResidence').val(a.country_of_residence).trigger('change');
-            $('#editNationality').val(a.nationality).trigger('change');
-        }
-
-        // Initialise intl-tel-input (same as single badge)
-        const mobileInput = document.getElementById('editMobileNumber');
-        if (mobileInput) {
-            // Destroy previous instance cleanly
-            if (mobileInput.itiInstance) {
-                mobileInput.itiInstance.destroy();
-                mobileInput.itiInstance = null;
-            }
-            const iti = window.intlTelInput(mobileInput, {
-                initialCountry: "ae",
-                preferredCountries: ["ae", "sa", "kw", "qa", "bh", "om", "in", "pk", "gb", "us"],
-                separateDialCode: true,
-                formatOnDisplay: true,
-                autoPlaceholder: "aggressive",
-                utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@23.1.0/build/js/utils.js"
-            });
-            mobileInput.itiInstance = iti;
-        }
-
-        // Populate form fields (including mobile via ITI)
-        if (pendingAttendeeData) {
-            const a = pendingAttendeeData;
-            document.getElementById('editFirstName').value = a.first_name || '';
-            document.getElementById('editLastName').value = a.last_name || '';
-            document.getElementById('editJobTitle').value = a.job_title || '';
-            document.getElementById('editCompanyName').value = a.company_name || '';
-            document.getElementById('editEmail').value = a.email || '';
-            document.getElementById('editTicketType').value = a.ticket_type || '';
-            document.getElementById('editStatus').value = a.status || 'PENDING';
-
-            const mobileInputEl = document.getElementById('editMobileNumber');
-            if (mobileInputEl && mobileInputEl.itiInstance && a.mobile_number) {
-                // Wait for utils to load before setting number, so isValidNumber() works correctly
-                mobileInputEl.itiInstance.promise.then(() => {
-                    mobileInputEl.itiInstance.setNumber(a.mobile_number);
-                });
-            } else if (mobileInputEl) {
-                mobileInputEl.value = a.mobile_number || '';
-            }
-        }
-    });
-
-    // ── SAVE BUTTON – exact validation logic from single badge ──
-    document.getElementById('saveEditBtn').addEventListener('click', function () {
-        // Clear previous errors
-        resetEditForm();
-
-        const attendeeId = document.getElementById('editAttendeeId').value;
-        const mobileInput = document.getElementById('editMobileNumber');
-        const iti = mobileInput?.itiInstance;
-
-        // Mobile validation – exactly as in single badge
-        let mobileNumber = '';
-// Use getNumber() to check if anything was actually entered,
-// since mobileInput.value may only contain local digits without the dial code
-const rawE164 = iti ? iti.getNumber() : mobileInput.value.trim();
-if (rawE164 && rawE164.replace(/[+\s]/g, '') !== '') {
-    if (!iti) {
-        const phoneRegex = /^[0-9+\-\s()]{8,20}$/;
-        if (!phoneRegex.test(mobileInput.value.trim())) {
-            showEditFieldError('editMobileNumberError', 'Invalid mobile number format.');
-            return;
-        }
-        mobileNumber = mobileInput.value.trim();
-    } else {
-        if (!iti.isValidNumber()) {
-            const errorCode = iti.getValidationError();
-            let message = "Invalid mobile number.";
-            if (errorCode === 0) message = "Invalid number.";
-            else if (errorCode === 1) message = "Invalid country code.";
-            else if (errorCode === 2) message = "Number too short.";
-            else if (errorCode === 3) message = "Number too long.";
-            showEditFieldError('editMobileNumberError', message);
-            return;
-        }
-        mobileNumber = iti.getNumber();
-    }
-}
-
-        // Build payload
-        const payload = {
-            first_name: document.getElementById('editFirstName').value.trim(),
-            last_name: document.getElementById('editLastName').value.trim(),
-            job_title: document.getElementById('editJobTitle').value.trim(),
-            company_name: document.getElementById('editCompanyName').value.trim(),
-            email: document.getElementById('editEmail').value.trim(),
-            mobile_number: mobileNumber,
-            country_of_residence: $('#editCountryResidence').val(),
-            nationality: $('#editNationality').val(),
-            ticket_type: document.getElementById('editTicketType').value,
-            status: document.getElementById('editStatus').value,
+        // Create progress card
+        const card = document.createElement('div');
+        card.id = cardId;
+        card.className = 'animate-fade-in';
+        card.style.cssText = `
+            background: white; 
+            border-radius: 12px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15); 
+            padding: 15px; 
+            border-left: 5px solid #1a56db;
+            transition: all 0.3s ease;
+        `;
+        
+        card.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <strong style="font-size: 13px; color: #111;">${label}</strong>
+                <span class="badge rounded-pill bg-primary" id="${cardId}-percent" style="font-size: 10px;">0%</span>
+            </div>
+            <div class="progress" style="height: 6px; margin-bottom: 8px;">
+                <div id="${cardId}-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+            </div>
+            <div class="d-flex justify-content-between" style="font-size: 11px; color: #666;">
+                <span id="${cardId}-status">Initializing...</span>
+                <span id="${cardId}-counts">0/0</span>
+            </div>
+        `;
+        
+        container.appendChild(card);
+        
+        // Helper to remove task from localStorage
+        const removeFromPersistence = (tid) => {
+            const pending = JSON.parse(localStorage.getItem('pendingBulkTasks') || '[]');
+            const filtered = pending.filter(t => t.id !== tid);
+            localStorage.setItem('pendingBulkTasks', JSON.stringify(filtered));
         };
 
-        // Show spinner
-        document.getElementById('saveEditBtnText').style.display = 'none';
-        document.getElementById('saveEditBtnSpinner').style.display = 'inline';
-
-        fetch(`/update-attendee/${attendeeId}/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCsrfToken(),
-            },
-            body: JSON.stringify(payload),
-        })
-            .then(r => r.json().then(data => ({ ok: r.ok, body: data })))
-            .then(({ ok, body }) => {
-                if (!body.success) {
-                    if (typeof body.errors === 'string') {
-                        showEditGlobalError(body.errors);
+        // Polling loop
+        const interval = setInterval(async () => {
+            try {
+                const res = await fetch(`/bulk-task-status/${taskId}/`);
+                const data = await res.json();
+                
+                const bar = document.getElementById(`${cardId}-bar`);
+                const percentLabel = document.getElementById(`${cardId}-percent`);
+                const statusLabel = document.getElementById(`${cardId}-status`);
+                const countsLabel = document.getElementById(`${cardId}-counts`);
+                
+                if (data.state === 'PROGRESS' || data.state === 'PENDING') {
+                    if (data.progress) {
+                        const prog = data.progress;
+                        const percent = Math.round((prog.current / prog.total) * 100);
+                        bar.style.width = `${percent}%`;
+                        percentLabel.innerText = `${percent}%`;
+                        statusLabel.innerText = 'Processing rows...';
+                        countsLabel.innerText = `${prog.current}/${prog.total}`;
                     } else {
-                        Object.entries(body.errors).forEach(([field, msg]) => {
-                            const errId = editFieldErrorMap[field];
-                            if (errId) showEditFieldError(errId, msg);
-                        });
+                        statusLabel.innerText = 'Waiting for worker...';
                     }
-                    return;
-                }
-
-                // Success – show success modal and close edit modal
-                const editModalEl = document.getElementById('editBadgeModal');
-                const editModal = bootstrap.Modal.getOrCreateInstance(editModalEl);
-                document.getElementById('badgeSuccessMsg').innerText = body.message || 'Registration updated successfully.';
-
-                editModalEl.addEventListener('hidden.bs.modal', function handler() {
-                    editModalEl.removeEventListener('hidden.bs.modal', handler);
-                    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-                    document.body.classList.remove('modal-open');
-                    document.body.style.removeProperty('overflow');
-                    document.body.style.removeProperty('padding-right');
+                } 
+                else if (data.state === 'SUCCESS') {
+                    clearInterval(interval);
+                    removeFromPersistence(taskId);
+                    
+                    const resData = data.result;
+                    bar.style.width = '100%';
+                    bar.classList.remove('progress-bar-animated');
+                    bar.classList.add('bg-success');
+                    percentLabel.innerText = '100%';
+                    percentLabel.className = 'badge rounded-pill bg-success';
+                    statusLabel.innerText = 'Complete!';
+                    countsLabel.innerText = `${resData.created} created, ${resData.skipped} skipped`;
+                    
+                    // Auto-dismiss after 5 seconds
                     setTimeout(() => {
-                        const successModalEl = document.getElementById('badgeSuccessModal');
-                        if (successModalEl) {
-                            bootstrap.Modal.getOrCreateInstance(successModalEl).show();
-                        } else {
-                            location.reload();
-                        }
-                    }, 100);
-                });
-                editModal.hide();
-            })
-            .catch(() => showEditGlobalError('Network error. Please try again.'))
-            .finally(() => {
-                document.getElementById('saveEditBtnText').style.display = 'inline';
-                document.getElementById('saveEditBtnSpinner').style.display = 'none';
-            });
+                        card.style.opacity = '0';
+                        card.style.transform = 'translateX(20px)';
+                        setTimeout(() => {
+                            card.remove();
+                            if (container.children.length === 0) {
+                                location.reload();
+                            }
+                        }, 300);
+                    }, 5000);
+                }
+                else if (data.state === 'FAILURE') {
+                    clearInterval(interval);
+                    removeFromPersistence(taskId);
+                    
+                    bar.classList.add('bg-danger');
+                    statusLabel.innerText = 'Failed';
+                    statusLabel.style.color = '#dc3545';
+                    percentLabel.className = 'badge rounded-pill bg-danger';
+                    console.error('Task failed:', data.error);
+                    
+                    setTimeout(() => { card.remove(); }, 8000);
+                }
+            } catch (err) {
+                console.error('Polling error:', err);
+            }
+        }, 2000);
+    };
+
+    // Auto-resume tasks on load
+    $(document).ready(function() {
+        const pending = JSON.parse(localStorage.getItem('pendingBulkTasks') || '[]');
+        pending.forEach(task => {
+            window.startTrackingTask(task.id, task.label);
+        });
     });
-
-
-    // ── Helpers ───────────────────────────────────────────────────────────────────
-    function resetEditForm() {
-        document.getElementById('editGlobalError').style.display = 'none';
-        document.getElementById('editGlobalSuccess').style.display = 'none';
-
-        // Reset button state
-        const saveBtnText = document.getElementById('saveEditBtnText');
-        const saveBtnSpinner = document.getElementById('saveEditBtnSpinner');
-        if (saveBtnText) saveBtnText.style.display = 'inline';
-        if (saveBtnSpinner) saveBtnSpinner.style.display = 'none';
-
-        // Clear all field errors
-        Object.values(editFieldErrorMap).forEach(id => {
-            const el = document.getElementById(id);
-            if (el) { el.textContent = ''; el.style.display = 'none'; }
-        });
-        // Clear mobile error specifically
-        const mobileError = document.getElementById('editMobileNumberError');
-        if (mobileError) { mobileError.textContent = ''; mobileError.style.display = 'none'; }
-
-        // Reset border colors
-        ['editFirstName', 'editEmail', 'editTicketType', 'editMobileNumber'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.style.borderColor = '';
-        });
-    }
-
-    function showEditGlobalError(msg) {
-        const el = document.getElementById('editGlobalError');
-        document.getElementById('editGlobalErrorMsg').textContent = msg;
-        el.style.display = 'block';
-        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-
-    function showEditGlobalSuccess(msg) {
-        const el = document.getElementById('editGlobalSuccess');
-        document.getElementById('editGlobalSuccessMsg').textContent = msg;
-        el.style.display = 'block';
-    }
 
     function getCsrfToken() {
         return document.cookie.split('; ')

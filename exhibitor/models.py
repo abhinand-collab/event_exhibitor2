@@ -42,7 +42,41 @@ class Exhibitor(models.Model):
     stand_name = models.CharField(max_length=255, blank=True, null=True)
     contact_person = models.CharField(max_length=255)
     email = models.EmailField()
-    pass_limit = models.PositiveIntegerField(default=20)
+    # pass_limit = models.PositiveIntegerField(default=20)
+
+    # ── Per-type pass limits ──────────────────────────────────
+    vip_pass_limit      = models.PositiveIntegerField(default=0)
+    exhibitor_pass_limit = models.PositiveIntegerField(default=0)
+    visitor_pass_limit  = models.PositiveIntegerField(default=0)
+
+    @property
+    def pass_limit(self):
+        """Total across all types — kept for backward compat."""
+        return self.vip_pass_limit + self.exhibitor_pass_limit + self.visitor_pass_limit
+
+    def passes_used_by_type(self):
+        """Returns dict of used counts per ticket type."""
+        from django.db.models import Count
+        qs = (
+            Badge.objects
+            .filter(attendee__exhibitor=self)
+            .values("badge_type")
+            .annotate(count=Count("id"))
+        )
+        used = {"VIP": 0, "EXHIBITOR": 0, "VISITOR": 0}
+        for row in qs:
+            t = (row["badge_type"] or "").upper()
+            if t in used:
+                used[t] = row["count"]
+        return used
+
+    def remaining_by_type(self):
+        used = self.passes_used_by_type()
+        return {
+            "VIP":      max(0, self.vip_pass_limit      - used["VIP"]),
+            "EXHIBITOR": max(0, self.exhibitor_pass_limit - used["EXHIBITOR"]),
+            "VISITOR":  max(0, self.visitor_pass_limit   - used["VISITOR"]),
+        }
 
     def __str__(self):
         return self.company_name    

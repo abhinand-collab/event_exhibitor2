@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import index,Login,create_single_badge,bulk_upload_preview,bulk_upload_save,validate_email
 from .views import get_columns,bulk_update_session,bulk_task_status,get_attendee,update_attendee,delete_attendee
-from .views import export_registrations,send_invitations,register_attendee,get_existing_emails,attendee_audit_logs
+from .views import export_registrations,send_invitations,register_attendee,get_existing_emails,attendee_audit_logs,task_status_invitation
 
 urlpatterns=[
     path('',index,name="home"),
@@ -21,4 +21,5 @@ urlpatterns=[
     path("register/<uuid:token>/", register_attendee,name="register_attendee"),
     path('get-existing-emails/', get_existing_emails, name='get_existing_emails'),
     path("attendee/<int:attendee_id>/logs/", attendee_audit_logs, name="attendee_audit_logs"),
+    path("task-status-invitation/<str:task_id>/", task_status_invitation, name="task_status"),
 ]

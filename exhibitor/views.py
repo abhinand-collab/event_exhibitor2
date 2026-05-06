@@ -30,6 +30,7 @@ from auditlog.models import LogEntry
 from itertools import chain
 from .utils.redis_lock import acquire_lock,release_lock
 
+
 # =============================================================================
 # AUTH
 # =============================================================================
@@ -59,11 +60,31 @@ def index(request):
     total_pass = exhibitor.pass_limit
     used_pass = Badge.objects.filter(attendee__exhibitor=exhibitor).count()
 
-    stats = Attendee.objects.filter(exhibitor=exhibitor).aggregate(
-        confirmed=Count("id", filter=Q(status="CONFIRMED")),
-        pending=Count("id", filter=Q(status="PENDING")),
-        invited=Count("id", filter=Q(status="INVITED")),
-    )
+    # ── Detailed Stats per Ticket Type ──────────────────────────────────────
+    ticket_types = [
+        ("VIP", "VIP PASS", exhibitor.vip_pass_limit),
+        ("EXHIBITOR", "EXHIBITOR PASS", exhibitor.exhibitor_pass_limit),
+        ("VISITOR", "VISITOR PASS", exhibitor.visitor_pass_limit),
+    ]
+    
+    badge_stats = []
+    for t_code, t_label, t_limit in ticket_types:
+        t_counts = Attendee.objects.filter(exhibitor=exhibitor, attendee_type=t_code).aggregate(
+            confirmed=Count("id", filter=Q(status="CONFIRMED")),
+            pending=Count("id", filter=Q(status="PENDING")),
+            invited=Count("id", filter=Q(status="INVITED")),
+        )
+        t_used = Badge.objects.filter(attendee__exhibitor=exhibitor, badge_type=t_code).count()
+        
+        badge_stats.append({
+            "label": t_label,
+            "limit": t_limit,
+            "used": t_used,
+            "confirmed": t_counts["confirmed"],
+            "pending": t_counts["pending"],
+            "invited": t_counts["invited"],
+            "percent": int((t_used / t_limit * 100)) if t_limit > 0 else 0
+        })
 
     registrations_qs = Attendee.objects.filter(
         exhibitor=exhibitor
@@ -113,14 +134,13 @@ def index(request):
     page_number = request.GET.get("page", 1)
     paginator = Paginator(registrations_qs, page_size)
     registrations = paginator.get_page(page_number)
+    print(badge_stats,"__badgestats")
 
     return render(request, "index.html", {
         "registrations": registrations,
         "used_pass": used_pass,
         "total_pass": total_pass,
-        "confirmed_count": stats["confirmed"],
-        "pending_count": stats["pending"],
-        "invited_count": stats["invited"],
+        "badge_stats": badge_stats,
         "current_page_size": page_size,  # Pass to template
     })
 
@@ -197,15 +217,6 @@ import threading
 @login_required
 @require_http_methods(["POST"])
 def create_single_badge(request):
-    """
-    Create one Attendee + Badge for the logged-in exhibitor.
-
-    Flow:
-      1. Validate form
-      2. Check pass limit
-      3. Create Attendee + Badge inside a transaction
-      4. Return JSON success / error
-    """
     # ── 1. Form validation ──────────────────────────────────────────────────
     form = CreateBadgeForm(request.POST)
     if not form.is_valid():
@@ -221,17 +232,38 @@ def create_single_badge(request):
             status=403,
         )
 
-    # ── 3. Pass limit check ─────────────────────────────────────────────────
-    used = Badge.objects.filter(attendee__exhibitor=exhibitor).count()
-    if used >= exhibitor.pass_limit:
+    # ── 3. Per-type pass limit check ────────────────────────────────────────
+    ticket_type = form.cleaned_data["ticket_type"]  # "VIP" / "EXHIBITOR" / "VISITOR"
+
+    limit_map = {
+        "VIP":       exhibitor.vip_pass_limit,
+        "EXHIBITOR": exhibitor.exhibitor_pass_limit,
+        "VISITOR":   exhibitor.visitor_pass_limit,
+    }
+    label_map = {
+        "VIP":       "VIP",
+        "EXHIBITOR": "Exhibitor",
+        "VISITOR":   "Visitor",
+    }
+
+    limit = limit_map.get(ticket_type, 0)
+
+    # Count only badges of this specific type for this exhibitor
+    used = Badge.objects.filter(
+        attendee__exhibitor=exhibitor,
+        badge_type=ticket_type,
+    ).count()
+
+    if used >= limit:
         return JsonResponse({
             "success": False,
-            "errors" : f"Pass limit reached ({exhibitor.pass_limit}). Cannot create more badges.",
-        })
+            "errors": (
+                f"{label_map[ticket_type]} pass limit reached "
+                f"({used}/{limit}). Cannot create more {label_map[ticket_type]} badges."
+            ),
+        }, status=400)
 
     # ── 4. Create Attendee + Badge ──────────────────────────────────────────
-    ticket_type = form.cleaned_data["ticket_type"]
-
     try:
         with transaction.atomic():
             attendee = Attendee.objects.create(
@@ -254,20 +286,21 @@ def create_single_badge(request):
             )
 
             Badge.objects.create(
-                attendee    = attendee,
-                badge_type  = ticket_type,
+                attendee   = attendee,
+                badge_type = ticket_type,
             )
 
     except Exception as e:
-        print(str(e),'checkerror')
+        print(str(e), 'checkerror')
         return JsonResponse(
             {"success": False, "errors": _friendly_db_error(str(e))},
             status=500,
         )
+
     threading.Thread(
         target=send_badge_confirmation_email,
         args=(attendee, ticket_type),
-        daemon=True,          # dies with the process — no orphaned threads
+        daemon=True,
     ).start()
 
     return JsonResponse(
@@ -433,66 +466,57 @@ def bulk_upload_preview(request):
 @login_required
 @require_POST
 def bulk_upload_save(request):
-    """
-    Receive pre-filtered valid rows from JS (no status/errors fields in payload).
-    Handles chunked uploads — each chunk is a separate POST.
-    Pass limit is checked on every chunk using live DB count so chunks
-    cannot collectively exceed the limit even if fired in sequence.
-    """
-    exhibitor=request.user.exhibitor
-    lock_name = f"exhibitor_lock_{exhibitor.id}"
-    
     try:
         body = json.loads(request.body)
     except (json.JSONDecodeError, KeyError):
         return JsonResponse({"success": False, "errors": "Invalid request body."}, status=400)
- 
+
     rows         = body.get("rows", [])
     chunk_index  = body.get("chunk_index", 0)
     total_chunks = body.get("total_chunks", 1)
-    
- 
+
     if not rows:
         return JsonResponse({"success": False, "errors": "No valid rows received."}, status=400)
-    
-    if not acquire_lock(lock_name, timeout=1800):
-        return JsonResponse({
-            "success": False,
-            "errors": "An upload is already in progress for this account. Please wait for it to complete."
-        }, status=429)
- 
+
     exhibitor = request.user.exhibitor
- 
-    # ── Pass limit check — live DB count every chunk so cumulative chunks
-    #    cannot sneak past the limit when processed in parallel/sequence ────
-    used      = Badge.objects.filter(attendee__exhibitor=exhibitor).count()
-    remaining = exhibitor.pass_limit - used
- 
-    if remaining <= 0:
-        release_lock(lock_name)  # ← release before returning
-        return JsonResponse({
-            "success": False,
-            "errors": f"Pass limit reached. You have used all {exhibitor.pass_limit} passes."
-        }, status=400)
- 
-    if len(rows) > remaining:
-        return JsonResponse({
-            "success": False,
-            "errors": (
-                f"Not enough passes remaining for chunk {chunk_index + 1}/{total_chunks}. "
-                f"Trying to import {len(rows)} record(s) but only {remaining} pass(es) remain."
+    remaining = exhibitor.remaining_by_type()
+
+    # ── Count requested rows per ticket type ─────────────────
+    requested = {"VIP": 0, "EXHIBITOR": 0, "VISITOR": 0}
+    for row in rows:
+        t = str(row.get("ticket_type") or "").strip().upper()
+        if t in requested:
+            requested[t] += 1
+
+    # ── Check each type ───────────────────────────────────────
+    limit_errors = []
+    for ticket_type, count in requested.items():
+        if count == 0:
+            continue
+        rem = remaining[ticket_type]
+        if rem <= 0:
+            limit_errors.append(
+                f"{ticket_type}: no passes remaining "
+                f"(limit: {getattr(exhibitor, f'{ticket_type.lower()}_pass_limit')})."
             )
+        elif count > rem:
+            limit_errors.append(
+                f"{ticket_type}: trying to import {count} but only {rem} pass(es) remaining "
+                f"(limit: {getattr(exhibitor, f'{ticket_type.lower()}_pass_limit')})."
+            )
+
+    if limit_errors:
+        return JsonResponse({
+            "success": False,
+            "errors": " | ".join(limit_errors),
         }, status=400)
- 
-    # 🚀 Fire Celery task — rows are already valid, no status filtering needed
+
     task = bulk_upload_save_task.delay(rows, exhibitor.id)
 
-    print(task.id,'----------checktaskid')
- 
     return JsonResponse({
-        "success" : True,
-        "task_id" : task.id,
-        "message" : f"Chunk {chunk_index + 1}/{total_chunks} queued",
+        "success":  True,
+        "task_id":  task.id,
+        "message":  f"Chunk {chunk_index + 1}/{total_chunks} queued",
     })
  
 # =============================================================================
@@ -582,10 +606,17 @@ def bulk_task_status(request, task_id):
     if result.state == "PENDING":
         return JsonResponse({"state": "PENDING"})
     
+    elif result.state == "PROGRESS":
+        # info contains the custom meta dict from task.update_state
+        return JsonResponse({
+            "state": "PROGRESS",
+            "progress": result.info
+        })
+    
     elif result.state == "SUCCESS":
         return JsonResponse({
             "state": "SUCCESS",
-            **result.result  # spreads created, skipped, total_valid
+            "result": result.result  # spreads created, skipped, total_valid, created_by_type
         })
     
     elif result.state == "FAILURE":
@@ -640,7 +671,7 @@ def get_attendee(request, attendee_id):
 # EDIT ATTENDEE — SAVE changes
 # =============================================================================
 @login_required
-@require_POST
+@require_http_methods(["POST", "PUT"])
 def update_attendee(request, attendee_id):
     exhibitor = request.user.exhibitor
     attendee  = get_object_or_404(Attendee, id=attendee_id, exhibitor=exhibitor)
@@ -776,9 +807,8 @@ def export_registrations(request):
 
     headers = [
         "First Name", "Last Name", "Email", "Job Title", "Company Name",
-        "Source", "Ticket ID", "Mobile Number",
+        "Source", "Mobile Number",
         "Country of Residence", "Nationality",
-        "Digital Badge Issued", "Onsite Badge Printed",
         "Accepted Terms", "Accepted Data Sharing", "Accepted Marketing",
         "Status",
     ]
@@ -786,7 +816,7 @@ def export_registrations(request):
 
     for reg in qs:
         badge        = getattr(reg, "badge", None)
-        ticket_id    = str(badge.ticket_id) if badge and badge.ticket_id else ""
+        # ticket_id    = str(badge.ticket_id) if badge and badge.ticket_id else ""
         ws.append([
             reg.first_name,
             reg.last_name or "",
@@ -794,12 +824,12 @@ def export_registrations(request):
             reg.job_title or "",
             reg.company_name or "",
             reg.source or "",
-            ticket_id,
+            # ticket_id,
             reg.mobile_number or "",
             reg.country_of_residence or "",
             reg.nationality or "",
-            "Yes" if reg.digital_badge_issued else "No",
-            "Yes" if reg.onsite_badge_printed else "No",
+            # "Yes" if reg.digital_badge_issued else "No",
+            # "Yes" if reg.onsite_badge_printed else "No",
             "Yes" if reg.accepted_terms else "No",
             "Yes" if reg.accepted_data_sharing else "No",
             "Yes" if reg.accepted_marketing else "No",
@@ -891,6 +921,19 @@ def send_invitations(request):
         'task_id': task.id,
         'message': f'Processing {len(entries)} entries in background.'
     })
+
+@login_required
+def task_status_invitation(request, task_id):
+    result = AsyncResult(task_id)
+
+    response = {"state": result.state}  # PENDING / SUCCESS / FAILURE
+
+    if result.state == "SUCCESS":
+        response["result"] = result.result  # {"sent_count": X, "skipped_count": Y}
+    elif result.state == "FAILURE":
+        response["error"] = str(result.result)
+
+    return JsonResponse(response)
 
 def register_attendee(request, token):
     attendee = get_object_or_404(Attendee, invite_token=token)

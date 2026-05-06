@@ -76,7 +76,7 @@
         <table class="table table-hover" id="registrationsTable">
             <thead>
                 <tr>
-                    <th style="width: 40px;"><input type="checkbox" class="table-checkbox" id="selectAll"></th>
+                    <!-- <th style="width: 40px;"><input type="checkbox" class="table-checkbox" id="selectAll"></th> -->
                     <th>NAME</th>
                     <th>JOB TITLE</th>
                     <th>COUNTRY</th>
@@ -95,7 +95,7 @@
             <tbody>
                 {% for reg in registrations %}
                 <tr data-attendee-id="{{ reg.id }}">
-                    <td><input type="checkbox" class="table-checkbox row-checkbox"></td>
+                    <!-- <td><input type="checkbox" class="table-checkbox row-checkbox"></td> -->
                     <td>
                         <a href="{% url 'attendee_audit_logs' reg.id %}" class="user-info" style="text-decoration:none;" >
                             <span class="name">{{ reg.first_name }} {{ reg.last_name }}</span>
@@ -107,7 +107,7 @@
                     <td>{{ reg.nationality }}</td>
                     <td>{{ reg.mobile_number }}</td>
                     <td>{{ reg.source }}</td>
-                    <td>{% if reg.badge %}{{ reg.badge.badge_type }}{% else %}-{% endif %}</td>
+                    <td>{% if reg.badge %}{{ reg.badge.badge_type }}{% else %}{{reg.attendee_type}}{% endif %}</td>
                     <!-- <td style="max-width:180px; word-break: break-word;">{% if reg.badge %}{{ reg.badge.ticket_id }}{% else %}-{% endif %}</td> -->
                     <td>{{ reg.company_name }}</td>
                     <!-- <td>{% if reg.digital_badge_issued %}<span class="label-yes">Yes</span>{% else %}<span class="label-no">No</span>{% endif %}</td>
@@ -115,18 +115,18 @@
                     <td><span class="status-badge {{ reg.status|lower }}">{{ reg.get_status_display }}</span></td>
                     <td>
                         <div class="action-buttons">
-                            <button class="btn-action-table edit" title="Edit">
+                            <button class="btn-action-table edit" title="Edit" data-bs-toggle="modal" data-bs-target="#createBadgeModal">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button class="btn-action-table email" title="Email">
+                            <!-- <button class="btn-action-table email" title="Email">
                                 <i class="fas fa-envelope"></i>
-                            </button>
-                            <button class="btn-action-table download" title="Download">
+                            </button> -->
+                            <!-- <button class="btn-action-table download" title="Download">
                                 <i class="fas fa-download"></i>
                             </button>
                             <button class="btn-action-table print" title="Print">
                                 <i class="fas fa-print"></i>
-                            </button>
+                            </button> -->
                             <button class="btn-action-table delete" title="Delete">
                                 <i class="fas fa-trash"></i>
                             </button>

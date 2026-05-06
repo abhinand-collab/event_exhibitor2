@@ -1,28 +1,7 @@
-<!-- <style>
-    /* Ensure Select2 selection matches our custom form-control styling */
-    #createBadgeForm .select2-container--bootstrap-5 .select2-selection {
-        border: 1px solid #ddd !important;
-        min-height: 42px !important;
-        display: flex;
-        align-items: center;
-        padding: 0 12px !important;
-        border-radius: 0.375rem !important; /* Bootstrap 5 default */
-    }
-    #createBadgeForm .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
-        padding: 0 !important;
-        line-height: 40px !important;
-        color: #333 !important;
-    }
-    #createBadgeForm .select2-container--bootstrap-5 .select2-selection--single .select2-selection__arrow {
-        height: 40px !important;
-    }
-    /* Fix mobile input padding and width */
-    #createBadgeForm .iti { width: 100%; }
-</style> -->
-
 <div class="modal-body" style="padding: 25px; max-height: 70vh; overflow-y: auto;">
     <form method="POST" action="{% url 'create_single_badge' %}" id="createBadgeForm" novalidate>
         {% csrf_token %}
+        <input type="hidden" name="attendee_id" id="attendeeId">
         <div id="globalFormError"
             style="display:none; background:#fdf2f2; border:1px solid #e74c3c; color:#c0392b; padding:12px 16px; border-radius:6px; margin-bottom:16px; font-size:14px;">
             <i class="fas fa-exclamation-triangle me-2"></i>
@@ -132,9 +111,17 @@
                 <div class="validation-error" id="ticketTypeError"><i
                         class="fas fa-exclamation-circle"></i><span></span></div>
             </div>
+            <div class="col-md-6 mb-4" id="statusFieldRow" style="display: none;">
+                <label class="form-label" style="font-weight: 600; color: #333;">Status</label>
+                <select name="status" class="form-select" id="attendeeStatus">
+                    <option value="PENDING">Pending</option>
+                    <option value="INVITED">Invited</option>
+                    <option value="CONFIRMED">Confirmed</option>
+                </select>
+            </div>
         </div>
 
-        <div class="consent-section" style="padding-top: 10px;">
+        <div class="consent-section" id="consentSection" style="padding-top: 10px;">
             <div class="form-check mb-3">
                 <input class="form-check-input" name="accepted_terms" type="checkbox" id="consent1" required
                     style="margin-top: 3px;">
@@ -155,7 +142,8 @@
                     I understand that if I allow an exhibitor or sponsor at the event to scan my badge, whether physical
                     or digital (e.g., via the Mobile App), I am providing them with my personal data. I acknowledge that
                     the organizers have no control over any third-party use of this data and cannot be held liable for
-                    such use to the extent permitted by law. <span class="text-danger">*</span>
+                    such use to the extent permitted by law.
+                     <!-- <span class="text-danger">*</span> -->
                 </label>
             </div>
 
@@ -460,9 +448,6 @@
         }
 
         // ── Key fix: init country Select2 on modal shown, AFTER base.html runs ──
-        // base.html runs its generic select2 init on shown.bs.modal.
-        // We re-init the country selects immediately after on the same event,
-        // which overrides the generic init with our custom templates.
         const createModalEl = document.getElementById('createBadgeModal');
 
         createModalEl.addEventListener('shown.bs.modal', function () {
@@ -496,9 +481,81 @@
             });
         });
 
+        // Handle population for Edit mode
+        createModalEl.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const form = document.getElementById("createBadgeForm");
+            const isEdit = button && button.classList.contains('edit');
+            
+            // Reset form and UI
+            form.reset();
+            document.getElementById('attendeeId').value = '';
+            document.getElementById('statusFieldRow').style.display = 'none';
+            document.getElementById('consentSection').style.display = 'block';
+            document.getElementById('submitBadgeBtn').innerText = 'REGISTER';
+            
+            // Clear errors
+            document.getElementById("globalFormError").style.display = "none";
+            document.querySelectorAll(".validation-error").forEach(el => el.style.display = "none");
+            document.querySelectorAll(".form-control, .form-select").forEach(el => el.style.border = "1px solid #ddd");
+
+            if (isEdit) {
+                const attendeeId = button.closest('tr').dataset.attendeeId;
+                document.getElementById('attendeeId').value = attendeeId;
+                document.getElementById('statusFieldRow').style.display = 'block';
+                document.getElementById('consentSection').style.display = 'none'; // Usually hide consents on edit
+                document.getElementById('submitBadgeBtn').innerText = 'SAVE CHANGES';
+
+                // ── Disable fields that should not be editable ──
+                document.getElementById('email').disabled = true;
+                document.getElementById('email').style.background = '#f5f5f5';
+                document.getElementById('attendeeStatus').disabled = true;
+                document.getElementById('attendeeStatus').style.background = '#f5f5f5';
+                document.getElementById('ticketType').disabled = true;
+                document.getElementById('ticketType').style.background = '#f5f5f5';
+                $('#ticketType').trigger('change');
+                
+                // Set modal title if it exists
+                const titleEl = createModalEl.querySelector('.modal-title');
+                if (titleEl) titleEl.innerText = 'Edit Registration';
+
+                fetch(`/get-attendee/${attendeeId}/`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            const a = data.attendee;
+                            document.getElementById('firstName').value = a.first_name || '';
+                            document.getElementById('lastName').value = a.last_name || '';
+                            document.getElementById('jobTitle').value = a.job_title || '';
+                            document.getElementById('companyName').value = a.company_name || '';
+                            document.getElementById('email').value = a.email || '';
+                            document.getElementById('ticketType').value = a.ticket_type || '';
+                            document.getElementById('attendeeStatus').value = a.status || 'PENDING';
+                            
+                            // Trigger Select2 updates
+                            $('#countryResidence').val(a.country_of_residence).trigger('change');
+                            $('#nationality').val(a.nationality).trigger('change');
+                            $('#ticketType').trigger('change');
+                            
+                            const mobileInput = document.getElementById('mobileNumber');
+                            if (mobileInput && mobileInput.itiInstance) {
+                                mobileInput.itiInstance.setNumber(a.mobile_number || '');
+                            } else {
+                                mobileInput.value = a.mobile_number || '';
+                            }
+                        }
+                    });
+            } else {
+                  // ── Re-enable fields for create mode (reset bg too) ──
+                    document.getElementById('email').style.background = '';
+                    document.getElementById('attendeeStatus').style.background = '';
+                    document.getElementById('ticketType').style.background = '';
+                const titleEl = createModalEl.querySelector('.modal-title');
+                if (titleEl) titleEl.innerText = 'GULFOOD 2026';
+            }
+        });
+
         // ── Remove select2-country from base.html's generic class ───────────────
-        // So base.html won't re-init these after our shown.bs.modal handler runs.
-        // Add this ONLY if your base.html targets '.select2-modal' class:
         document.getElementById('countryResidence').classList.remove('select2-modal');
         document.getElementById('nationality').classList.remove('select2-modal');
 
@@ -507,7 +564,7 @@
             const modalEl = document.getElementById("badgeSuccessModal");
             const modal = bootstrap.Modal.getInstance(modalEl) || bootstrap.Modal.getOrCreateInstance(modalEl);
             if (modal) modal.hide();
-            window.location.href = window.location.pathname;
+            location.reload(); // Refresh to see changes
         });
 
         // ── Form submit ─────────────────────────────────────────────────────────
@@ -515,46 +572,102 @@
             e.preventDefault();
 
             const form = this;
+            const attendeeId = document.getElementById('attendeeId').value;
+            const method = attendeeId ? "PUT" : "POST";
+            const action = attendeeId ? `/update-attendee/${attendeeId}/` : form.action;
+            
             const formData = new FormData(form);
 
             document.querySelectorAll(".validation-error span").forEach(el => el.innerText = "");
             document.querySelectorAll(".form-control, .form-select").forEach(el => el.style.border = "1px solid #ddd");
 
-            const mobileInput = document.querySelector("#mobileNumber");
-            const itiInstance = mobileInput.itiInstance; // get instance stored on the element
+            // ── Name Validation ──────────────────────────────────────────────────
+            const nameRegex = /^[A-Za-z\s]+$/;
+            const fName = formData.get('first_name')?.trim();
+            const lName = formData.get('last_name')?.trim();
+            let stopSubmit = false;
 
-if (mobileInput.value.trim() !== "") {
-    if (!itiInstance) {
-        // fallback if instance missing (should not happen)
-        const phoneRegex = /^[0-9+\-\s()]{8,20}$/;
-        if (!phoneRegex.test(mobileInput.value)) {
-            document.getElementById("mobileNumberError").querySelector("span").innerText = "Invalid mobile number format.";
-            document.getElementById("mobileNumberError").style.display = "block";
-            mobileInput.style.border = "1px solid red";
-            return;
-        }
-        formData.set("mobile_number", mobileInput.value.trim());
-    } else {
-        if (!itiInstance.isValidNumber()) {
-            const errorMsg = itiInstance.getValidationError();
-            let message = "Invalid mobile number.";
-            if (errorMsg === 0) message = "Invalid number.";
-            else if (errorMsg === 1) message = "Invalid country code.";
-            else if (errorMsg === 2) message = "Number too short.";
-            else if (errorMsg === 3) message = "Number too long.";
-            document.getElementById("mobileNumberError").querySelector("span").innerText = message;
-            document.getElementById("mobileNumberError").style.display = "block";
-            mobileInput.style.border = "1px solid red";
-            return;
-        }
-        formData.set("mobile_number", itiInstance.getNumber());
-    }
+            if (!fName) {
+                const errSpan = document.getElementById("firstNameError").querySelector("span");
+                if (errSpan) errSpan.innerText = "First name is required.";
+                document.getElementById("firstNameError").style.display = "block";
+                highlightFieldError('first_name');
+                stopSubmit = true;
+            } else if (!nameRegex.test(fName)) {
+                const errSpan = document.getElementById("firstNameError").querySelector("span");
+                if (errSpan) errSpan.innerText = "First name should only contain letters.";
+                document.getElementById("firstNameError").style.display = "block";
+                highlightFieldError('first_name');
+                stopSubmit = true;
+            }
+
+            if (lName && !nameRegex.test(lName)) {
+                const errSpan = document.getElementById("lastNameError").querySelector("span");
+                if (errSpan) errSpan.innerText = "Last name should only contain letters.";
+                document.getElementById("lastNameError").style.display = "block";
+                highlightFieldError('last_name');
+                stopSubmit = true;
+            }
+
+            if (stopSubmit) {
+                createModalEl.querySelector(".modal-body").scrollTop = 0;
+                return;
+            }
+
+            const mobileInput = document.querySelector("#mobileNumber");
+            const itiInstance = mobileInput.itiInstance; 
+
+            if (mobileInput.value.trim() !== "") {
+                if (!itiInstance) {
+                    const phoneRegex = /^[0-9+\-\s()]{8,20}$/;
+                    if (!phoneRegex.test(mobileInput.value)) {
+                        document.getElementById("mobileNumberError").querySelector("span").innerText = "Invalid mobile number format.";
+                        document.getElementById("mobileNumberError").style.display = "block";
+                        mobileInput.style.border = "1px solid red";
+                        return;
+                    }
+                    formData.set("mobile_number", mobileInput.value.trim());
+                } else {
+                    if (!itiInstance.isValidNumber()) {
+                        const errorMsg = itiInstance.getValidationError();
+                        let message = "Invalid mobile number.";
+                        if (errorMsg === 0) message = "Invalid number.";
+                        else if (errorMsg === 1) message = "Invalid country code.";
+                        else if (errorMsg === 2) message = "Number too short.";
+                        else if (errorMsg === 3) message = "Number too long.";
+                        document.getElementById("mobileNumberError").querySelector("span").innerText = message;
+                        document.getElementById("mobileNumberError").style.display = "block";
+                        mobileInput.style.border = "1px solid red";
+                        return;
+                    }
+                    formData.set("mobile_number", itiInstance.getNumber());
+                }
+            }
+
+            let fetchBody = formData;
+            let headers = { "X-CSRFToken": getCSRFToken() };
+            
+            if (method === "PUT") {
+    const payload = Object.fromEntries(formData);
+
+    // ── Disabled fields are excluded from FormData by the browser.
+    //    Read them directly from the DOM and add them back manually. ──
+    const emailEl      = document.getElementById('email');
+    const ticketEl     = document.getElementById('ticketType');
+    const statusEl     = document.getElementById('attendeeStatus');
+
+    if (emailEl && emailEl.disabled)  payload.email       = emailEl.value.trim();
+    if (ticketEl && ticketEl.disabled) payload.ticket_type = ticketEl.value.trim();
+    if (statusEl && statusEl.disabled) payload.status      = statusEl.value.trim();
+
+    fetchBody = JSON.stringify(payload);
+    headers["Content-Type"] = "application/json";
 }
 
-            fetch(form.action, {
-                method: "POST",
-                body: formData,
-                headers: { "X-CSRFToken": getCSRFToken() }
+            fetch(action, {
+                method: method,
+                body: fetchBody,
+                headers: headers
             })
                 .then(res => res.json().then(data => ({ status: res.status, body: data })))
                 .then(({ status, body }) => {
@@ -565,7 +678,7 @@ if (mobileInput.value.trim() !== "") {
                         if (typeof body.errors === "string") {
                             document.getElementById("globalFormErrorMsg").innerText = body.errors;
                             document.getElementById("globalFormError").style.display = "block";
-                            document.getElementById("createBadgeModal").querySelector(".modal-body").scrollTop = 0;
+                            createModalEl.querySelector(".modal-body").scrollTop = 0;
                             return;
                         }
                         for (let field in body.errors) {
@@ -574,19 +687,16 @@ if (mobileInput.value.trim() !== "") {
                                 let span = errorDiv.querySelector("span");
                                 if (span) { span.innerText = body.errors[field]; errorDiv.style.display = "block"; }
                             }
-                            highlightFieldError(field); // ✅ replaces the raw border line
+                            highlightFieldError(field);
                         }
                     } else {
                         form.reset();
-                        // ✅ Reset intl-tel-input flag back to UAE
                         if (itiInstance) itiInstance.setCountry("ae");
 
-                        // ✅ Clear any red borders on Select2 containers
                         $('#countryResidence, #nationality, #ticketType')
                             .next('.select2-container').find('.select2-selection')
                             .css('border', '1px solid #ddd');
 
-                        // Reset all Select2 dropdowns including country ones
                         $('#countryResidence, #nationality').val(null).trigger('change');
                         $('.select2-modal').val(null).trigger('change');
 
@@ -594,7 +704,7 @@ if (mobileInput.value.trim() !== "") {
                         document.querySelectorAll(".validation-error span").forEach(el => el.innerText = "");
                         document.querySelectorAll(".form-control, .form-select").forEach(el => el.style.border = "1px solid #ddd");
 
-                        document.getElementById("badgeSuccessMsg").innerText = body.message || "Badge registered successfully.";
+                        document.getElementById("badgeSuccessMsg").innerText = body.message || "Operation successful.";
 
                         createModalEl.addEventListener('hidden.bs.modal', function handler() {
                             createModalEl.removeEventListener('hidden.bs.modal', handler);
@@ -615,7 +725,7 @@ if (mobileInput.value.trim() !== "") {
                     console.error(err);
                     document.getElementById("globalFormErrorMsg").innerText = "Something Went Wrong";
                     document.getElementById("globalFormError").style.display = "block";
-                    document.getElementById("createBadgeModal").querySelector(".modal-body").scrollTop = 0;
+                    createModalEl.querySelector(".modal-body").scrollTop = 0;
                 });
         });
 

@@ -145,8 +145,8 @@
                 <th class="bpt-th">TERMS</th>
                 <th class="bpt-th">DATA SHARING</th>
                 <th class="bpt-th">MARKETING</th>
-                <th class="bpt-th">DIGITAL BADGE</th>
-                <th class="bpt-th">ONSITE BADGE</th>
+                <!-- <th class="bpt-th">DIGITAL BADGE</th>
+                <th class="bpt-th">ONSITE BADGE</th> -->
                 <th class="bpt-th">STATUS</th>
               </tr>
             </thead>
@@ -463,14 +463,16 @@
     color: #1e40af;
     border-bottom-color: #bfdbfe;
   }
+
   /* Add inside your <style> block */
-.mobile-number-container .iti {
-  width: 100%;
-}
-.mobile-number-container .iti__tel-input {
-  width: 100%;
-  min-width: 130px;
-}
+  .mobile-number-container .iti {
+    width: 100%;
+  }
+
+  .mobile-number-container .iti__tel-input {
+    width: 100%;
+    min-width: 130px;
+  }
 </style>
 
 
@@ -605,7 +607,6 @@
    */
   function applyMappingAndNormalise(rawRows, mapping) {
     return rawRows.map((raw, index) => {
-      // Remap keys according to column mapping
       const mapped = { ...raw };
       Object.entries(mapping).forEach(([srcCol, sysField]) => {
         if (srcCol in mapped) {
@@ -613,6 +614,8 @@
           if (srcCol !== sysField) delete mapped[srcCol];
         }
       });
+
+      const rawTicket = cleanVal(mapped.ticket_type);
 
       return {
         id: index,
@@ -625,12 +628,12 @@
         nationality: cleanVal(mapped.nationality),
         company_name: cleanVal(mapped.company_name),
         job_title: cleanVal(mapped.job_title),
-        ticket_type: cleanVal(mapped.ticket_type),
+        // ── Uppercase so "vip" / "visitor" match the <option> values ──
+        // ── But keep original if invalid so the error is visible ──
+        ticket_type: rawTicket ? rawTicket.toUpperCase() : null,
         accepted_terms: toBool(mapped.accepted_terms),
         accepted_data_sharing: toBool(mapped.accepted_data_sharing),
         accepted_marketing: toBool(mapped.accepted_marketing),
-        digital_badge_issued: toBool(mapped.digital_badge_issued),
-        onsite_badge_printed: toBool(mapped.onsite_badge_printed),
       };
     });
   }
@@ -639,7 +642,7 @@
   // VALIDATION  (100% client-side)
   // ═════════════════════════════════════════════════════════════
 
-  function validateRowData(data, skipId = null) {
+  function validateRowData(data, skipId = null, skipDuplicateCheck = false) {
     const errors = [];
     const NAME_RE = /^[A-Za-z \-'.]+$/;
 
@@ -650,7 +653,6 @@
     const nationality = String(data.nationality || "").trim();
     const ticket_type = String(data.ticket_type || "").trim();
 
-    // ── first_name ───────────────────────────────────────────
     if (!first_name) {
       errors.push("First name required");
     } else if (first_name.length < 2) {
@@ -659,7 +661,6 @@
       errors.push("First name should only contain letters");
     }
 
-    // ── last_name (optional — only validate if filled) ───────
     if (last_name) {
       if (last_name.length < 2) {
         errors.push("Last name must be at least 2 characters");
@@ -671,51 +672,42 @@
     // ── email ─────────────────────────────────────────────────
     if (!email || !email.includes("@")) {
       errors.push("Invalid email");
-    } else {
+    } else if (!skipDuplicateCheck) {
       const inDb = existingEmailsSet.has(email);
       const inFile = allRows.some(r =>
         r.id !== skipId && String(r.email || "").trim().toLowerCase() === email
       );
-      if (inDb || inFile) errors.push("Email already exists");
+      if (inDb) errors.push("Email already exists");
+      else if (inFile) errors.push("Duplicate email");
     }
 
-    // ── mobile_number ──────────────────────────────────────────
     if (data.mobile_number) {
-  // Strip whitespace/dashes for basic length check
-  const digits = String(data.mobile_number).replace(/[\s\-().+]/g, '');
-  if (digits.length < 5 || digits.length > 15) {
-    errors.push("Invalid mobile number");
-  }
-} 
+      const digits = String(data.mobile_number).replace(/[\s\-().+]/g, '');
+      if (digits.length < 5 || digits.length > 15) {
+        errors.push("Invalid mobile number");
+      }
+    }
 
-    // ── country ───────────────────────────────────────────────
     if (!country) {
-  errors.push("Country required");
-} else {
-  const validCountry = COUNTRIES.some(
-    c => c.name.toLowerCase() === country.toLowerCase()
-  );
-  if (!validCountry) errors.push("Country required");
-}
+      errors.push("Country required");
+    } else {
+      const validCountry = COUNTRIES.some(c => c.name.toLowerCase() === country.toLowerCase());
+      if (!validCountry) errors.push("Country required");
+    }
 
-// ── nationality ───────────────────────────────────────────────
-if (!nationality) {
-  errors.push("Nationality required");
-} else {
-  const validNationality = COUNTRIES.some(
-    c => c.nationality.toLowerCase() === nationality.toLowerCase()
-  );
-  if (!validNationality) errors.push("Nationality required");
-}
+    if (!nationality) {
+      errors.push("Nationality required");
+    } else {
+      const validNationality = COUNTRIES.some(c => c.nationality.toLowerCase() === nationality.toLowerCase());
+      if (!validNationality) errors.push("Nationality required");
+    }
 
-    // ── ticket_type ───────────────────────────────────────────
     if (!ticket_type) {
       errors.push("Ticket type required");
     } else if (!["VIP", "VISITOR", "EXHIBITOR"].includes(ticket_type.toUpperCase())) {
       errors.push("Invalid ticket type");
     }
 
-    // ── accepted_terms ────────────────────────────────────────
     if (!data.accepted_terms) {
       errors.push("Terms must be accepted");
     }
@@ -786,19 +778,30 @@ if (!nationality) {
     "first_name", "last_name", "email", "mobile_number",
     "country", "nationality", "company_name", "job_title",
     "ticket_type", "accepted_terms", "accepted_data_sharing",
-    "accepted_marketing", "digital_badge_issued", "onsite_badge_printed",
+    "accepted_marketing"
+    // , "digital_badge_issued", "onsite_badge_printed",
   ];
 
   function toLabel(str) {
     return str.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
   }
 
+  function toSnakeCase(str) {
+    return str
+      .trim()
+      .toLowerCase()
+      .replace(/[\s\-]+/g, '_')      // spaces/hyphens → underscore
+      .replace(/[^a-z0-9_]/g, '');   // remove special chars
+  }
+
   function renderFieldMapping(columns) {
     const container = document.getElementById("mappingContainer");
     container.innerHTML = "";
     columns.forEach(col => {
-      // Auto-select if column name already matches a system field
-      const autoMatch = SYSTEM_FIELDS.includes(col.toLowerCase()) ? col.toLowerCase() : "";
+      // Normalize the column name and try to match a system field
+      const normalized = toSnakeCase(col);
+      const autoMatch = SYSTEM_FIELDS.find(f => f === normalized) || "";
+
       const row = document.createElement("div");
       row.className = "fm-row";
       row.innerHTML = `
@@ -825,59 +828,87 @@ if (!nationality) {
   // ═════════════════════════════════════════════════════════════
 
   document.getElementById("confirmMappingBtn").addEventListener("click", async () => {
-    // Collect mapping
-    pagination.savedMapping = {};
-    document.querySelectorAll(".fm-select").forEach(sel => {
-      if (sel.value) pagination.savedMapping[sel.dataset.col] = sel.value;
-    });
-
-    // Reset pagination state
-    pagination.currentPage = 1;
-    const pageSizeSel = document.getElementById("pageSizeSelect");
-    pagination.pageSize = pageSizeSel ? parseInt(pageSizeSel.value) : 50;
-    pagination.activeTab = "all";
-    document.querySelectorAll(".bulk-preview-tab").forEach(b => b.classList.remove("active"));
-    document.querySelector('[data-bptab="all"]').classList.add("active");
-
-    // Apply mapping + normalise in browser
-    const structured = applyMappingAndNormalise(parsedFileRows, pagination.savedMapping);
-
-    // Build allRows with initial validation
-    allRows = structured.map(r => {
-      const errors = validateRowData(r, r.id);
-      return { ...r, status: errors.length === 0 ? "valid" : "invalid", errors };
-    });
-
-    // Global Mobile Validation Pass (Headless)
-    // Create a temporary instance to validate all rows for accurate tab counts
-    const tempInput = document.createElement("input");
-    const iti = intlTelInput(tempInput, {
-      utilsScript: 'https://cdn.jsdelivr.net/npm/intl-tel-input@23.1.0/build/js/utils.js',
-    });
+    const btn = document.getElementById("confirmMappingBtn");
+    const origText = btn.innerHTML;
     
-    // Ensure utils are loaded for accurate validation if supported
-    if (window.intlTelInput && typeof window.intlTelInput.loadUtils === 'function') {
+    // 1. Show loading state
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing…';
+
+    // 2. Wrap in setTimeout to allow UI to render spinner before heavy JS execution
+    setTimeout(async () => {
       try {
-        await window.intlTelInput.loadUtils('https://cdn.jsdelivr.net/npm/intl-tel-input@23.1.0/build/js/utils.js');
-      } catch(e) { console.warn("ITI utils load failed", e); }
-    }
+        pagination.savedMapping = {};
+        document.querySelectorAll(".fm-select").forEach(sel => {
+          if (sel.value) pagination.savedMapping[sel.dataset.col] = sel.value;
+        });
+
+        pagination.currentPage = 1;
+        const pageSizeSel = document.getElementById("pageSizeSelect");
+        pagination.pageSize = pageSizeSel ? parseInt(pageSizeSel.value) : 50;
+        pagination.activeTab = "all";
+        document.querySelectorAll(".bulk-preview-tab").forEach(b => b.classList.remove("active"));
+        document.querySelector('[data-bptab="all"]').classList.add("active");
+
+        const structured = applyMappingAndNormalise(parsedFileRows, pagination.savedMapping);
+
+        // ── STEP 1: Build allRows with basic validation ──
+        allRows = structured.map(r => {
+          const errors = validateRowData(r, r.id, true);
+          return { ...r, status: errors.length === 0 ? "valid" : "invalid", errors };
+        });
+
+        // ── STEP 2: Full duplicate email pass ──
+        flagDuplicateEmailsInFile();
+
+        // ── STEP 3: Render view ──
+        renderCurrentView();
+
+        // ── STEP 4: Switch Modals ──
+        bootstrap.Modal.getInstance(document.getElementById("fieldMappingModal")).hide();
+        setTimeout(() => {
+          new bootstrap.Modal(document.getElementById("bulkPreviewModal")).show();
+        }, 400);
+
+      } catch (err) {
+        console.error(err);
+        showNotificationModal('Error', 'An error occurred while processing the data.', 'error');
+      } finally {
+        // Restore button for next use
+        btn.disabled = false;
+        btn.innerHTML = origText;
+      }
+    }, 100);
+  });
+
+  function flagDuplicateEmailsInFile() {
+    const emailCount = {};
+    allRows.forEach(r => {
+      const email = String(r.email || "").trim().toLowerCase();
+      if (!email) return;
+      emailCount[email] = (emailCount[email] || 0) + 1;
+    });
 
     allRows.forEach(r => {
-      if (r.mobile_number) {
-        iti.setNumber(String(r.mobile_number));
-        if (!iti.isValidNumber()) {
-          if (!r.errors.includes("Invalid mobile number")) {
-            r.errors.push("Invalid mobile number");
-            r.status = "invalid";
-          }
-        }
+      const email = String(r.email || "").trim().toLowerCase();
+      const isDuplicateInFile = email && emailCount[email] > 1;
+      const isInDb = email && existingEmailsSet.has(email);
+
+      // Remove both stale messages
+      r.errors = r.errors.filter(e => e !== "Email already exists" && e !== "Duplicate email");
+
+      if (isInDb) {
+        r.errors.push("Email already exists");
+        r.status = "invalid";
+      } else if (isDuplicateInFile) {
+        r.errors.push("Duplicate email");
+        r.status = "invalid";
+      } else {
+        if (r.errors.length === 0) r.status = "valid";
       }
     });
-    iti.destroy();
+  }
 
-    renderCurrentView();
-    new bootstrap.Modal(document.getElementById("bulkPreviewModal")).show();
-  });
 
   // ═════════════════════════════════════════════════════════════
   // DERIVED VIEWS  (filter + paginate allRows in memory)
@@ -1257,10 +1288,10 @@ if (!nationality) {
       </td>
 
       <td class="bpt-td">
-        <input class="bpt-input ${cls('Invalid email', 'Email already exists')}"
-               value="${escapeHtml(r.email)}">
-        ${err('Invalid email', 'Email already exists')}
-      </td>
+  <input class="bpt-input ${cls('Invalid email', 'Email already exists', 'Duplicate email')}"
+         value="${escapeHtml(r.email)}">
+  ${err('Invalid email', 'Email already exists', 'Duplicate email')}
+</td>
 
       <td class="bpt-td" style="min-width:200px;">
   <div class="mobile-number-container" style="display:flex;align-items:center;">
@@ -1292,14 +1323,20 @@ if (!nationality) {
       <td class="bpt-td"><input class="bpt-input" value="${escapeHtml(r.job_title)}"></td>
 
       <td class="bpt-td">
-        <select class="bpt-input bpt-ticket-type ${cls('Ticket type required', 'Invalid ticket type')}">
-          <option value="">Select</option>
-          <option value="VIP"       ${r.ticket_type === "VIP" ? "selected" : ""}>VIP</option>
-          <option value="VISITOR"   ${r.ticket_type === "VISITOR" ? "selected" : ""}>Visitor</option>
-          <option value="EXHIBITOR" ${r.ticket_type === "EXHIBITOR" ? "selected" : ""}>Exhibitor</option>
-        </select>
-        ${err('Ticket type required', 'Invalid ticket type')}
-      </td>
+  <select class="bpt-input bpt-ticket-type ${cls('Ticket type required', 'Invalid ticket type')}">
+    <option value="">Select</option>
+    ${!["VIP", "VISITOR", "EXHIBITOR"].includes(r.ticket_type || "") && r.ticket_type
+          ? `<option value="${escapeHtml(r.ticket_type)}" selected style="color:#dc2626;">
+           ${escapeHtml(r.ticket_type)} (invalid)
+         </option>`
+          : ""
+        }
+    <option value="VIP"       ${r.ticket_type === "VIP" ? "selected" : ""}>VIP</option>
+    <option value="VISITOR"   ${r.ticket_type === "VISITOR" ? "selected" : ""}>Visitor</option>
+    <option value="EXHIBITOR" ${r.ticket_type === "EXHIBITOR" ? "selected" : ""}>Exhibitor</option>
+  </select>
+  ${err('Ticket type required', 'Invalid ticket type')}
+</td>
 
       <td class="bpt-td text-center">
         <input type="checkbox" ${r.accepted_terms ? "checked" : ""}>
@@ -1307,8 +1344,6 @@ if (!nationality) {
       </td>
       <td class="bpt-td text-center"><input type="checkbox" ${r.accepted_data_sharing ? "checked" : ""}></td>
       <td class="bpt-td text-center"><input type="checkbox" ${r.accepted_marketing ? "checked" : ""}></td>
-      <td class="bpt-td text-center"><input type="checkbox" ${r.digital_badge_issued ? "checked" : ""}></td>
-      <td class="bpt-td text-center"><input type="checkbox" ${r.onsite_badge_printed ? "checked" : ""}></td>
 
       <td class="bpt-td">
         <span class="bpt-status ${isInvalid ? 'bpt-s-invalid' : 'bpt-s-valid'}">${r.status}</span>
@@ -1327,59 +1362,63 @@ if (!nationality) {
 
   // Initialize intl-tel-input on all mobile number inputs
   function initMobileFields() {
-  $('.mobile-number-input').each(function () {
-    const input = this;
-    if (input.itiInstance) {
-      input.itiInstance.destroy();
-      delete input.itiInstance;
-    }
-    const initialValue = input.value.trim();
-    const iti = intlTelInput(input, {
-      initialCountry: 'ae',
-      separateDialCode: false,
-      // Use ONE utils URL — remove the duplicate loadUtilsOnInit
-      utilsScript: 'https://cdn.jsdelivr.net/npm/intl-tel-input@23.1.0/build/js/utils.js',
-      autoPlaceholder: 'aggressive',
-      formatOnDisplay: true,
-      // loadUtilsOnInit: "https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/utils.js"
-    });
-    if (initialValue) {
-      iti.setNumber(initialValue);
-    } 
-    input.itiInstance = iti;
+    $('.mobile-number-input').each(function () {
+      const input = this;
+      if (input.itiInstance) {
+        input.itiInstance.destroy();
+        delete input.itiInstance;
+      }
+      const initialValue = input.value.trim();
+      const iti = intlTelInput(input, {
+        initialCountry: 'ae',
+        separateDialCode: false,
+        utilsScript: 'https://cdn.jsdelivr.net/npm/intl-tel-input@23.1.0/build/js/utils.js',
+        autoPlaceholder: 'aggressive',
+        formatOnDisplay: true,
+      });
+      input.itiInstance = iti;
 
-    // Trigger validation immediately after init
-    const rowId = parseInt(input.dataset.rowId);
-    const idx = allRows.findIndex(r => r.id === rowId);
-    if (idx !== -1 && initialValue !== "") {
-      if (!iti.isValidNumber()) {
-        if (!allRows[idx].errors.includes("Invalid mobile number")) {
-          allRows[idx].errors.push("Invalid mobile number");
-          allRows[idx].status = "invalid";
-          updateRowUI($(input).closest('tr')[0], allRows[idx]);
+      // Wait for utils to be fully loaded before validating
+      iti.promise.then(() => {
+        if (initialValue !== "") {
+          if (!iti.isValidNumber()) {
+            // Mark as invalid in allRows and refresh UI
+            const rowId = parseInt(input.dataset.rowId);
+            const idx = allRows.findIndex(r => r.id === rowId);
+            if (idx !== -1 && !allRows[idx].errors.includes("Invalid mobile number")) {
+              allRows[idx].errors.push("Invalid mobile number");
+              allRows[idx].status = "invalid";
+              const tr = $(input).closest('tr')[0];
+              if (tr) updateRowUI(tr, allRows[idx]);
+              // Refresh tab counts
+              const validCount = allRows.filter(r => r.status === "valid").length;
+              const invalidCount = allRows.filter(r => r.status === "invalid").length;
+              updateTabCounts(validCount, invalidCount, allRows.length);
+            }
+          }
         }
-      }
-    }
+      });
 
-    const syncMobile = debounce(function () {
-      const rowId = parseInt(input.dataset.rowId);
-      const idx = allRows.findIndex(r => r.id === rowId);
-      if (idx !== -1) {
-        const e164 = iti.getNumber();
-        allRows[idx].mobile_number = e164 || input.value.trim();
-      }
-    }, 300);
+      // Sync changes back to allRows (debounced)
+      const syncMobile = debounce(function () {
+        const rowId = parseInt(input.dataset.rowId);
+        const idx = allRows.findIndex(r => r.id === rowId);
+        if (idx !== -1) {
+          const e164 = iti.getNumber();
+          allRows[idx].mobile_number = e164 || input.value.trim();
+        }
+      }, 300);
 
-    input.addEventListener('countrychange', syncMobile);
-    input.addEventListener('input', syncMobile);
-    input.addEventListener('blur', syncMobile);
-  });
+      input.addEventListener('countrychange', syncMobile);
+      input.addEventListener('input', syncMobile);
+      input.addEventListener('blur', syncMobile);
+    });
 
-  // Refresh tab counts after processing visible rows
-  const validCount = allRows.filter(r => r.status === "valid").length;
-  const invalidCount = allRows.filter(r => r.status === "invalid").length;
-  updateTabCounts(validCount, invalidCount, allRows.length);
-}
+    // Refresh tab counts after initial validation
+    const validCount = allRows.filter(r => r.status === "valid").length;
+    const invalidCount = allRows.filter(r => r.status === "invalid").length;
+    updateTabCounts(validCount, invalidCount, allRows.length);
+  }
 
   // ═════════════════════════════════════════════════════════════
   // ROW INPUT CHANGE — silent sync only (no validation on typing)
@@ -1406,84 +1445,86 @@ if (!nationality) {
     Object.assign(allRows[idx], readRowFromDOM(tr));
   }, 150);
   function readRowFromDOM(tr) {
-  const mobileInput = tr.children[4].querySelector(".mobile-number-input");
-  const iti = mobileInput ? mobileInput.itiInstance : null;
+    const mobileInput = tr.children[4].querySelector(".mobile-number-input");
+    const iti = mobileInput ? mobileInput.itiInstance : null;
 
-  let mobileNumber = '';
-  if (iti) {
-    const e164 = iti.getNumber();          // always returns E.164 if user typed anything
-    mobileNumber = e164 || mobileInput.value.trim();
-  } else if (mobileInput) {
-    mobileNumber = mobileInput.value.trim();
+    let mobileNumber = '';
+    if (iti) {
+      const e164 = iti.getNumber();          // always returns E.164 if user typed anything
+      mobileNumber = e164 || mobileInput.value.trim();
+    } else if (mobileInput) {
+      mobileNumber = mobileInput.value.trim();
+    }
+
+    return {
+      first_name: tr.children[1].querySelector("input").value.trim(),
+      last_name: tr.children[2].querySelector("input").value.trim(),
+      email: tr.children[3].querySelector("input").value.trim(),
+      mobile_number: mobileNumber,
+      country: tr.children[5].querySelector("select.bpt-country-select").value,
+      nationality: tr.children[6].querySelector("select.bpt-nationality-select").value,
+      company_name: tr.children[7].querySelector("input").value.trim(),
+      job_title: tr.children[8].querySelector("input").value.trim(),
+      ticket_type: (() => {
+        const val = tr.children[9].querySelector("select").value;
+        return ["VIP", "VISITOR", "EXHIBITOR"].includes(val) ? val : (val || null);
+      })(),
+      accepted_terms: tr.children[10].querySelector("input").checked,
+      accepted_data_sharing: tr.children[11].querySelector("input").checked,
+      accepted_marketing: tr.children[12].querySelector("input").checked,
+      // digital_badge_issued: tr.children[13].querySelector("input").checked,
+      // onsite_badge_printed: tr.children[14].querySelector("input").checked,
+    };
   }
-
-  return {
-    first_name:            tr.children[1].querySelector("input").value.trim(),
-    last_name:             tr.children[2].querySelector("input").value.trim(),
-    email:                 tr.children[3].querySelector("input").value.trim(),
-    mobile_number:         mobileNumber,
-    country:               tr.children[5].querySelector("select.bpt-country-select").value,
-    nationality:           tr.children[6].querySelector("select.bpt-nationality-select").value,
-    company_name:          tr.children[7].querySelector("input").value.trim(),
-    job_title:             tr.children[8].querySelector("input").value.trim(),
-    ticket_type:           tr.children[9].querySelector("select").value,
-    accepted_terms:        tr.children[10].querySelector("input").checked,
-    accepted_data_sharing: tr.children[11].querySelector("input").checked,
-    accepted_marketing:    tr.children[12].querySelector("input").checked,
-    digital_badge_issued:  tr.children[13].querySelector("input").checked,
-    onsite_badge_printed:  tr.children[14].querySelector("input").checked,
-  };
-}
 
   // ═════════════════════════════════════════════════════════════
   // "✔ CHECK" BUTTON — validate row, update status + counts
   // ═════════════════════════════════════════════════════════════
 
-document.addEventListener("click", e => {
-  if (!e.target.classList.contains("check-row-btn")) return;
+  document.addEventListener("click", e => {
+    if (!e.target.classList.contains("check-row-btn")) return;
 
-  const tr = e.target.closest("tr");
-  const rowId = parseInt(tr.dataset.rowId);
-  const idx = allRows.findIndex(r => r.id === rowId);
-  if (idx === -1) return;
+    const tr = e.target.closest("tr");
+    const rowId = parseInt(tr.dataset.rowId);
+    const idx = allRows.findIndex(r => r.id === rowId);
+    if (idx === -1) return;
 
-  // Sync the current mobile value into allRows before reading and validating
-  const mobileInput = tr.querySelector(".mobile-number-input");
-  if (mobileInput && mobileInput.itiInstance) {
-      const iti = mobileInput.itiInstance;
-      allRows[idx].mobile_number = iti.getNumber() || mobileInput.value.trim();
-  }
-
-  const updated = readRowFromDOM(tr);
-  const errors = validateRowData(updated, rowId);
-
-  // Mobile validation — run if user actually typed something
-  if (mobileInput && mobileInput.itiInstance) {
-  const rawValue = mobileInput.value.trim();
-  if (rawValue !== "") {
-    const iti = mobileInput.itiInstance;
-    if (!iti.isValidNumber()) {
-      // Remove the generic parse-time error if present, add the ITI one
-      const idx2 = errors.indexOf("Invalid mobile number");
-      if (idx2 === -1) errors.push("Invalid mobile number");
-    } else {
-      // ITI says valid — remove any parse-time false positive
-      const idx2 = errors.indexOf("Invalid mobile number");
-      if (idx2 !== -1) errors.splice(idx2, 1);
+    const mobileInput = tr.querySelector(".mobile-number-input");
+    if (mobileInput && mobileInput.itiInstance) {
+      allRows[idx].mobile_number = mobileInput.itiInstance.getNumber() || mobileInput.value.trim();
     }
-  }
-}
 
-  const status = errors.length === 0 ? "valid" : "invalid";
-  Object.assign(allRows[idx], updated, { errors, status });
-  updateRowUI(tr, allRows[idx]);
+    const updated = readRowFromDOM(tr);
+    // skipDuplicateCheck=true here — flagDuplicateEmailsInFile handles it globally below
+    const errors = validateRowData(updated, rowId, true);
 
-  const validCount   = allRows.filter(r => r.status === "valid").length;
-  const invalidCount = allRows.filter(r => r.status === "invalid").length;
-  updateTabCounts(validCount, invalidCount, allRows.length);
+    if (mobileInput && mobileInput.itiInstance) {
+      const rawValue = mobileInput.value.trim();
+      if (rawValue !== "") {
+        const iti = mobileInput.itiInstance;
+        if (!iti.isValidNumber()) {
+          if (!errors.includes("Invalid mobile number")) errors.push("Invalid mobile number");
+        } else {
+          const i2 = errors.indexOf("Invalid mobile number");
+          if (i2 !== -1) errors.splice(i2, 1);
+        }
+      }
+    }
 
-  if (pagination.activeTab !== "all") renderCurrentView();
-});
+    const status = errors.length === 0 ? "valid" : "invalid";
+    Object.assign(allRows[idx], updated, { errors, status });
+
+    // ── Re-run global duplicate pass so sibling rows update too ──
+    flagDuplicateEmailsInFile();
+
+    // Re-render the whole view so sibling duplicate rows reflect new status
+    renderCurrentView();
+
+    const validCount = allRows.filter(r => r.status === "valid").length;
+    const invalidCount = allRows.filter(r => r.status === "invalid").length;
+    updateTabCounts(validCount, invalidCount, allRows.length);
+  });
+
 
   // Update error markers + status pill for a single row (no table re-render)
   function updateRowUI(tr, rowData) {
@@ -1512,7 +1553,7 @@ document.addEventListener("click", e => {
       "Last name must be at least 2 characters",     // ✅ new
       "Last name should only contain letters"        // ✅ new
     );
-    refreshCell(3, "input", "Invalid email", "Email already exists");
+    refreshCell(3, "input", "Invalid email", "Email already exists", "Duplicate email");
     // Country
     let countryTd = tr.children[5];
     let countrySelect = countryTd.querySelector(".bpt-country-select");
@@ -1545,12 +1586,27 @@ document.addEventListener("click", e => {
 
     const mobileTd = tr.children[4];
     const mobileContainer = mobileTd.querySelector('.mobile-number-container');
+    const mobileRawInput = mobileContainer.querySelector('input.mobile-number-input');
+    console.log(mobileContainer, 'mobileraw')
+    const itiWrapper = mobileContainer.querySelector('.iti');
+
     mobileTd.querySelectorAll(".bpt-error").forEach(el => el.remove());
     if (errors.includes("Invalid mobile number")) {
       mobileContainer.insertAdjacentHTML("afterend", `<div class="bpt-error">Invalid mobile number</div>`);
-      mobileContainer.querySelector('input').classList.add("bpt-input-err");
+      mobileRawInput.classList.add("bpt-input-err");
+      if (itiWrapper) {
+        itiWrapper.style.border = '1px solid #ef4444';
+        itiWrapper.style.borderRadius = '5px';
+      }
     } else {
-      mobileContainer.querySelector('input').classList.remove("bpt-input-err");
+      console.log(mobileRawInput, 'checkmobilerawinput')
+      mobileRawInput.classList.remove("bpt-input-err");
+
+      mobileRawInput.style.borderColor = '';
+      if (itiWrapper) {
+        itiWrapper.style.border = '';
+        itiWrapper.style.borderRadius = '';
+      }
     }
 
     const termsTd = tr.children[10];
@@ -1561,7 +1617,7 @@ document.addEventListener("click", e => {
     tr.dataset.bpstatus = status;
     tr.classList.toggle("bpt-row-invalid", isInvalid);
 
-    const pill = tr.children[15].querySelector(".bpt-status");
+    const pill = tr.children[13].querySelector(".bpt-status");
     pill.className = `bpt-status ${isInvalid ? "bpt-s-invalid" : "bpt-s-valid"}`;
     pill.textContent = status;
   }
@@ -1659,7 +1715,7 @@ document.addEventListener("click", e => {
       "first_name", "last_name", "email", "mobile_number",
       "country", "nationality", "company_name", "job_title", "ticket_type",
       "accepted_terms", "accepted_data_sharing", "accepted_marketing",
-      "digital_badge_issued", "onsite_badge_printed",
+      // "digital_badge_issued", "onsite_badge_printed",
     ];
 
     const validRows = allRows
@@ -1682,26 +1738,38 @@ document.addEventListener("click", e => {
       const data = await postJSON("/bulk-upload-save/", { rows: validRows });
 
       if (!data.success) {
-        await showNotificationModal('Upload Failed', data.errors || 'Unknown error', 'error');
+        // Format pipe-separated per-type errors into a readable list
+        const errorLines = (data.errors || "Unknown error")
+          .split(" | ")
+          .map(e => `<li>${e}</li>`)
+          .join("");
+        await showNotificationModal(
+          'Pass Limit Exceeded',
+          `<ul style="margin:0;padding-left:18px;">${errorLines}</ul>`,
+          'error'
+        );
         submitBtn.innerHTML = origText;
         submitBtn.disabled = false;
         return;
       }
 
-      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing…';
+      // ✅ NEW: Close all active modals immediately and track in background
+      document.querySelectorAll('.modal.show').forEach(m => {
+          const inst = bootstrap.Modal.getInstance(m) || bootstrap.Modal.getOrCreateInstance(m);
+          inst.hide();
+      });
+      
+      if (window.startTrackingTask) {
+          // Store task info in localStorage for persistence across refreshes
+          const pendingTasks = JSON.parse(localStorage.getItem('pendingBulkTasks') || '[]');
+          pendingTasks.push({ id: data.task_id, label: "Bulk Badge Import" });
+          localStorage.setItem('pendingBulkTasks', JSON.stringify(pendingTasks));
 
-      const result = await pollTaskStatus(data.task_id);
-
-      await showNotificationModal(
-        'Import Complete',
-        `<strong>${result.created}</strong> record(s) created.<br>
-         <strong>${result.skipped}</strong> record(s) skipped.<br>
-         Total valid rows: <strong>${result.total_valid}</strong>`,
-        'success'
-      );
-
-      bootstrap.Modal.getInstance(document.getElementById("bulkPreviewModal")).hide();
-      location.reload();
+          window.startTrackingTask(data.task_id, "Bulk Badge Import");
+      } else {
+          // Fallback if global function not found
+          location.reload();
+      }
 
     } catch (error) {
       console.error(error);
@@ -1709,7 +1777,7 @@ document.addEventListener("click", e => {
       submitBtn.innerHTML = origText;
       submitBtn.disabled = false;
     }
-});
+  });
 
   // ═════════════════════════════════════════════════════════════
   // CELERY TASK POLLER
