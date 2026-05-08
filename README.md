@@ -78,6 +78,3 @@ The project is pre-configured to use Gmail SMTP for sending emails. Update the f
 - `/exhibitor/utils`: Utility functions for Redis locking and Email services
 - `/static`: Project assets (CSS, Styles, Sample Templates)
 
-## 📝 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.

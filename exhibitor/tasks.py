@@ -1,14 +1,13 @@
 from celery import shared_task
-from django.db import transaction,IntegrityError
+from django.db import transaction, IntegrityError
 from .models import Attendee, Badge, Exhibitor
 from django.core.mail import send_mail
 import logging
 from django.utils import timezone
 from .utils.emails import send_pending_reminder_email
-from .utils.redis_lock import acquire_lock,release_lock
+from .utils.redis_lock import acquire_lock, release_lock
 from collections import Counter
 from django.db.models import Count
-
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +18,13 @@ def bulk_upload_save_task(self, rows, exhibitor_id):
     from django.core.validators import validate_email
     from django.core.exceptions import ValidationError
 
+    lock_key = f"bulk_op_lock_{exhibitor_id}"
+    if not acquire_lock(lock_key, timeout=1800):
+        logger.warning(f"Bulk operation already in progress for exhibitor {exhibitor_id}")
+        return {"error": "A bulk operation is already in progress."}
+
     try:
+        # ... (keep existing setup)
         exhibitor = Exhibitor.objects.get(id=exhibitor_id)
         event     = exhibitor.event
 
@@ -42,11 +47,10 @@ def bulk_upload_save_task(self, rows, exhibitor_id):
 
         VALID_TICKET_TYPES = {"VIP", "EXHIBITOR", "VISITOR"}
         NAME_RE            = re.compile(r"^[A-Za-z \-'.]+$")
-        BATCH_SIZE         = 200
 
+        # Fetch ALL existing emails for true global uniqueness check
         existing_emails = set(
-            Attendee.objects.filter(exhibitor=exhibitor)
-            .values_list("email", flat=True)
+            Attendee.objects.values_list("email", flat=True)
         )
 
         def is_valid_row(row, email, ticket_type):
@@ -101,9 +105,10 @@ def bulk_upload_save_task(self, rows, exhibitor_id):
             return True, None
 
         emails_to_send = []
+        DB_BATCH_SIZE = 1000
 
-        for i in range(0, len(rows), BATCH_SIZE):
-            batch = rows[i:i + BATCH_SIZE]
+        for i in range(0, len(rows), DB_BATCH_SIZE):
+            batch_rows = rows[i:i + DB_BATCH_SIZE]
             
             # Update progress
             self.update_state(state='PROGRESS', meta={
@@ -113,80 +118,100 @@ def bulk_upload_save_task(self, rows, exhibitor_id):
                 'skipped': skipped
             })
 
-            with transaction.atomic():
-                batch_emails = []
+            attendees_to_create = []
+            
+            for row in batch_rows:
+                raw_email   = row.get("email") or ""
+                email       = raw_email.strip().lower()
+                ticket_type = str(row.get("ticket_type") or "").strip().upper()
 
-                for row in batch:
-                    raw_email   = row.get("email") or ""
-                    email       = raw_email.strip().lower()
-                    ticket_type = str(row.get("ticket_type") or "").strip().upper()
+                valid, reason = is_valid_row(row, email, ticket_type)
+                if not valid:
+                    skipped += 1
+                    continue
 
-                    valid, reason = is_valid_row(row, email, ticket_type)
-                    if not valid:
-                        skipped += 1
-                        logger.warning(f"Row skipped — {reason} | email={email}")
-                        continue
+                seen_emails.add(email)
+                
+                attendee = Attendee(
+                    event                = event,
+                    exhibitor            = exhibitor,
+                    first_name           = str(row.get("first_name") or "").strip(),
+                    last_name            = str(row.get("last_name")  or "").strip(),
+                    email                = email,
+                    mobile_number        = row.get("mobile_number") or None,
+                    job_title            = row.get("job_title")     or None,
+                    company_name         = row.get("company_name")  or None,
+                    country_of_residence = str(row.get("country")     or "").strip(),
+                    nationality          = str(row.get("nationality") or "").strip(),
+                    attendee_type        = ticket_type,
+                    source               = "Bulk Upload",
+                    status               = "CONFIRMED",
+                    accepted_terms        = bool(row.get("accepted_terms",         False)),
+                    accepted_data_sharing = bool(row.get("accepted_data_sharing",  False)),
+                    accepted_marketing    = bool(row.get("accepted_marketing",      False)),
+                    digital_badge_issued  = bool(row.get("digital_badge_issued",   False)),
+                    onsite_badge_printed  = bool(row.get("onsite_badge_printed",   False)),
+                )
+                attendees_to_create.append(attendee)
+                created_by_type[ticket_type] += 1
 
-                    seen_emails.add(email)
-
-                    try:
-                        attendee = Attendee.objects.create(
-                            event                = event,
-                            exhibitor            = exhibitor,
-                            first_name           = str(row.get("first_name") or "").strip(),
-                            last_name            = str(row.get("last_name")  or "").strip(),
-                            email                = email,
-                            mobile_number        = row.get("mobile_number") or None,
-                            job_title            = row.get("job_title")     or None,
-                            company_name         = row.get("company_name")  or None,
-                            country_of_residence = str(row.get("country")     or "").strip(),
-                            nationality          = str(row.get("nationality") or "").strip(),
-                            attendee_type        = ticket_type,
-                            source               = "Bulk Upload",
-                            status               = "CONFIRMED",
-                            accepted_terms        = bool(row.get("accepted_terms",         False)),
-                            accepted_data_sharing = bool(row.get("accepted_data_sharing",  False)),
-                            accepted_marketing    = bool(row.get("accepted_marketing",      False)),
-                            digital_badge_issued  = bool(row.get("digital_badge_issued",   False)),
-                            onsite_badge_printed  = bool(row.get("onsite_badge_printed",   False)),
-                        )
-
-                        Badge.objects.create(
-                            attendee   = attendee,
-                            badge_type = ticket_type,
-                        )
-
-                        created += 1
-                        created_by_type[ticket_type] += 1
-                        batch_emails.append((attendee, ticket_type))
-
-                    except IntegrityError as e:
-                        logger.warning(f"IntegrityError for {email}: {e}", exc_info=True)
-                        skipped += 1
-                    except Exception as e:
-                        logger.error(f"Unexpected error for row {row}: {e}", exc_info=True)
-                        skipped += 1
-
-            emails_to_send.extend(batch_emails)
-
-        def send_all_emails(pairs):
-            for attendee, ticket_type in pairs:
+            if attendees_to_create:
                 try:
-                    send_badge_confirmation_email(attendee, ticket_type)
-                except Exception as exc:
-                    logger.error("Bulk confirmation email failed for %s: %s", attendee.email, exc)
+                    with transaction.atomic():
+                        created_attendees = Attendee.objects.bulk_create(attendees_to_create)
+                        
+                        # Ensure IDs are present (fallback for older SQLite < 3.35)
+                        if created_attendees and not created_attendees[0].pk:
+                            emails = [att.email for att in created_attendees]
+                            id_map = {}
+                            # SQLite has a 999 limit on variables, so chunk the ID fetch
+                            for j in range(0, len(emails), 900):
+                                chunk = emails[j:j+900]
+                                id_map.update(dict(
+                                    Attendee.objects.filter(email__in=chunk).values_list('email', 'id')
+                                ))
+                            for att in created_attendees:
+                                att.pk = id_map.get(att.email)
 
-        if emails_to_send:
-            threading.Thread(target=send_all_emails, args=(emails_to_send,), daemon=True).start()
+                        badges_to_create = [
+                            Badge(attendee=att, badge_type=att.attendee_type)
+                            for att in created_attendees if att.pk
+                        ]
+                        Badge.objects.bulk_create(badges_to_create)
+                        
+                        created += len(badges_to_create)
+                        for att in created_attendees:
+                            if att.pk:
+                                send_badge_confirmation_email.delay(att.id, att.attendee_type)
+                            
+                except IntegrityError as e:
+                    logger.warning(f"Batch IntegrityError: {e}. Falling back to individual creation for this batch.")
+                    # Fallback if bulk_create fails (e.g. race condition with email)
+                    for att in attendees_to_create:
+                        try:
+                            with transaction.atomic():
+                                att.save()
+                                Badge.objects.create(attendee=att, badge_type=att.attendee_type)
+                                created += 1
+                                send_badge_confirmation_email.delay(att.id, att.attendee_type)
+                        except IntegrityError:
+                            skipped += 1
+                            created_by_type[att.attendee_type] -= 1 # Revert count
+                except Exception as e:
+                    logger.error(f"Unexpected error in batch: {e}", exc_info=True)
+                    skipped += len(attendees_to_create)
+                    for att in attendees_to_create:
+                        created_by_type[att.attendee_type] -= 1 # Revert count
 
     finally:
-        pass
+        from .utils.redis_lock import redis_client
+        release_lock(lock_key)
+        redis_client.delete(f"active_bulk_task_{exhibitor_id}")
 
     return {
         "created":     created,
         "skipped":     skipped,
         "total_valid": len(rows),
-        # ── Return per-type summary for the frontend ──────────
         "created_by_type": created_by_type,
     }
 
@@ -195,51 +220,50 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 
 
-def send_badge_confirmation_email(attendee, ticket_type: str) -> None:
+@shared_task(bind=True, max_retries=3)
+def send_badge_confirmation_email(self, attendee_id, ticket_type: str) -> None:
     """
     Send a styled confirmation email to the attendee after badge creation.
-    Silently swallows send errors so they never break the main request.
     """
-    context = {
-        "first_name"  : attendee.first_name,
-        "last_name"   : attendee.last_name,
-        "email"       : attendee.email,
-        "company_name": attendee.company_name,
-        "job_title"   : attendee.job_title,
-        "country"     : attendee.country_of_residence,
-        "ticket_type" : ticket_type,
-        "event_name"  : attendee.event.name,  # adjust if your field name differs
-    }
-
-    html_body  = render_to_string("emails/badge_confirmation.html", context)
-    plain_body = strip_tags(html_body)
-    subject    = f"Badge Confirmed – {attendee.event.name}"
-
-    msg = EmailMultiAlternatives(
-        subject      = subject,
-        body         = plain_body,
-        from_email   = None,          # uses DEFAULT_FROM_EMAIL from settings
-        to           = [attendee.email],
-    )
-    msg.attach_alternative(html_body, "text/html")
-
     try:
-        msg.send()
-        logger.info(f"Successfully sent invitation email to {attendee.email}")
+        attendee = Attendee.objects.select_related('event').get(id=attendee_id)
+        context = {
+            "first_name"  : attendee.first_name,
+            "last_name"   : attendee.last_name,
+            "email"       : attendee.email,
+            "company_name": attendee.company_name,
+            "job_title"   : attendee.job_title,
+            "country"     : attendee.country_of_residence,
+            "ticket_type" : ticket_type,
+            "event_name"  : attendee.event.name,
+        }
 
-    except Exception as exc:
-        # Log the failure but never let an email error break badge creation
-        import logging
-        logging.getLogger(__name__).error(
-            "Badge confirmation email failed for %s: %s", attendee.email, exc
+        html_body  = render_to_string("emails/badge_confirmation.html", context)
+        plain_body = strip_tags(html_body)
+        subject    = f"Badge Confirmed – {attendee.event.name}"
+
+        msg = EmailMultiAlternatives(
+            subject      = subject,
+            body         = plain_body,
+            from_email   = None,          # uses DEFAULT_FROM_EMAIL from settings
+            to           = [attendee.email],
         )
+        msg.attach_alternative(html_body, "text/html")
+        msg.send()
+        logger.info(f"Successfully sent confirmation email to {attendee.email}")
+
+    except Attendee.DoesNotExist:
+        logger.error(f"Attendee {attendee_id} not found for confirmation email.")
+    except Exception as exc:
+        logger.error(f"Badge confirmation email failed for attendee {attendee_id}: {exc}")
+        raise self.retry(exc=exc)
 
 @shared_task(
     bind=True,
     rate_limit='100/m',  # max 100 emails per minute
     max_retries=3
 )
-def send_invite_email(self,email, token):
+def send_invite_email(self, email, token):
     try:
         logger.info(f"Attempting to send invitation email to {email}")
         link = f"http://127.0.0.1:8000/register/{token}/"
@@ -260,8 +284,14 @@ def send_invite_email(self,email, token):
 def process_invitations_batch(self, entries, exhibitor_id):
     from .models import Attendee, Exhibitor
 
+    lock_key = f"bulk_op_lock_{exhibitor_id}"
+    if not acquire_lock(lock_key, timeout=1800):
+        logger.warning(f"Bulk operation already in progress for exhibitor {exhibitor_id}")
+        return {"error": "A bulk operation is already in progress."}
+
     try:
         exhibitor = Exhibitor.objects.get(id=exhibitor_id)
+        # ... (rest of function)
         event = exhibitor.event
 
         incoming_emails = {
@@ -289,7 +319,7 @@ def process_invitations_batch(self, entries, exhibitor_id):
             email      = (entry.get("email") or "").strip().lower()
             first_name = (entry.get("first_name") or "").strip()
             last_name  = (entry.get("last_name") or "").strip()
-            ticket_type=(entry.get("ticket_type") or "").strip()
+            ticket_type = (entry.get("ticket_type") or "").strip()
 
             if not email or not first_name:
                 skipped_count += 1
@@ -339,21 +369,54 @@ def process_invitations_batch(self, entries, exhibitor_id):
         if errors:
             raise ValueError("Ticket type limits exceeded: " + "; ".join(errors))
 
+        # ── Phase 1: Importing (Database) ──────────────────────────
+        self.update_state(state='PROGRESS', meta={
+            'phase': 'IMPORTING',
+            'current': 0,
+            'total': len(to_create)
+        })
+
         created = []
         for i in range(0, len(to_create), 500):
-            created += Attendee.objects.bulk_create(to_create[i:i + 500])
+            batch = to_create[i:i + 500]
+            created += Attendee.objects.bulk_create(batch)
+            self.update_state(state='PROGRESS', meta={
+                'phase': 'IMPORTING',
+                'current': len(created),
+                'total': len(to_create)
+            })
 
+        # ── Phase 2: Sending (Email Queueing) ──────────────────────
         sent_count = 0
-        for attendee in created:
+        total_to_send = len(created)
+        
+        self.update_state(state='PROGRESS', meta={
+            'phase': 'SENDING',
+            'current': 0,
+            'total': total_to_send,
+            'sent': 0,
+            'skipped': skipped_count
+        })
+
+        for idx, attendee in enumerate(created):
             if attendee.pk:
                 send_invite_email.delay(attendee.email, str(attendee.invite_token))
                 sent_count += 1
             else:
                 skipped_count += 1
+            
+            # Update progress every 100 emails
+            if idx % 100 == 0 or idx == total_to_send - 1:
+                self.update_state(state='PROGRESS', meta={
+                    'phase': 'SENDING',
+                    'current': idx + 1,
+                    'total': total_to_send,
+                    'sent': sent_count,
+                    'skipped': skipped_count
+                })
 
         logger.info(f"✅ Batch complete — Sent: {sent_count} | Skipped: {skipped_count}")
 
-        # 👇 This is what makes the result available to poll
         return {
             "sent_count":    sent_count,
             "skipped_count": skipped_count,
@@ -365,29 +428,30 @@ def process_invitations_batch(self, entries, exhibitor_id):
     except Exception as e:
         logger.exception(f"Unexpected error: {e}")
         raise
+    finally:
+        from .utils.redis_lock import release_lock, redis_client
+        release_lock(lock_key)
+        redis_client.delete(f"active_bulk_task_{exhibitor_id}")
 
 
-@shared_task(bind=True,max_tries=3)
+@shared_task(bind=True, max_tries=3)
 def send_pending_attendee_reminders(self):
-
-    now=timezone.now()
-    pending_attendees=Attendee.objects.filter(
+    now = timezone.now()
+    pending_attendees = Attendee.objects.filter(
         status=Attendee.Status.PENDING,
         event__end_date__gte=now
-    ).select_related("event","exhibitor")
-    total=pending_attendees.count()
-    sent=0
-    failed=0
+    ).select_related("event", "exhibitor")
+    total = pending_attendees.count()
+    sent = 0
+    failed = 0
 
     for attendee in pending_attendees:
         try:
             send_pending_reminder_email(attendee)
-            sent+=1
+            sent += 1
             logger.info(f"Reminder sent to {attendee.email}")
         except Exception as exc:
-            failed+=1
+            failed += 1
             logger.error(f"Failed to send reminder to {attendee.email}: {exc}")
     logger.info(f"Pending reminders done — sent: {sent}, failed: {failed}, total: {total}")
     return {"sent": sent, "failed": failed, "total": total}
-
-

@@ -133,6 +133,18 @@ CELERY_TASK_SERIALIZER = 'json'
 
 # Optional (for results)
 CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379/0'
+
+# ── Task Routing ──────────────────────────────────────────────────────────
+# Separates fast management tasks from slow email delivery.
+# This ensures a 100k email campaign doesn't block the next bulk upload.
+CELERY_TASK_ROUTES = {
+    'exhibitor.tasks.send_invite_email': {'queue': 'emails'},
+    'exhibitor.tasks.send_badge_confirmation_email': {'queue': 'emails'},
+    # All other tasks (bulk_upload, process_invitations) go to 'default'
+}
+CELERY_TASK_DEFAULT_QUEUE = 'default'
+
+
 CELERY_BEAT_SCHEDULE = {
     "send-pending-attendee-reminders": {
         "task": "exhibitor.tasks.send_pending_attendee_reminders",
@@ -141,7 +153,7 @@ CELERY_BEAT_SCHEDULE = {
 }
 
 
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True

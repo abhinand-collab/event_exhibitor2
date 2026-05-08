@@ -399,69 +399,69 @@ def _validate_row(row, existing_emails):
 # JS handles everything after this single response.
 # =============================================================================
  
-@login_required
-@require_POST
-def bulk_upload_preview(request):
-    """
-    Parse the uploaded file once and return:
-      - data: all rows (no pagination, no filter)
-      - existing_emails: the full set of DB emails so JS can validate client-side
-    """
-    file    = request.FILES.get("file")
-    mapping = json.loads(request.POST.get("mapping", "{}"))
+# @login_required
+# @require_POST
+# def bulk_upload_preview(request):
+#     """
+#     Parse the uploaded file once and return:
+#       - data: all rows (no pagination, no filter)
+#       - existing_emails: the full set of DB emails so JS can validate client-side
+#     """
+#     file    = request.FILES.get("file")
+#     mapping = json.loads(request.POST.get("mapping", "{}"))
  
-    if not file:
-        return JsonResponse({"success": False, "error": "No file uploaded"}, status=400)
+#     if not file:
+#         return JsonResponse({"success": False, "error": "No file uploaded"}, status=400)
  
-    try:
-        # ── Parse ────────────────────────────────────────────────────────────
-        if file.name.endswith(".csv"):
-            df = pd.read_csv(file)
-        else:
-            df = pd.read_excel(file)
+#     try:
+#         # ── Parse ────────────────────────────────────────────────────────────
+#         if file.name.endswith(".csv"):
+#             df = pd.read_csv(file)
+#         else:
+#             df = pd.read_excel(file)
  
-        df.columns = [col.strip() for col in df.columns]
-        if mapping:
-            df.rename(columns=mapping, inplace=True)
-        df = df.where(pd.notnull(df), None)
+#         df.columns = [col.strip() for col in df.columns]
+#         if mapping:
+#             df.rename(columns=mapping, inplace=True)
+#         df = df.where(pd.notnull(df), None)
  
-        # ── Existing emails — sent to JS once so it can validate client-side ─
-        existing_emails = list(
-            Attendee.objects.values_list("email", flat=True)
-        )
+#         # ── Existing emails — sent to JS once so it can validate client-side ─
+#         existing_emails = list(
+#             Attendee.objects.values_list("email", flat=True)
+#         )
  
-        # ── Build row list (no validation — JS does that) ────────────────────
-        rows = []
-        for index, row in df.iterrows():
-            rows.append({
-                "id"                  : index,
-                "row"                 : index + 1,
-                "first_name"          : _clean(row.get("first_name")),
-                "last_name"           : _clean(row.get("last_name")),
-                "email"               : _clean(row.get("email")),
-                "mobile_number"       : _clean(row.get("mobile_number")),
-                "country"             : _clean(row.get("country")),
-                "nationality"         : _clean(row.get("nationality")),
-                "company_name"        : _clean(row.get("company_name")),
-                "job_title"           : _clean(row.get("job_title")),
-                "ticket_type"         : _clean(row.get("ticket_type")),
-                "accepted_terms"      : _to_bool(row.get("accepted_terms")),
-                "accepted_data_sharing": _to_bool(row.get("accepted_data_sharing")),
-                "accepted_marketing"  : _to_bool(row.get("accepted_marketing")),
-                "digital_badge_issued": _to_bool(row.get("digital_badge_issued")),
-                "onsite_badge_printed": _to_bool(row.get("onsite_badge_printed")),
-                # status / errors intentionally omitted — JS computes them
-            })
+#         # ── Build row list (no validation — JS does that) ────────────────────
+#         rows = []
+#         for index, row in df.iterrows():
+#             rows.append({
+#                 "id"                  : index,
+#                 "row"                 : index + 1,
+#                 "first_name"          : _clean(row.get("first_name")),
+#                 "last_name"           : _clean(row.get("last_name")),
+#                 "email"               : _clean(row.get("email")),
+#                 "mobile_number"       : _clean(row.get("mobile_number")),
+#                 "country"             : _clean(row.get("country")),
+#                 "nationality"         : _clean(row.get("nationality")),
+#                 "company_name"        : _clean(row.get("company_name")),
+#                 "job_title"           : _clean(row.get("job_title")),
+#                 "ticket_type"         : _clean(row.get("ticket_type")),
+#                 "accepted_terms"      : _to_bool(row.get("accepted_terms")),
+#                 "accepted_data_sharing": _to_bool(row.get("accepted_data_sharing")),
+#                 "accepted_marketing"  : _to_bool(row.get("accepted_marketing")),
+#                 "digital_badge_issued": _to_bool(row.get("digital_badge_issued")),
+#                 "onsite_badge_printed": _to_bool(row.get("onsite_badge_printed")),
+#                 # status / errors intentionally omitted — JS computes them
+#             })
  
-        return JsonResponse({
-            "success"        : True,
-            "data"           : rows,
-            "existing_emails": existing_emails,  # ← new: JS uses this for validation
-        })
+#         return JsonResponse({
+#             "success"        : True,
+#             "data"           : rows,
+#             "existing_emails": existing_emails,  # ← new: JS uses this for validation
+#         })
  
-    except Exception as e:
-        traceback.print_exc()
-        return JsonResponse({"success": False, "error": str(e)}, status=500)
+#     except Exception as e:
+#         traceback.print_exc()
+#         return JsonResponse({"success": False, "error": str(e)}, status=500)
  
 @login_required
 @require_POST
@@ -479,6 +479,16 @@ def bulk_upload_save(request):
         return JsonResponse({"success": False, "errors": "No valid rows received."}, status=400)
 
     exhibitor = request.user.exhibitor
+
+    # ── Check for existing lock (Shared with Invitations) ─────────
+    from .utils.redis_lock import redis_client
+    lock_key = f"bulk_op_lock_{exhibitor.id}"
+    if redis_client.get(lock_key):
+        return JsonResponse({
+            "success": False,
+            "errors": "A bulk operation (upload or invitation) is already in progress for your account. Please wait until it finishes."
+        }, status=409)
+
     remaining = exhibitor.remaining_by_type()
 
     # ── Count requested rows per ticket type ─────────────────
@@ -512,11 +522,13 @@ def bulk_upload_save(request):
         }, status=400)
 
     task = bulk_upload_save_task.delay(rows, exhibitor.id)
+    
+    # ── Store task ID in Redis for cross-session tracking ──────────
+    redis_client.set(f"active_bulk_task_{exhibitor.id}", task.id, ex=3600)
 
     return JsonResponse({
-        "success":  True,
-        "task_id":  task.id,
-        "message":  f"Chunk {chunk_index + 1}/{total_chunks} queued",
+        "success": True,
+        "task_id": task.id
     })
  
 # =============================================================================
@@ -540,64 +552,64 @@ def get_existing_emails(request):
 # UTILITY — Real-time email duplicate check (called from frontend)
 # =============================================================================
 
-@login_required
-@require_POST
-def validate_email(request):
-    """Return whether an email is already registered as an Attendee."""
-    data  = json.loads(request.body)
-    email = data.get("email", "").strip().lower()
+# @login_required
+# @require_POST
+# def validate_email(request):
+#     """Return whether an email is already registered as an Attendee."""
+#     data  = json.loads(request.body)
+#     email = data.get("email", "").strip().lower()
 
-    exists = Attendee.objects.filter(email=email).exists()
-    return JsonResponse({"exists": exists})
+#     exists = Attendee.objects.filter(email=email).exists()
+#     return JsonResponse({"exists": exists})
 
-@login_required
-@require_POST
-def bulk_update_session(request):
-    """Update session data with edited rows."""
-    data = json.loads(request.body)
-    updates = data.get("rows", [])
+# @login_required
+# @require_POST
+# def bulk_update_session(request):
+#     """Update session data with edited rows."""
+#     data = json.loads(request.body)
+#     updates = data.get("rows", [])
 
-    preview_data = request.session.get("bulk_preview_data", [])
+#     preview_data = request.session.get("bulk_preview_data", [])
     
-    if not preview_data:
-        return JsonResponse({"success": False, "error": "No session data found"}, status=400)
+#     if not preview_data:
+#         return JsonResponse({"success": False, "error": "No session data found"}, status=400)
     
-    # Convert to dict for O(1) lookup
-    preview_map = {row["id"]: row for row in preview_data}
+#     # Convert to dict for O(1) lookup
+#     preview_map = {row["id"]: row for row in preview_data}
 
-    for upd in updates:
-        row_id = upd["id"]
-        if row_id in preview_map:
-            # Update the row with new data
-            preview_map[row_id].update(upd)
+#     for upd in updates:
+#         row_id = upd["id"]
+#         if row_id in preview_map:
+#             # Update the row with new data
+#             preview_map[row_id].update(upd)
             
-            # Re-validate with existing emails (excluding current email)
-            current_email = upd.get("email", "")
-            existing_emails = set(
-                Attendee.objects.exclude(email=current_email)
-                .values_list("email", flat=True)
-            )
+#             # Re-validate with existing emails (excluding current email)
+#             current_email = upd.get("email", "")
+#             existing_emails = set(
+#                 Attendee.objects.exclude(email=current_email)
+#                 .values_list("email", flat=True)
+#             )
             
-            # Create a copy for validation
-            row_copy = preview_map[row_id].copy()
-            errors = _validate_row(row_copy, existing_emails)
+#             # Create a copy for validation
+#             row_copy = preview_map[row_id].copy()
+#             errors = _validate_row(row_copy, existing_emails)
             
-            preview_map[row_id]["errors"] = errors
-            preview_map[row_id]["status"] = "valid" if not errors else "invalid"
+#             preview_map[row_id]["errors"] = errors
+#             preview_map[row_id]["status"] = "valid" if not errors else "invalid"
 
-    # Save back to session
-    request.session["bulk_preview_data"] = list(preview_map.values())
+#     # Save back to session
+#     request.session["bulk_preview_data"] = list(preview_map.values())
     
-    # Update counts in session for quick access
-    valid_count = sum(1 for row in request.session["bulk_preview_data"] if row["status"] == "valid")
-    invalid_count = sum(1 for row in request.session["bulk_preview_data"] if row["status"] == "invalid")
-    request.session["bulk_valid_count"] = valid_count
-    request.session["bulk_invalid_count"] = invalid_count
-    request.session["bulk_total_records"] = len(preview_data)
+#     # Update counts in session for quick access
+#     valid_count = sum(1 for row in request.session["bulk_preview_data"] if row["status"] == "valid")
+#     invalid_count = sum(1 for row in request.session["bulk_preview_data"] if row["status"] == "invalid")
+#     request.session["bulk_valid_count"] = valid_count
+#     request.session["bulk_invalid_count"] = invalid_count
+#     request.session["bulk_total_records"] = len(preview_data)
     
-    request.session.modified = True
+#     request.session.modified = True
 
-    return JsonResponse({"success": True})
+#     return JsonResponse({"success": True})
 
 @login_required
 def bulk_task_status(request, task_id):
@@ -911,10 +923,27 @@ def send_invitations(request):
     data = json.loads(request.body)
     entries = data.get('entries', [])
 
+    if not entries:
+        return JsonResponse({'success': False, 'error': 'No entries provided.'}, status=400)
+
+    exhibitor = request.user.exhibitor
+
+    # ── Check for existing lock (Shared with Bulk Upload) ─────────
+    from .utils.redis_lock import redis_client
+    lock_key = f"bulk_op_lock_{exhibitor.id}"
+    if redis_client.get(lock_key):
+        return JsonResponse({
+            "success": False,
+            "errors": "A bulk operation (upload or invitation) is already in progress. Please wait."
+        }, status=409)
+
     task = process_invitations_batch.delay(
         entries=entries,
-        exhibitor_id=request.user.exhibitor.id,
+        exhibitor_id=exhibitor.id,
     )
+
+    # ── Store task ID in Redis for cross-session tracking ──────────
+    redis_client.set(f"active_bulk_task_{exhibitor.id}", task.id, ex=3600)
 
     return JsonResponse({
         'success': True,

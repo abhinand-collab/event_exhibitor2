@@ -1370,7 +1370,7 @@
       }
       const initialValue = input.value.trim();
       const iti = intlTelInput(input, {
-        initialCountry: 'ae',
+        initialCountry: 'in',
         separateDialCode: false,
         utilsScript: 'https://cdn.jsdelivr.net/npm/intl-tel-input@23.1.0/build/js/utils.js',
         autoPlaceholder: 'aggressive',
@@ -1444,6 +1444,8 @@
     // Silently keep allRows in sync with DOM — no re-validation
     Object.assign(allRows[idx], readRowFromDOM(tr));
   }, 150);
+
+  
   function readRowFromDOM(tr) {
     const mobileInput = tr.children[4].querySelector(".mobile-number-input");
     const iti = mobileInput ? mobileInput.itiInstance : null;
@@ -1735,25 +1737,43 @@
     try {
       submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading…';
 
-      const data = await postJSON("/bulk-upload-save/", { rows: validRows });
+      const response = await fetch("/bulk-upload-save/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": getCsrfToken() },
+        body: JSON.stringify({ rows: validRows }),
+      });
 
-      if (!data.success) {
-        // Format pipe-separated per-type errors into a readable list
-        const errorLines = (data.errors || "Unknown error")
-          .split(" | ")
-          .map(e => `<li>${e}</li>`)
-          .join("");
-        await showNotificationModal(
-          'Pass Limit Exceeded',
-          `<ul style="margin:0;padding-left:18px;">${errorLines}</ul>`,
-          'error'
-        );
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 409) {
+          // Task already in progress (Locked)
+          await showNotificationModal(
+            'Upload in Progress',
+            `<div class="text-center p-3">
+              <i class="fas fa-spinner fa-spin mb-3" style="font-size: 32px; color: #1a56db;"></i>
+              <p>${data.errors || "A bulk upload is already in progress for your account. Please wait until it finishes."}</p>
+            </div>`,
+            'info'
+          );
+        } else {
+          // Format pipe-separated per-type errors into a readable list
+          const errorLines = (data.errors || "Unknown error")
+            .split(" | ")
+            .map(e => `<li>${e}</li>`)
+            .join("");
+          await showNotificationModal(
+            'Error Starting Upload',
+            `<ul style="margin:0;padding-left:18px;">${errorLines}</ul>`,
+            'error'
+          );
+        }
         submitBtn.innerHTML = origText;
         submitBtn.disabled = false;
         return;
       }
 
-      // ✅ NEW: Close all active modals immediately and track in background
+      // ✅ SUCCESS: Close all active modals immediately and track in background
       document.querySelectorAll('.modal.show').forEach(m => {
           const inst = bootstrap.Modal.getInstance(m) || bootstrap.Modal.getOrCreateInstance(m);
           inst.hide();

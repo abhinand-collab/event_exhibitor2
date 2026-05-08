@@ -320,7 +320,16 @@
                         const percent = Math.round((prog.current / prog.total) * 100);
                         bar.style.width = `${percent}%`;
                         percentLabel.innerText = `${percent}%`;
-                        statusLabel.innerText = 'Processing rows...';
+                        
+                        if (prog.phase === 'IMPORTING') {
+                            statusLabel.innerText = 'Importing attendees...';
+                        } else if (prog.phase === 'SENDING') {
+                            statusLabel.innerText = 'Sending invitations...';
+                            statusLabel.style.color = '#16a34a'; // Greenish for sending phase
+                        } else {
+                            statusLabel.innerText = 'Processing rows...';
+                        }
+                        
                         countsLabel.innerText = `${prog.current}/${prog.total}`;
                     } else {
                         statusLabel.innerText = 'Waiting for worker...';
@@ -370,10 +379,14 @@
     };
 
     // Auto-resume tasks on load
-    $(document).ready(function() {
+    $(document).ready(async function() {
+        // 2. Fallback to localStorage for any other tracked tasks
         const pending = JSON.parse(localStorage.getItem('pendingBulkTasks') || '[]');
         pending.forEach(task => {
-            window.startTrackingTask(task.id, task.label);
+            // Avoid duplicate tracking if server check already started it
+            if (!document.getElementById(`task-card-${task.id}`)) {
+                window.startTrackingTask(task.id, task.label);
+            }
         });
     });
 

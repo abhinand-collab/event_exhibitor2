@@ -708,11 +708,28 @@
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
                 body: JSON.stringify({ entries }),
             })
-                .then(r => r.json())
-                .then(data => {
+                .then(async r => {
+                    const data = await r.json();
+                    if (r.status === 409) {
+                        showAlert('info', `<i class="fas fa-spinner fa-spin me-2"></i>${data.errors || 'A bulk operation is already in progress. Please wait.'}`);
+                        return;
+                    }
                     if (data.success) {
-                        getModal('sendInvitationModal').hide();
-                        pollTaskResult(data.task_id, entries.length);
+                        // Close all modals
+                        document.querySelectorAll('.modal.show').forEach(m => {
+                            bootstrap.Modal.getOrCreateInstance(m).hide();
+                        });
+                        
+                        if (window.startTrackingTask) {
+                            // Persistence
+                            const pending = JSON.parse(localStorage.getItem('pendingBulkTasks') || '[]');
+                            pending.push({ id: data.task_id, label: "Invitations" });
+                            localStorage.setItem('pendingBulkTasks', JSON.stringify(pending));
+
+                            window.startTrackingTask(data.task_id, "Invitations");
+                        } else {
+                            location.reload();
+                        }
                     } else {
                         showAlert('danger', '<i class="fas fa-times-circle me-2"></i>' + (data.error || 'Something went wrong.'));
                     }
@@ -1196,11 +1213,29 @@
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
                 body: JSON.stringify({ entries: validEntries }),
             })
-                .then(r => r.json())
-                .then(data => {
+                .then(async r => {
+                    const data = await r.json();
+                    if (r.status === 409) {
+                        alert(data.errors || 'A bulk operation is already in progress. Please wait.');
+                        return;
+                    }
                     if (!data.success) throw new Error(data.error || 'Failed to queue task.');
-                    getModal('bulkPreviewModal2').hide();
-                    pollTaskResult(data.task_id, validEntries.length);
+                    
+                    // Close all modals
+                    document.querySelectorAll('.modal.show').forEach(m => {
+                        bootstrap.Modal.getOrCreateInstance(m).hide();
+                    });
+
+                    if (window.startTrackingTask) {
+                        // Persistence
+                        const pending = JSON.parse(localStorage.getItem('pendingBulkTasks') || '[]');
+                        pending.push({ id: data.task_id, label: "Bulk Invitations" });
+                        localStorage.setItem('pendingBulkTasks', JSON.stringify(pending));
+
+                        window.startTrackingTask(data.task_id, "Bulk Invitations");
+                    } else {
+                        location.reload();
+                    }
                 })
                 .catch(() => alert('Network error. Please try again.'))
                 .finally(() => {
@@ -1252,7 +1287,16 @@
             fetch(`/task-status-invitation/${taskId}/`)
                 .then(r => r.json())
                 .then(data => {
-                    if (data.state === 'SUCCESS') {
+                    if (data.state === 'PROGRESS' && data.progress) {
+                        const p = data.progress;
+                        if (p.phase === 'IMPORTING') {
+                            setInviteProcessingStatus(`Importing attendees: ${p.current} / ${p.total}`);
+                        } else if (p.phase === 'SENDING') {
+                            setInviteProcessingStatus(`Queueing emails: ${p.current} / ${p.total} (Sent: ${p.sent}, Skipped: ${p.skipped})`);
+                        }
+                        setTimeout(() => pollTaskResult(taskId, attempted, tries + 1), INTERVAL);
+
+                    } else if (data.state === 'SUCCESS') {
                         setInviteProcessingStatus('Done! Loading results...');
                         setTimeout(() => {
                             hideInviteProcessing();

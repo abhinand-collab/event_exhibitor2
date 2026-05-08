@@ -548,6 +548,8 @@
             } else {
                   // ── Re-enable fields for create mode (reset bg too) ──
                     document.getElementById('email').style.background = '';
+                    document.getElementById('email').disabled = false;
+                    document.getElementById('ticketType').disabled = false;
                     document.getElementById('attendeeStatus').style.background = '';
                     document.getElementById('ticketType').style.background = '';
                 const titleEl = createModalEl.querySelector('.modal-title');
@@ -691,7 +693,7 @@
                         }
                     } else {
                         form.reset();
-                        if (itiInstance) itiInstance.setCountry("ae");
+                        if (itiInstance) itiInstance.setCountry("in");
 
                         $('#countryResidence, #nationality, #ticketType')
                             .next('.select2-container').find('.select2-selection')
