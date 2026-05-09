@@ -523,6 +523,12 @@
     <!-- FORM STATE -->
     <div class="card-body" id="formSection">
 
+        <!-- Global error -->
+        <div class="alert alert-danger" id="globalError" style="display:none;">
+            <i class="fas fa-exclamation-circle"></i>
+            <span id="globalErrorMsg"></span>
+        </div>
+
         <!-- Greeting -->
         <div class="greeting">
             <div class="greeting-avatar"><i class="fas fa-user"></i></div>
@@ -547,12 +553,6 @@
                 <label>Email Address</label>
                 <span style="word-break: break-all;">{{ attendee.email }}</span>
             </div>
-        </div>
-
-        <!-- Global error -->
-        <div class="alert alert-danger" id="globalError" style="display:none;">
-            <i class="fas fa-exclamation-circle"></i>
-            <span id="globalErrorMsg"></span>
         </div>
 
         <!-- Form -->
@@ -1169,7 +1169,7 @@ function clearSelect2Error(selectId, errId) {
         const globalErrorMsg = document.getElementById('globalErrorMsg');
         if (globalError && globalErrorMsg) {
             globalError.style.display = 'flex';
-            globalErrorMsg.textContent = errorMessages.join(' ');
+            globalErrorMsg.textContent = errorMessages;
         }
     }
 });

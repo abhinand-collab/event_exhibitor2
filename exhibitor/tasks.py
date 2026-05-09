@@ -271,7 +271,7 @@ def send_invite_email(self, email, token):
         send_mail(
             subject="You're Invited!",
             message=f"Click to register: {link}",
-            from_email="abhinand@veuz.in",
+            from_email="abhinandveuz@gmail.com",
             recipient_list=[email],
         )
         logger.info(f"Successfully sent invitation email to {email}")

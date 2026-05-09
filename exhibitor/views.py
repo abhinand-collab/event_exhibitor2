@@ -1025,29 +1025,34 @@ def register_attendee(request, token):
                 exhibitor=exhibitor,
                 status=Attendee.Status.CONFIRMED,
             ).count()
- 
-            if used_pass >= exhibitor.pass_limit:
-                errors.append("Pass limit exceeded. Cannot register more attendees.")
+            print(used_pass,'--------checkedpass')
+
+            ticket_type = attendee.attendee_type.upper()
+
+            remaining = exhibitor.remaining_by_type()
+
+            if remaining.get(ticket_type, 0) <= 0:
+                print("error")
+                errors.append(
+                    f"{ticket_type} pass limit exceeded. Cannot register more attendees."
+                )
             else:
-                attendee.mobile_number         = mobile
-                attendee.company_name          = company
-                attendee.country_of_residence  = country
-                attendee.nationality           = nationality
-                attendee.job_title             = job_title
-                attendee.accepted_terms        = accepted_terms
+                attendee.mobile_number = mobile
+                attendee.company_name = company
+                attendee.country_of_residence = country
+                attendee.nationality = nationality
+                attendee.job_title = job_title
+                attendee.accepted_terms = accepted_terms
                 attendee.accepted_data_sharing = accepted_data_sharing
-                attendee.accepted_marketing    = accepted_marketing
-                attendee.source                = "Invitation Portal"
-                attendee.status                = Attendee.Status.CONFIRMED
+                attendee.accepted_marketing = accepted_marketing
+                attendee.source = "Invitation Portal"
+                attendee.status = Attendee.Status.CONFIRMED
                 attendee.save()
 
                 Badge.objects.create(
-                    attendee   = attendee,
-                    badge_type = attendee.attendee_type,
+                    attendee=attendee,
+                    badge_type=attendee.attendee_type,
                 )
- 
-            # Re-render — JS switches to success screen when status == CONFIRMED
-            return render(request, "invite_registration.html", {"attendee": attendee})
  
     return render(request, "invite_registration.html", {
         "attendee": attendee,
