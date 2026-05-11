@@ -1055,10 +1055,11 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-    // ── Form submit validation ─────────────────────────────────────────────
+    // ── Form submit with AJAX ─────────────────────────────────────────────
     const form = document.getElementById('registrationForm');
     if (form) {
         form.addEventListener('submit', function (e) {
+            e.preventDefault();
             let valid = true;
 
             // Sync hidden fields before submit
@@ -1072,22 +1073,21 @@ document.addEventListener("DOMContentLoaded", function () {
             const nationality = document.getElementById('nationalityHidden').value.trim();
             const terms       = document.getElementById('chkTerms')?.checked;
 
-            // ── mobile ──────────────────────────────────────────────────
+            // ── validation ──
             if (!mobileRaw) {
                 showFieldError('fieldMobile', 'errMobile', 'Mobile number is required.');
                 valid = false;
             } else {
-                iti.promise.then(() => {
-                    if (!iti.isValidNumber()) {
-                        const code = iti.getValidationError();
-                        const msgs = { 0: 'Invalid number.', 1: 'Invalid country code.', 2: 'Number too short.', 3: 'Number too long.' };
-                        showFieldError('fieldMobile', 'errMobile', msgs[code] || 'Invalid mobile number.');
-                    }
-                });
-                clearFieldError('fieldMobile', 'errMobile');
+                if (!iti.isValidNumber()) {
+                    const code = iti.getValidationError();
+                    const msgs = { 0: 'Invalid number.', 1: 'Invalid country code.', 2: 'Number too short.', 3: 'Number too long.' };
+                    showFieldError('fieldMobile', 'errMobile', msgs[code] || 'Invalid mobile number.');
+                    valid = false;
+                } else {
+                    clearFieldError('fieldMobile', 'errMobile');
+                }
             }
 
-            // ── company ─────────────────────────────────────────────────
             if (!company) {
                 showFieldError('fieldCompany', 'errCompany', 'Company name is required.');
                 valid = false;
@@ -1098,7 +1098,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 clearFieldError('fieldCompany', 'errCompany');
             }
 
-            // ── country ─────────────────────────────────────────────────
             if (!country) {
                 showSelect2Error('fieldCountry', 'errCountry', 'Country of residence is required.');
                 valid = false;
@@ -1106,7 +1105,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 clearSelect2Error('fieldCountry', 'errCountry');
             }
 
-            // ── nationality ─────────────────────────────────────────────
             if (!nationality) {
                 showSelect2Error('fieldNationality', 'errNationality', 'Nationality is required.');
                 valid = false;
@@ -1114,17 +1112,59 @@ document.addEventListener("DOMContentLoaded", function () {
                 clearSelect2Error('fieldNationality', 'errNationality');
             }
 
-            // ── terms ───────────────────────────────────────────────────
             setCheckboxError('chkTerms', 'errTerms', !terms);
             if (!terms) valid = false;
 
-            if (!valid) { e.preventDefault(); return; }
+            if (!valid) return;
 
             const btn = document.getElementById('submitBtn');
-            if (btn) {
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting…';
-            }
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting…';
+
+            const formData = new FormData(form);
+            
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCsrf()
+                }
+            })
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                // Check if the response contains the success section
+                const successSection = doc.getElementById('successSection');
+                if (successSection && successSection.classList.contains('show')) {
+                    // Success! Switch sections
+                    document.getElementById('formSection').style.display = 'none';
+                    const mainSuccess = document.getElementById('successSection');
+                    mainSuccess.innerHTML = successSection.innerHTML;
+                    mainSuccess.classList.add('show');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    // There were likely errors. Update the form with the new HTML to show errors.
+                    const newFormSection = doc.getElementById('formSection');
+                    if (newFormSection) {
+                        document.getElementById('formSection').innerHTML = newFormSection.innerHTML;
+                        // Note: Re-binding listeners might be needed if we replaced everything,
+                        // but since we are using a full page reload fallback or re-initing, 
+                        // it's safer to just reload if we can't easily patch.
+                        // However, for now, let's just reload if it failed to keep it simple 
+                        // and avoid re-binding complex Select2/intlTelInput logic.
+                        location.reload(); 
+                    }
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm My Registration';
+                alert('An error occurred. Please try again.');
+            });
         });
     }
 

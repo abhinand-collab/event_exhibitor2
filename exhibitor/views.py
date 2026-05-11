@@ -103,6 +103,7 @@ def index(request):
             # Multi-word: try full name match across first+last AND individual field matches
             registrations_qs = registrations_qs.filter(
                 Q(first_name__icontains=parts[0], last_name__icontains=parts[1]) |  # "John Doe"
+                Q(email__icontains=search) |
                 Q(first_name__icontains=parts[1], last_name__icontains=parts[0]) |  # "Doe John" (reversed)
                 Q(job_title__icontains=search)    |
                 Q(company_name__icontains=search)
@@ -112,6 +113,7 @@ def index(request):
             registrations_qs = registrations_qs.filter(
                 Q(first_name__icontains=search)   |
                 Q(last_name__icontains=search)    |
+                Q(email__icontains=search)        |
                 Q(job_title__icontains=search)    |
                 Q(company_name__icontains=search)
             )
@@ -936,6 +938,41 @@ def send_invitations(request):
             "success": False,
             "errors": "A bulk operation (upload or invitation) is already in progress. Please wait."
         }, status=409)
+    
+    remaining = exhibitor.remaining_by_type()
+
+    # ── Count requested rows per ticket type ─────────────────
+    requested = {"VIP": 0, "EXHIBITOR": 0, "VISITOR": 0}
+
+    print(entries,'-------checkentries')
+    for row in entries:
+        t = str(row.get("ticket_type") or "").strip().upper()
+        if t in requested:
+            requested[t] += 1
+
+    # ── Check each type ───────────────────────────────────────
+    limit_errors = []
+    for ticket_type, count in requested.items():
+        if count == 0:
+            continue
+        rem = remaining[ticket_type]
+        if rem <= 0:
+            limit_errors.append(
+                f"{ticket_type}: no passes remaining "
+                f"(limit: {getattr(exhibitor, f'{ticket_type.lower()}_pass_limit')})."
+            )
+        elif count > rem:
+            limit_errors.append(
+                f"{ticket_type}: trying to import {count} but only {rem} pass(es) remaining "
+                f"(limit: {getattr(exhibitor, f'{ticket_type.lower()}_pass_limit')})."
+            )
+    print(limit_errors,'----check limi err')
+
+    if limit_errors:
+        return JsonResponse({
+            "success": False,
+            "errors": " | ".join(limit_errors),
+        }, status=400)
 
     task = process_invitations_batch.delay(
         entries=entries,

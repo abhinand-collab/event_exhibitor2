@@ -252,7 +252,7 @@
             </div>
             <div class="modal-footer" style="justify-content:center; background:#f8f9fa; border-top:1px solid #eee;">
                 <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal"
-                    onclick="location.reload()">Close</button>
+                    onclick="window.refreshRegistrations ? window.refreshRegistrations() : location.reload()">Close</button>
             </div>
         </div>
     </div>
@@ -411,6 +411,24 @@
     </div>
 </div>
 
+<!-- ── Limit Error Modal ── -->
+<div class="modal fade" id="limitErrorModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:440px;">
+    <div class="modal-content" style="border-radius:14px; overflow:hidden; border:none;">
+      <div class="modal-header" style="background:linear-gradient(135deg,#e74c3c,#c0392b); color:white; padding:18px 24px;">
+        <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Pass Limit Reached</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" style="padding:24px;">
+        <div id="limitErrorBody" style="display:flex; flex-direction:column; gap:10px; font-size:13px; color:#333;"></div>
+      </div>
+      <div class="modal-footer" style="background:#f8f9fa; border-top:1px solid #eee; justify-content:center;">
+        <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <!-- ═══════════════════════════════════════════════════════════
      SCRIPTS
@@ -547,7 +565,12 @@
             getModal('successModal').show();
         }
         document.getElementById('successModalOkBtn').addEventListener('click', () => {
-            // location.reload();
+            if (window.refreshRegistrations) {
+                window.refreshRegistrations();
+                bootstrap.Modal.getInstance(document.getElementById('successModal')).hide();
+            } else {
+                location.reload();
+            }
         });
 
         /* ══════════════════════════════════════════════════════════════
@@ -633,6 +656,18 @@
             btn.closest('.invitation-entry-row').remove();
         });
 
+        function showLimitError(errorsString) {
+    const lines = errorsString.split(' | ').filter(Boolean);
+    const body = document.getElementById('limitErrorBody');
+    body.innerHTML = lines.map(line =>
+        `<div style="display:flex; gap:10px; align-items:flex-start; background:#fff5f5; border:1px solid #fecaca; border-radius:8px; padding:12px 14px;">
+            <i class="fas fa-ban" style="color:#e74c3c; margin-top:1px; flex-shrink:0;"></i>
+            <span>${escHtml(line)}</span>
+        </div>`
+    ).join('');
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('limitErrorModal')).show();
+}
+
         /* Manual send */
         document.getElementById('sendInviteBtn').addEventListener('click', () => {
             hideAlert();
@@ -714,6 +749,10 @@
                         showAlert('info', `<i class="fas fa-spinner fa-spin me-2"></i>${data.errors || 'A bulk operation is already in progress. Please wait.'}`);
                         return;
                     }
+                    if (r.status === 400) {          // ← ADD THIS
+        showLimitError(data.errors || data.error || 'Limit exceeded.');
+        return;
+    }
                     if (data.success) {
                         // Close all modals
                         document.querySelectorAll('.modal.show').forEach(m => {
@@ -1219,6 +1258,10 @@
                         alert(data.errors || 'A bulk operation is already in progress. Please wait.');
                         return;
                     }
+                    if (r.status === 400) {          // ← ADD THIS
+        showLimitError(data.errors || data.error || 'Limit exceeded.');
+        return;
+    }
                     if (!data.success) throw new Error(data.error || 'Failed to queue task.');
                     
                     // Close all modals

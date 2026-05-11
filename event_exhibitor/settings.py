@@ -76,15 +76,26 @@ WSGI_APPLICATION = 'event_exhibitor.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#         'OPTIONS': {
+#             'timeout': 30,  # Wait up to 30 seconds for a lock (in seconds).
+#             'init_command': 'PRAGMA journal_mode=WAL;', # Enable WAL mode
+#             'transaction_mode': 'IMMEDIATE', # Better for concurrent writes
+#         }
+#     }
+# }
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-        'OPTIONS': {
-            'timeout': 30,  # Wait up to 30 seconds for a lock (in seconds).
-            'init_command': 'PRAGMA journal_mode=WAL;', # Enable WAL mode
-            'transaction_mode': 'IMMEDIATE', # Better for concurrent writes
-        }
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'exhibitor_db',
+        'USER': 'exhibito_admin',
+        'PASSWORD': 'postgres', 
+        'HOST': '127.0.0.1',
+        'PORT': '5432',
     }
 }
 
