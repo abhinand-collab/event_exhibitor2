@@ -1,5 +1,6 @@
 from django import forms
 from .models import Attendee
+import re
 
 
 TICKET_TYPE_CHOICES = [
@@ -100,20 +101,38 @@ class CreateBadgeForm(forms.Form):
         widget=forms.CheckboxInput(attrs={"class": "form-check-input", "id": "consent3"}),
     )
 
+    NAME_REGEX = re.compile(r"^[A-Za-z\s\-'.]+$")
+
     def clean_first_name(self):
         value = self.cleaned_data.get("first_name", "").strip()
+
         if len(value) < 2:
-            raise forms.ValidationError("First name must be at least 2 characters.")
-        if not all(c.isalpha() or c in " -'." for c in value):
-            raise forms.ValidationError("First name should only contain letters.")
+            raise forms.ValidationError(
+                "First name must be at least 2 characters."
+            )
+
+        if not self.NAME_REGEX.fullmatch(value):
+            raise forms.ValidationError(
+                "First name should only contain letters."
+            )
+
         return value
+
 
     def clean_last_name(self):
         value = self.cleaned_data.get("last_name", "").strip()
-        if value and  len(value) < 2:
-            raise forms.ValidationError("Last name must be at least 2 characters.")
-        if not all(c.isalpha() or c in " -'." for c in value):
-            raise forms.ValidationError("Last name should only contain letters.")
+
+        if value:
+            if len(value) < 2:
+                raise forms.ValidationError(
+                    "Last name must be at least 2 characters."
+                )
+
+            if not self.NAME_REGEX.fullmatch(value):
+                raise forms.ValidationError(
+                    "Last name should only contain letters."
+                )
+
         return value
 
     def clean_country_of_residence(self):

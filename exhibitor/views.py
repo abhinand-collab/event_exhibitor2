@@ -17,7 +17,7 @@ from .forms import CreateBadgeForm
 from .models import User, Exhibitor, Event, Badge, Attendee
 from math import ceil
 from django.core.paginator import Paginator
-from .tasks import bulk_upload_save_task,send_invite_email,process_invitations_batch
+from .tasks import bulk_upload_save_task,send_invite_email,process_invitations_batch,send_badge_confirmation_email_task
 from celery.result import AsyncResult
 from django.http import HttpResponse
 import openpyxl
@@ -50,6 +50,20 @@ def Login(request):
 
     return render(request, "login.html")
 
+
+from django.contrib.auth import authenticate, login, logout
+
+# ... (keep other imports)
+
+def Logout(request):
+    """Log out the current user and redirect to login page."""
+    logout(request)
+    return redirect("login")
+
+@login_required
+def manuals(request):
+    """Render the Manuals & Guides page."""
+    return render(request, "manuals.html")
 
 # =============================================================================
 # DASHBOARD
@@ -169,13 +183,34 @@ DB_ERROR_MESSAGES = {
 
 
 def _friendly_db_error(error_str):
-    """Convert a raw database error string into a user-friendly message."""
-    if "UNIQUE constraint failed" in error_str and "email" in error_str:
+    """Convert raw DB errors into user-friendly messages."""
+
+    error_str = str(error_str)
+
+    # UNIQUE email errors
+    if (
+        ("UNIQUE constraint failed" in error_str and "email" in error_str)
+        or
+        ("duplicate key value violates unique constraint" in error_str and "email" in error_str)
+    ):
         return "This email address is already registered."
-    if "NOT NULL constraint" in error_str:
+
+    # NOT NULL errors
+    if (
+        "NOT NULL constraint" in error_str
+        or
+        "null value in column" in error_str
+    ):
         return "Please fill in all required fields."
-    if "value too long" in error_str or "DataError" in error_str:
+
+    # Length/Data errors
+    if (
+        "value too long" in error_str
+        or
+        "DataError" in error_str
+    ):
         return "One of the entered values is too long."
+
     return "Something went wrong. Please try again or contact support."
 
 
@@ -215,7 +250,6 @@ def send_badge_confirmation_email(attendee, ticket_type: str) -> None:
         logging.getLogger(__name__).error(
             "Badge confirmation email failed for %s: %s", attendee.email, exc
         )
-import threading
 @login_required
 @require_http_methods(["POST"])
 def create_single_badge(request):
@@ -235,7 +269,7 @@ def create_single_badge(request):
         )
 
     # ── 3. Per-type pass limit check ────────────────────────────────────────
-    ticket_type = form.cleaned_data["ticket_type"]  # "VIP" / "EXHIBITOR" / "VISITOR"
+    ticket_type = form.cleaned_data["ticket_type"]
 
     limit_map = {
         "VIP":       exhibitor.vip_pass_limit,
@@ -249,9 +283,7 @@ def create_single_badge(request):
     }
 
     limit = limit_map.get(ticket_type, 0)
-
-    # Count only badges of this specific type for this exhibitor
-    used = Badge.objects.filter(
+    used  = Badge.objects.filter(
         attendee__exhibitor=exhibitor,
         badge_type=ticket_type,
     ).count()
@@ -286,30 +318,64 @@ def create_single_badge(request):
                 accepted_data_sharing = form.cleaned_data["accepted_data_sharing"],
                 accepted_marketing    = form.cleaned_data.get("accepted_marketing", False),
             )
-
             Badge.objects.create(
                 attendee   = attendee,
                 badge_type = ticket_type,
             )
-
     except Exception as e:
-        print(str(e), 'checkerror')
+        print(_friendly_db_error(str(e)),'checkingerrorrrr')
         return JsonResponse(
             {"success": False, "errors": _friendly_db_error(str(e))},
             status=500,
         )
 
-    threading.Thread(
-        target=send_badge_confirmation_email,
-        args=(attendee, ticket_type),
-        daemon=True,
-    ).start()
+    # ── 5. Dispatch Celery email task ───────────────────────────────────────
+    task = send_badge_confirmation_email_task.delay(attendee.pk, ticket_type)
 
     return JsonResponse(
-        {"success": True, "message": "Badge registered successfully."},
+        {
+            "success":  True,
+            "message":  "Badge registered successfully.",
+            "email_task_id": task.id,   # <-- frontend polls this
+        },
         status=201,
     )
 
+
+@login_required
+@require_http_methods(["GET"])
+def badge_email_status(request, task_id: str):
+    """
+    Poll endpoint: returns the Celery task state + any error message.
+
+    States the frontend cares about:
+        pending  → still running / queued
+        success  → email sent
+        failure  → unrecoverable Celery exception (not the same as our
+                   {"success": False} result — that's handled separately)
+    """
+    result = AsyncResult(task_id)
+    state  = result.state   # PENDING | STARTED | SUCCESS | FAILURE | RETRY
+
+    if state == "SUCCESS":
+        task_result = result.get()          # our {"success": True/False, "error": ...}
+        return JsonResponse({
+            "state":   "SUCCESS",
+            "success": task_result.get("success", True),
+            "error":   task_result.get("error", ""),
+        })
+
+    if state == "FAILURE":
+        # Unhandled exception escaped the task — shouldn't happen with our try/except,
+        # but handle it defensively.
+        return JsonResponse({
+            "state":   "FAILURE",
+            "success": False,
+            "error":   "Confirmation email failed unexpectedly. Please contact support.",
+        })
+
+    # PENDING / STARTED / RETRY — still running
+    return JsonResponse({"state": state, "success": None, "error": ""})
 
 # =============================================================================
 # BULK UPLOAD — STEP 1: Get columns from uploaded file
@@ -992,10 +1058,12 @@ def send_invitations(request):
 def task_status_invitation(request, task_id):
     result = AsyncResult(task_id)
 
-    response = {"state": result.state}  # PENDING / SUCCESS / FAILURE
+    response = {"state": result.state}  # PENDING / PROGRESS / SUCCESS / FAILURE
 
-    if result.state == "SUCCESS":
-        response["result"] = result.result  # {"sent_count": X, "skipped_count": Y}
+    if result.state == "PROGRESS":
+        response["progress"] = result.info
+    elif result.state == "SUCCESS":
+        response["result"] = result.result  # contains created, skipped, etc.
     elif result.state == "FAILURE":
         response["error"] = str(result.result)
 

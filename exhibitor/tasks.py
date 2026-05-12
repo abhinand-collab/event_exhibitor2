@@ -46,7 +46,7 @@ def bulk_upload_save_task(self, rows, exhibitor_id):
         seen_emails = set()
 
         VALID_TICKET_TYPES = {"VIP", "EXHIBITOR", "VISITOR"}
-        NAME_RE            = re.compile(r"^[A-Za-z \-'.]+$")
+        NAME_RE = re.compile(r"^[A-Za-z]+(?:[ .'-][A-Za-z]+)*$")
 
         # Fetch ALL existing emails for true global uniqueness check
         existing_emails = set(
@@ -418,6 +418,8 @@ def process_invitations_batch(self, entries, exhibitor_id):
         logger.info(f"✅ Batch complete — Sent: {sent_count} | Skipped: {skipped_count}")
 
         return {
+            "created":       sent_count,
+            "skipped":       skipped_count,
             "sent_count":    sent_count,
             "skipped_count": skipped_count,
         }
@@ -455,3 +457,102 @@ def send_pending_attendee_reminders(self):
             logger.error(f"Failed to send reminder to {attendee.email}: {exc}")
     logger.info(f"Pending reminders done — sent: {sent}, failed: {failed}, total: {total}")
     return {"sent": sent, "failed": failed, "total": total}
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+def send_badge_confirmation_email_task(self, attendee_id: int, ticket_type: str) -> dict:
+    """
+    Send a styled confirmation email after badge creation.
+
+    Returns a dict so Celery stores it as the task result:
+        {"success": True}
+        {"success": False, "error": "<human-readable reason>"}
+
+    Retries up to 3 times (60 s apart) on transient SMTP failures.
+    Permanent failures (bad address, auth error) are NOT retried.
+    """
+    from .models import Attendee  # local import avoids circular imports
+
+    # ── Fetch attendee ──────────────────────────────────────────────────────
+    try:
+        attendee = Attendee.objects.select_related("event").get(pk=attendee_id)
+    except Attendee.DoesNotExist:
+        # Nothing useful we can do — don't retry
+        logger.error("send_badge_email: Attendee %s not found", attendee_id)
+        return {"success": False, "error": "Attendee record not found."}
+
+    context = {
+        "first_name":   attendee.first_name,
+        "last_name":    attendee.last_name,
+        "email":        attendee.email,
+        "company_name": attendee.company_name,
+        "job_title":    attendee.job_title,
+        "country":      attendee.country_of_residence,
+        "ticket_type":  ticket_type,
+        "event_name":   attendee.event.name,
+    }
+
+    # ── Render templates ────────────────────────────────────────────────────
+    try:
+        html_body  = render_to_string("emails/badge_confirmation.html", context)
+        plain_body = strip_tags(html_body)
+    except Exception as exc:
+        logger.error("send_badge_email: Template render failed – %s", exc)
+        return {"success": False, "error": "Email template could not be rendered."}
+
+    subject = f"Badge Confirmed – {attendee.event.name}"
+
+    msg = EmailMultiAlternatives(
+        subject    = subject,
+        body       = plain_body,
+        from_email = None,          # uses DEFAULT_FROM_EMAIL
+        to         = [attendee.email],
+    )
+    msg.attach_alternative(html_body, "text/html")
+
+    # ── Send ────────────────────────────────────────────────────────────────
+    try:
+        msg.send()
+        logger.info("send_badge_email: Sent to %s", attendee.email)
+        return {"success": True}
+
+    except Exception as exc:
+        logger.error(
+            "send_badge_email: Failed for %s (attempt %d): %s",
+            attendee.email, self.request.retries + 1, exc,
+        )
+
+        # Classify the error for a user-friendly message
+        exc_str = str(exc).lower()
+
+        if any(k in exc_str for k in ("authentication", "credentials", "username", "password")):
+            # Config error — retrying won't help
+            return {
+                "success": False,
+                "error": (
+                    "Confirmation email could not be sent due to a mail server "
+                    "configuration issue. Please contact support."
+                ),
+            }
+
+        if any(k in exc_str for k in ("recipient", "address", "user unknown", "550")):
+            # Bad address — retrying won't help
+            return {
+                "success": False,
+                "error": (
+                    f"Confirmation email could not be delivered to {attendee.email}. "
+                    "Please verify the email address."
+                ),
+            }
+
+        # Transient error (connection refused, timeout, etc.) — retry
+        try:
+            raise self.retry(exc=exc)
+        except self.MaxRetriesExceededError:
+            return {
+                "success": False,
+                "error": (
+                    "Confirmation email could not be sent after multiple attempts. "
+                    "The badge was created successfully, but please resend the email manually."
+                ),
+            }

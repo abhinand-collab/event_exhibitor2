@@ -24,10 +24,10 @@
                 </div>
             </div>
             <div class="col-md-6 text-end d-flex align-items-center justify-content-end">
-                <span class="me-3">Welcome, Mohamed Belson</span>
-                <button class="btn btn-sm btn-outline-light" style="height: 32px;">
-                    <i class="fas fa-sign-out-alt"></i> Sign Out
-                </button>
+                <span class="me-3">Welcome, {{ request.user.get_full_name|default:request.user.username }}</span>
+                <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-light" style="height: 32px; display: flex; align-items: center;">
+                    <i class="fas fa-sign-out-alt me-1"></i> Sign Out
+                </a>
             </div>
         </div>
     </div>
@@ -42,7 +42,7 @@
 <div class="app-wrapper">
     <!-- Sidebar -->
     <nav class="sidebar" id="sidebar">
-        <div class="countdown-section">
+        <!-- <div class="countdown-section">
             <div class="countdown-title">Time Remaining</div>
             <div class="countdown-display" id="countdown">
                 <span>16<small>Days</small></span>
@@ -50,21 +50,25 @@
                 <span>45<small>Mins</small></span>
                 <span>19<small>Secs</small></span>
             </div>
-        </div>
+        </div> -->
 
         <div class="nav-menu">
-            <a href="#" class="nav-item">
+            <a href="{% url 'home' %}" class="nav-item active">
                 <i class="fas fa-home"></i>
                 <span>HOME</span>
             </a>
-            <div class="nav-parent open" id="badgesMenu">
+            <!-- <a href="{% url 'home' %}" class="nav-item">
+                <i class="fas fa-id-badge"></i>
+                <span>BADGES</span>
+            </a> -->
+            <!-- <div class="nav-parent open" id="badgesMenu">
                 <div class="nav-parent-left">
                     <i class="fas fa-id-badge"></i>
                     <span>BADGES</span>
                 </div>
                 <i class="fas fa-chevron-right nav-arrow"></i>
-            </div>
-            <div class="nav-submenu open" id="badgesSubmenu">
+            </div> -->
+            <!-- <div class="nav-submenu open" id="badgesSubmenu">
                 <a href="exhibitor.html" class="nav-item active">
                     <i class="fas fa-user-tie"></i>
                     <span>EXHIBITOR BADGE</span>
@@ -73,12 +77,12 @@
                     <i class="fas fa-user-plus"></i>
                     <span>VISITOR</span>
                 </a>
-            </div>
-            <a href="#" class="nav-item">
+            </div> -->
+            <!-- <a href="#" class="nav-item">
                 <i class="fas fa-trophy"></i>
                 <span>VIP NOMINATION</span>
-            </a>
-            <a href="#" class="nav-item">
+            </a> -->
+            <a href="{% url 'manuals' %}" class="nav-item">
                 <i class="fas fa-book"></i>
                 <span>MANUALS & GUIDES</span>
             </a>

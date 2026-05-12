@@ -504,34 +504,43 @@
                         }
                     } else {
                         form.reset();
-                        if (itiInstance) itiInstance.setCountry("in");
+    if (itiInstance) itiInstance.setCountry("in");
 
-                        $('#countryResidence, #nationality, #ticketType')
-                            .next('.select2-container').find('.select2-selection')
-                            .css('border', '1px solid #ddd');
+    $('#countryResidence, #nationality, #ticketType')
+        .next('.select2-container').find('.select2-selection')
+        .css('border', '1px solid #ddd');
 
-                        $('#countryResidence, #nationality').val(null).trigger('change');
-                        $('.select2-modal').val(null).trigger('change');
+    $('#countryResidence, #nationality').val(null).trigger('change');
+    $('.select2-modal').val(null).trigger('change');
 
-                        document.querySelectorAll(".validation-error").forEach(el => el.style.display = "none");
-                        document.querySelectorAll(".validation-error span").forEach(el => el.innerText = "");
-                        document.querySelectorAll(".form-control, .form-select").forEach(el => el.style.border = "1px solid #ddd");
+    document.querySelectorAll(".validation-error").forEach(el => el.style.display = "none");
+    document.querySelectorAll(".validation-error span").forEach(el => el.innerText = "");
+    document.querySelectorAll(".form-control, .form-select").forEach(el => el.style.border = "1px solid #ddd");
 
-                        document.getElementById("badgeSuccessMsg").innerText = body.message || "Operation successful.";
+    document.getElementById("badgeSuccessMsg").innerText = body.message || "Operation successful.";
 
-                        createModalEl.addEventListener('hidden.bs.modal', function handler() {
-                            createModalEl.removeEventListener('hidden.bs.modal', handler);
-                            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-                            document.body.classList.remove('modal-open');
-                            document.body.style.removeProperty('overflow');
-                            document.body.style.removeProperty('padding-right');
-                            setTimeout(() => {
-                                const successModalEl = document.getElementById("badgeSuccessModal");
-                                bootstrap.Modal.getOrCreateInstance(successModalEl).show();
-                            }, 100);
-                        });
+    // ── Store task id so we can show email errors after the modal closes ──
+    const emailTaskId = body.email_task_id || null;
 
-                        bootstrap.Modal.getOrCreateInstance(createModalEl).hide();
+    createModalEl.addEventListener('hidden.bs.modal', function handler() {
+        createModalEl.removeEventListener('hidden.bs.modal', handler);
+        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('padding-right');
+
+        setTimeout(() => {
+            const successModalEl = document.getElementById("badgeSuccessModal");
+            bootstrap.Modal.getOrCreateInstance(successModalEl).show();
+        }, 100);
+
+        // ── Poll for email task result ──────────────────────────────────
+        if (emailTaskId) {
+            pollEmailTask(emailTaskId);
+        }
+    });
+
+    bootstrap.Modal.getOrCreateInstance(createModalEl).hide();
                     }
                 })
                 .catch(err => {
@@ -541,6 +550,48 @@
                     createModalEl.querySelector(".modal-body").scrollTop = 0;
                 });
         });
+
+        function pollEmailTask(taskId, attempts = 0) {
+    const MAX_ATTEMPTS = 20;   // 20 × 3 s = 60 s max wait
+    const INTERVAL_MS  = 3000;
+
+    if (attempts >= MAX_ATTEMPTS) {
+        // Timed out — don't bother the user, just log
+        console.warn("Email task polling timed out for task:", taskId);
+        return;
+    }
+
+    fetch(`/badge-email-status/${taskId}/`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.state === "PENDING" || data.state === "STARTED" || data.state === "RETRY") {
+                // Still running — check again later
+                setTimeout(() => pollEmailTask(taskId, attempts + 1), INTERVAL_MS);
+                return;
+            }
+
+            // Task finished
+            if (!data.success && data.error) {
+                // Re-open the create modal and show the error at the top
+                const createModal = bootstrap.Modal.getOrCreateInstance(
+                    document.getElementById("createBadgeModal")
+                );
+                createModal.show();
+
+                // Wait a tick for the modal to render before scrolling
+                setTimeout(() => {
+                    document.getElementById("globalFormErrorMsg").innerText = data.error;
+                    document.getElementById("globalFormError").style.display = "block";
+                    document.getElementById("createBadgeModal")
+                        .querySelector(".modal-body").scrollTop = 0;
+                }, 150);
+            }
+            // data.success === true → all good, nothing to show
+        })
+        .catch(err => {
+            console.error("Email task poll error:", err);
+        });
+}
 
         function getCSRFToken() {
             return document.cookie.split("; ").find(row => row.startsWith("csrftoken"))?.split("=")[1];
@@ -565,8 +616,24 @@
             input.addEventListener("change", function () { clearFieldError(this.name); });
         });
         $('#countryResidence, #nationality, .select2-modal').on('select2:select', function () {
-            clearFieldError(this.name);
-        });
+    clearFieldError(this.name);
+});
+
+// ── Sync phone flag when country of residence changes ───────────────────
+$('#countryResidence').on('select2:select select2:clear', function () {
+    const mobileInput = document.getElementById('mobileNumber');
+    const itiInstance = mobileInput && mobileInput.itiInstance;
+    if (!itiInstance) return;
+
+    const selectedOption = this.options[this.selectedIndex];
+    const code = selectedOption && selectedOption.dataset.code;   // ISO2 code stored in data-code
+
+    if (code) {
+        itiInstance.setCountry(code.toLowerCase());
+    } else {
+        itiInstance.setCountry("us");   // fallback on clear
+    }
+});
 
         function clearFieldError(fieldName) {
             const errorId = fieldMap[fieldName];

@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="top-header">
+    <div class="container-fluid px-4">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <div class="d-flex align-items-center gap-3">
+                    <h5 class="mb-0 text-white">Manuals & Guides</h5>
+                </div>
+            </div>
+            <div class="col-md-6 text-end d-flex align-items-center justify-content-end">
+                <span class="me-3">Welcome, {{ request.user.get_full_name|default:request.user.username }}</span>
+                <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-light" style="height: 32px; display: flex; align-items: center;">
+                    <i class="fas fa-sign-out-alt me-1"></i> Sign Out
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-wrapper">
+    <nav class="sidebar" id="sidebar">
+        <!-- <div class="countdown-section">
+            <div class="countdown-title">Time Remaining</div>
+            <div class="countdown-display" id="countdown">
+                <span>16<small>Days</small></span>
+                <span>17<small>Hours</small></span>
+                <span>45<small>Mins</small></span>
+                <span>19<small>Secs</small></span>
+            </div>
+        </div> -->
+
+        <div class="nav-menu">
+            <a href="{% url 'home' %}" class="nav-item">
+                <i class="fas fa-home"></i>
+                <span>HOME</span>
+            </a>
+            <!-- <a href="{% url 'home' %}" class="nav-item">
+                <i class="fas fa-id-badge"></i>
+                <span>BADGES</span>
+            </a> -->
+            <!-- <div class="nav-parent open" id="badgesMenu">
+                <div class="nav-parent-left">
+                    <i class="fas fa-id-badge"></i>
+                    <span>BADGES</span>
+                </div>
+                <i class="fas fa-chevron-right nav-arrow"></i>
+            </div> -->
+            <!-- <div class="nav-submenu open" id="badgesSubmenu">
+                <a href="exhibitor.html" class="nav-item active">
+                    <i class="fas fa-user-tie"></i>
+                    <span>EXHIBITOR BADGE</span>
+                </a>
+                <a href="visitor.html" class="nav-item">
+                    <i class="fas fa-user-plus"></i>
+                    <span>VISITOR</span>
+                </a>
+            </div> -->
+            <!-- <a href="#" class="nav-item">
+                <i class="fas fa-trophy"></i>
+                <span>VIP NOMINATION</span>
+            </a> -->
+            <a href="{% url 'manuals' %}" class="nav-item active">
+                <i class="fas fa-book"></i>
+                <span>MANUALS & GUIDES</span>
+            </a>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="container-fluid mt-4">
+            <div class="card shadow-sm border-0" style="border-radius: 12px;">
+                <div class="card-body p-4">
+                    <h3 class="mb-4" style="color: #3f0e60; font-weight: 700;">Exhibitor Manuals</h3>
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="p-4 rounded border d-flex align-items-start gap-3" style="background: #f8f9fa;">
+                                <div class="bg-primary text-white rounded p-3">
+                                    <i class="fas fa-file-pdf fa-2x"></i>
+                                </div>
+                                <div>
+                                    <h5 class="fw-bold">User Guide</h5>
+                                    <p class="text-muted small">Complete guide on how to use the exhibitor portal, manage badges, and invite attendees.</p>
+                                    <button class="btn btn-sm btn-primary">Download PDF</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-4 rounded border d-flex align-items-start gap-3" style="background: #f8f9fa;">
+                                <div class="bg-success text-white rounded p-3">
+                                    <i class="fas fa-video fa-2x"></i>
+                                </div>
+                                <div>
+                                    <h5 class="fw-bold">Video Tutorial</h5>
+                                    <p class="text-muted small">Watch a quick walkthrough of the dashboard and its main features.</p>
+                                    <button class="btn btn-sm btn-success">Watch Video</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}
