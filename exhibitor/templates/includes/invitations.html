@@ -869,78 +869,93 @@
         });
 
         function applyMappingAndBuildPreview(mapping) {
-            const seenEmails = {};
-
-            parsedData = fileRows.map((row, idx) => {
-                const first_name = String(row[mapping.first_name] || '').trim();
-                const last_name = String(row[mapping.last_name] || '').trim();
-                const email = String(row[mapping.email] || '').trim().toLowerCase();
-                const ticket_raw = String(row[mapping.ticket_type] || '').trim();
-                const ticket_type = normaliseTicket(ticket_raw);
-
-                const issues = [];
-
-                if (!first_name) {
-                    issues.push('Missing first name');
-                } else if (first_name.length < 2) {
-                    issues.push('First name must be at least 2 characters');
-                } else if (!NAME_RE.test(first_name)) {
-                    issues.push('First name should only contain letters');
-                }
-
-                if (last_name) {
-                    if (last_name.length < 2) {
-                        issues.push('Last name must be at least 2 characters');
-                    } else if (!NAME_RE.test(last_name)) {
-                        issues.push('Last name should only contain letters');
-                    }
-                }
-
-                if (!email) {
-                    issues.push('Missing email');
-                } else if (!EMAIL_RE.test(email)) {
-                    issues.push('Invalid email format');
-                } else if (existingEmailsSet.has(email)) {
-                    // ✅ Check against DB on initial parse
-                    issues.push('Email already exists in the system');
-                }
-
-                if (!ticket_type) {
-                    issues.push('Missing ticket type');
-                } else if (!VALID_TICKETS.includes(ticket_type)) {
-                    issues.push('Unknown ticket: "' + ticket_raw + '" (use VIP / EXHIBITOR / VISITOR)');
-                }
-
-                let isDupe = false;
-                if (email && EMAIL_RE.test(email) && !existingEmailsSet.has(email)) {
-                    // Only dupe-check emails that aren't already flagged as existing
-                    if (seenEmails[email]) { issues.push('Duplicate email in this file'); isDupe = true; }
-                    else seenEmails[email] = true;
-                }
-
-                return {
-                    _row: idx + 1,
-                    first_name,
-                    last_name,
-                    email,
-                    ticket_type,
-                    _issues: issues,
-                    _valid: issues.length === 0,
-                    _isDupe: isDupe,
-                    _existsInDb: existingEmailsSet.has(email), // ✅ track this flag
-                };
-            });
-
-            currentFilter = 'all';
-            currentPage = 1;
-
-            getModal('mappingModal').hide();
-            setTimeout(() => {
-                renderSummaryBar();
-                renderPreviewTable();
-                getModal('bulkPreviewModal2').show();
-            }, 420);
+    // ── Pass 1: collect all valid emails to find within-file duplicates ──
+    const emailCounts = {};
+    fileRows.forEach(row => {
+        const email = String(row[mapping.email] || '').trim().toLowerCase();
+        if (email && EMAIL_RE.test(email)) {
+            emailCounts[email] = (emailCounts[email] || 0) + 1;
         }
+    });
+
+    // ── Pass 2: validate each row ──
+    const seenEmails = {};
+
+    parsedData = fileRows.map((row, idx) => {
+        const first_name  = String(row[mapping.first_name]  || '').trim();
+        const last_name   = String(row[mapping.last_name]   || '').trim();
+        const email       = String(row[mapping.email]       || '').trim().toLowerCase();
+        const ticket_raw  = String(row[mapping.ticket_type] || '').trim();
+        const ticket_type = normaliseTicket(ticket_raw);
+
+        const issues = [];
+
+        // first_name
+        if (!first_name) {
+            issues.push('Missing first name');
+        } else if (first_name.length < 2) {
+            issues.push('First name must be at least 2 characters');
+        } else if (!NAME_RE.test(first_name)) {
+            issues.push('First name should only contain letters');
+        }
+
+        // last_name (optional)
+        if (last_name) {
+            if (last_name.length < 2) {
+                issues.push('Last name must be at least 2 characters');
+            } else if (!NAME_RE.test(last_name)) {
+                issues.push('Last name should only contain letters');
+            }
+        }
+
+        // email
+        if (!email) {
+            issues.push('Missing email');
+        } else if (!EMAIL_RE.test(email)) {
+            issues.push('Invalid email format');
+        } else if (existingEmailsSet.has(email)) {
+            issues.push('Email already exists in the system');
+        }
+
+        // ticket
+        if (!ticket_type) {
+            issues.push('Missing ticket type');
+        } else if (!VALID_TICKETS.includes(ticket_type)) {
+            issues.push('Unknown ticket: "' + ticket_raw + '" (use VIP / EXHIBITOR / VISITOR)');
+        }
+
+        // within-file duplicate check (flag every occurrence, not just 2nd+)
+        let isDupe = false;
+        if (email && EMAIL_RE.test(email) && !existingEmailsSet.has(email)) {
+            if (emailCounts[email] > 1) {
+                issues.push('Duplicate email in this file');
+                isDupe = true;
+            }
+        }
+
+        return {
+            _row:        idx + 1,
+            first_name,
+            last_name,
+            email,
+            ticket_type,
+            _issues:     issues,
+            _valid:      issues.length === 0,
+            _isDupe:     isDupe,
+            _existsInDb: existingEmailsSet.has(email),
+        };
+    });
+
+    currentFilter = 'all';
+    currentPage   = 1;
+
+    getModal('mappingModal').hide();
+    setTimeout(() => {
+        renderSummaryBar();
+        renderPreviewTable();
+        getModal('bulkPreviewModal2').show();
+    }, 420);
+}
 
         /* ══════════════════════════════════════════════════════════════
            SUMMARY BAR
