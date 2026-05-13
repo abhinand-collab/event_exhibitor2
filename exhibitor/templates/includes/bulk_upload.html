@@ -644,7 +644,7 @@
 
   function validateRowData(data, skipId = null, skipDuplicateCheck = false) {
     const errors = [];
-    const NAME_RE = /^[A-Za-z\s]+$/;
+    const NAME_RE = /^[A-Za-z\s\-'.]+$/;
 
     const first_name = String(data.first_name || "").trim();
     const last_name = String(data.last_name || "").trim();
@@ -1172,6 +1172,7 @@
         delete input.itiInstance;
       }
       const initialValue = input.value.trim();
+      const rowId = parseInt(input.dataset.rowId);  // ✅ declare rowId first
       const iti = intlTelInput(input, {
         initialCountry: 'in',
         separateDialCode: false,
@@ -1180,13 +1181,32 @@
         formatOnDisplay: true,
       });
       input.itiInstance = iti;
+      const countrySelect = document.querySelector(
+            `.bpt-country-select[data-row-id="${rowId}"]`
+        );
+
+        if (countrySelect) {
+            $(countrySelect).on('select2:select select2:clear', function () {
+                const selectedOption = this.options[this.selectedIndex];
+                const code = selectedOption && selectedOption.dataset.code;
+                if (code) {
+                    iti.setCountry(code.toLowerCase());
+                } else {
+                    iti.setCountry("us");
+                }
+            });
+        }
 
       // Wait for utils to be fully loaded before validating
       iti.promise.then(() => {
+        const countrySelect = document.querySelector(
+    `.bpt-country-select[data-row-id="${rowId}"]`
+);
+
         if (initialValue !== "") {
           if (!iti.isValidNumber()) {
             // Mark as invalid in allRows and refresh UI
-            const rowId = parseInt(input.dataset.rowId);
+            const rowId = parseInt(input.dataset.rowId);   
             const idx = allRows.findIndex(r => r.id === rowId);
             if (idx !== -1 && !allRows[idx].errors.includes("Invalid mobile number")) {
               allRows[idx].errors.push("Invalid mobile number");

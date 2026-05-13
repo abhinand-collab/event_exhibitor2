@@ -58,14 +58,19 @@ class Exhibitor(models.Model):
         """Returns dict of used counts per ticket type."""
         from django.db.models import Count
         qs = (
-            Badge.objects
-            .filter(attendee__exhibitor=self)
-            .values("badge_type")
+            Attendee.objects
+            .filter(exhibitor=self,
+                    status__in=[
+                Attendee.Status.INVITED,
+                Attendee.Status.PENDING,
+                Attendee.Status.CONFIRMED,
+            ])
+            .values("attendee_type")
             .annotate(count=Count("id"))
         )
         used = {"VIP": 0, "EXHIBITOR": 0, "VISITOR": 0}
         for row in qs:
-            t = (row["badge_type"] or "").upper()
+            t = (row["attendee_type"] or "").upper()
             if t in used:
                 used[t] = row["count"]
         return used
@@ -114,9 +119,9 @@ class Attendee(models.Model):
     company_name = models.CharField(max_length=255,blank=True,null=True)
     country_of_residence = models.CharField(max_length=100)
     nationality = models.CharField(max_length=100)
-    attendee_type = models.CharField(max_length=20, choices=AttendeeType.choices)
+    attendee_type = models.CharField(max_length=20, choices=AttendeeType.choices,db_index=True)
     source = models.CharField(max_length=100, blank=True, null=True)
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)    
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING,db_index=True)    
     digital_badge_issued = models.BooleanField(default=False)
     onsite_badge_printed = models.BooleanField(default=False)
     accepted_terms = models.BooleanField(default=False)
@@ -140,20 +145,15 @@ auditlog.register(Attendee)
 # ---------------------------
 class Badge(models.Model):
 
-    class BadgeType(models.TextChoices):
-        EXHIBITOR = "EXHIBITOR", "Exhibitor"
-        VISITOR = "VISITOR", "Visitor"
-        VIP = "VIP", "VIP"
     ticket_id = models.UUIDField(
         default=uuid.uuid4,
         editable=False,
         unique=True
     )
     attendee = models.OneToOneField(Attendee, on_delete=models.CASCADE, related_name="badge")
-    badge_type = models.CharField(max_length=20, choices=BadgeType.choices)
     issued_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.attendee} - {self.badge_type}"
+        return f"{self.attendee} - {self.attendee.attendee_type}"
     
 auditlog.register(Badge)

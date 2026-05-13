@@ -22,6 +22,7 @@ def bulk_upload_save_task(self, rows, exhibitor_id):
     if not acquire_lock(lock_key, timeout=1800):
         logger.warning(f"Bulk operation already in progress for exhibitor {exhibitor_id}")
         return {"error": "A bulk operation is already in progress."}
+    logger.warning("Testing log")
 
     try:
         # ... (keep existing setup)
@@ -46,7 +47,7 @@ def bulk_upload_save_task(self, rows, exhibitor_id):
         seen_emails = set()
 
         VALID_TICKET_TYPES = {"VIP", "EXHIBITOR", "VISITOR"}
-        NAME_RE = re.compile(r"^[A-Za-z]+(?:[ .'-][A-Za-z]+)*$")
+        NAME_RE = re.compile(r"^[A-Za-z\s\-'.]+$")
 
         # Fetch ALL existing emails for true global uniqueness check
         existing_emails = set(
@@ -174,7 +175,7 @@ def bulk_upload_save_task(self, rows, exhibitor_id):
                                 att.pk = id_map.get(att.email)
 
                         badges_to_create = [
-                            Badge(attendee=att, badge_type=att.attendee_type)
+                            Badge(attendee=att)
                             for att in created_attendees if att.pk
                         ]
                         Badge.objects.bulk_create(badges_to_create)
@@ -191,7 +192,7 @@ def bulk_upload_save_task(self, rows, exhibitor_id):
                         try:
                             with transaction.atomic():
                                 att.save()
-                                Badge.objects.create(attendee=att, badge_type=att.attendee_type)
+                                Badge.objects.create(attendee=att)
                                 created += 1
                                 send_badge_confirmation_email.delay(att.id, att.attendee_type)
                         except IntegrityError:

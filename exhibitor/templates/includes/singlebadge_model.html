@@ -395,7 +395,7 @@
             document.querySelectorAll(".form-control, .form-select").forEach(el => el.style.border = "1px solid #ddd");
 
             // ── Name Validation ──────────────────────────────────────────────────
-            const nameRegex = /^[A-Za-z\s]+$/;
+            const nameRegex = /^[A-Za-z\s\-'.]+$/;
             const fName = formData.get('first_name')?.trim();
             const lName = formData.get('last_name')?.trim();
             let stopSubmit = false;
@@ -572,19 +572,7 @@
 
             // Task finished
             if (!data.success && data.error) {
-                // Re-open the create modal and show the error at the top
-                const createModal = bootstrap.Modal.getOrCreateInstance(
-                    document.getElementById("createBadgeModal")
-                );
-                createModal.show();
-
-                // Wait a tick for the modal to render before scrolling
-                setTimeout(() => {
-                    document.getElementById("globalFormErrorMsg").innerText = data.error;
-                    document.getElementById("globalFormError").style.display = "block";
-                    document.getElementById("createBadgeModal")
-                        .querySelector(".modal-body").scrollTop = 0;
-                }, 150);
+                console.warn("Badge email not sent:", data.error);
             }
             // data.success === true → all good, nothing to show
         })

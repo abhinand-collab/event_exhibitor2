@@ -930,11 +930,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     COUNTRIES.forEach(c => {
         const opt1 = new Option(c.name, c.name, false, false);
-        $(opt1).data('code', c.code);
+        opt1.dataset.code = c.code;
         countrySelect.appendChild(opt1);
 
         const opt2 = new Option(c.nationality, c.nationality, false, false);
-        $(opt2).data('code', c.code);
+        opt2.dataset.code = c.code;
         nationalitySelect.appendChild(opt2);
     });
 
@@ -950,6 +950,11 @@ document.addEventListener("DOMContentLoaded", function () {
         // Clear error
         document.getElementById('errCountry').classList.remove('show');
         $(this).next('.select2-container').find('.select2-selection').css('border', '');
+    }).on('select2:select', function(e) {
+        const code = e.params.data.element.dataset.code;
+        if (iti && code) {
+            iti.setCountry(code.toLowerCase());
+        }
     });
 
     // Init Select2 for nationality
@@ -1005,7 +1010,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     /* ── Shared validation helpers ── */
-    const NAME_RE = /^[a-zA-Z \-'.]+$/;
+    const NAME_RE = /^[A-Za-z\s\-'.]+$/;
 
     function setError(fieldId, errId, msg) {
         const field = document.getElementById(fieldId);

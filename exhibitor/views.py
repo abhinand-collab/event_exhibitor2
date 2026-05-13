@@ -88,7 +88,7 @@ def index(request):
             pending=Count("id", filter=Q(status="PENDING")),
             invited=Count("id", filter=Q(status="INVITED")),
         )
-        t_used = Badge.objects.filter(attendee__exhibitor=exhibitor, badge_type=t_code).count()
+        t_used = Badge.objects.filter(attendee__exhibitor=exhibitor, attendee__attendee_type=t_code).count()
         
         badge_stats.append({
             "label": t_label,
@@ -135,7 +135,7 @@ def index(request):
         registrations_qs = registrations_qs.filter(status__iexact=status)
 
     if ticket:
-        registrations_qs = registrations_qs.filter(badge__badge_type__iexact=ticket)
+        registrations_qs = registrations_qs.filter(attendee_type__iexact=ticket)
 
     # Get page size from request or default to 10
     page_size = request.GET.get('page_size', 10)
@@ -152,10 +152,21 @@ def index(request):
     registrations = paginator.get_page(page_number)
     print(badge_stats,"__badgestats")
 
+    total_percent = int((used_pass / total_pass * 100)) if total_pass > 0 else 0
+
+    # ── Aggregate Stats for All Types ───────────────────────────────────────
+    total_counts = Attendee.objects.filter(exhibitor=exhibitor).aggregate(
+        confirmed=Count("id", filter=Q(status="CONFIRMED")),
+        pending=Count("id", filter=Q(status="PENDING")),
+        invited=Count("id", filter=Q(status="INVITED")),
+    )
+
     return render(request, "index.html", {
         "registrations": registrations,
         "used_pass": used_pass,
         "total_pass": total_pass,
+        "total_percent": total_percent,
+        "total_counts": total_counts,
         "badge_stats": badge_stats,
         "current_page_size": page_size,  # Pass to template
     })
@@ -282,24 +293,34 @@ def create_single_badge(request):
         "VISITOR":   "Visitor",
     }
 
-    limit = limit_map.get(ticket_type, 0)
-    used  = Badge.objects.filter(
-        attendee__exhibitor=exhibitor,
-        badge_type=ticket_type,
-    ).count()
-
-    if used >= limit:
-        return JsonResponse({
-            "success": False,
-            "errors": (
-                f"{label_map[ticket_type]} pass limit reached "
-                f"({used}/{limit}). Cannot create more {label_map[ticket_type]} badges."
-            ),
-        }, status=400)
+    
 
     # ── 4. Create Attendee + Badge ──────────────────────────────────────────
     try:
         with transaction.atomic():
+
+            exhibitor = Exhibitor.objects.select_for_update().get(
+                pk=exhibitor.pk
+                )
+            
+             # Recalculate limit INSIDE transaction
+            limit = limit_map.get(ticket_type, 0)
+
+            used = Badge.objects.filter(
+                attendee__exhibitor=exhibitor,
+                attendee__attendee_type=ticket_type,
+            ).count()
+
+            if used >= limit:
+                return JsonResponse({
+                        "success": False,
+                        "errors": (
+                            f"{label_map[ticket_type]} pass limit reached "
+                            f"({used}/{limit}). Cannot create more "
+                            f"{label_map[ticket_type]} badges."
+                        ),
+                    }, status=400)
+
             attendee = Attendee.objects.create(
                 event                 = exhibitor.event,
                 exhibitor             = exhibitor,
@@ -320,7 +341,6 @@ def create_single_badge(request):
             )
             Badge.objects.create(
                 attendee   = attendee,
-                badge_type = ticket_type,
             )
     except Exception as e:
         print(_friendly_db_error(str(e)),'checkingerrorrrr')
@@ -534,6 +554,11 @@ def _validate_row(row, existing_emails):
 @login_required
 @require_POST
 def bulk_upload_save(request):
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
+    logger.warning("Testing log")
     try:
         body = json.loads(request.body)
     except (json.JSONDecodeError, KeyError):
@@ -588,6 +613,7 @@ def bulk_upload_save(request):
             "success": False,
             "errors": " | ".join(limit_errors),
         }, status=400)
+    
 
     task = bulk_upload_save_task.delay(rows, exhibitor.id)
     
@@ -717,13 +743,7 @@ def get_attendee(request, attendee_id):
     exhibitor = request.user.exhibitor
     attendee  = get_object_or_404(Attendee, id=attendee_id, exhibitor=exhibitor)
 
-    ticket_type  = ''
-    ticket_class = ''
-    try:
-        ticket_type  = attendee.badge.badge_type   or ''
-        ticket_class = attendee.badge.ticket_class or ''
-    except Exception:
-        pass
+    ticket_type  = attendee.attendee_type or ''
 
     return JsonResponse({
         'success': True,
@@ -742,7 +762,6 @@ def get_attendee(request, attendee_id):
             'accepted_data_sharing': attendee.accepted_data_sharing,
             'accepted_marketing'   : attendee.accepted_marketing,
             'ticket_type'          : ticket_type,
-            'ticket_class'         : ticket_class,
         }
     })
 
@@ -789,7 +808,6 @@ def update_attendee(request, attendee_id):
         return JsonResponse({'success': False, 'errors': errors}, status=400)
 
     # ── Persist ───────────────────────────────────────────────────────────────
-    ticket_class = f"{ticket_type} Pass"
     try:
         with transaction.atomic():
             attendee.first_name           = first_name
@@ -800,22 +818,18 @@ def update_attendee(request, attendee_id):
             attendee.company_name         = data.get('company_name', '').strip()  or None
             attendee.country_of_residence = country
             attendee.nationality          = nationality
-            attendee.status               = data.get('status', attendee.status)
+            attendee.attendee_type        = ticket_type
+            
+            new_status = data.get('status', attendee.status).upper()
+            attendee.status = new_status
             attendee.save()
 
-            try:
-                badge = attendee.badge
-                badge.badge_type   = ticket_type
-                badge.ticket_class = ticket_class
-                badge.save()
-            except Exception:
-                Badge.objects.create(
-                    attendee     = attendee,
-                    badge_type   = ticket_type,
-                    ticket_class = ticket_class,
-                )
+            if attendee.status == Attendee.Status.CONFIRMED:
+                # Only create/update badge for confirmed attendees
+                Badge.objects.get_or_create(attendee=attendee)
 
     except Exception as e:
+        print(str(e),'-errror')
         return JsonResponse({'success': False, 'errors': _friendly_db_error(str(e))}, status=500)
 
     return JsonResponse({
@@ -829,7 +843,7 @@ def update_attendee(request, attendee_id):
             'company_name'  : attendee.company_name  or '',
             'status'        : attendee.status,
             'status_display': attendee.get_status_display(),
-            'ticket_class'  : ticket_class,
+            'ticket_type'   : attendee.attendee_type,
         }
     })
 
@@ -878,7 +892,7 @@ def export_registrations(request):
     if status:
         qs = qs.filter(status__iexact=status)
     if ticket:
-        qs = qs.filter(badge__badge_type__iexact=ticket)
+        qs = qs.filter(attendee_type__iexact=ticket)
 
     # Build workbook
     wb = openpyxl       .Workbook()
@@ -1077,7 +1091,7 @@ def register_attendee(request, token):
         return render(request, "invite_registration.html", {"attendee": attendee})
  
     errors = []
-    NAME_RE = re.compile(r"^[a-zA-Z \-'.]+$")
+    NAME_RE = re.compile(r"^[A-Za-z\s\-'.]+$")
  
     if request.method == "POST":
         mobile      = request.POST.get("mobile", "").strip()
@@ -1156,7 +1170,6 @@ def register_attendee(request, token):
 
                 Badge.objects.create(
                     attendee=attendee,
-                    badge_type=attendee.attendee_type,
                 )
  
     return render(request, "invite_registration.html", {
