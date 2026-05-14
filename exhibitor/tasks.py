@@ -13,19 +13,14 @@ logger = logging.getLogger(__name__)
 
 @shared_task(bind=True)
 def bulk_upload_save_task(self, rows, exhibitor_id):
-    import re
-    import threading
-    from django.core.validators import validate_email
-    from django.core.exceptions import ValidationError
-
+    from .serializers import BulkAttendeeSerializer
+    
     lock_key = f"bulk_op_lock_{exhibitor_id}"
     if not acquire_lock(lock_key, timeout=1800):
         logger.warning(f"Bulk operation already in progress for exhibitor {exhibitor_id}")
         return {"error": "A bulk operation is already in progress."}
-    logger.warning("Testing log")
 
     try:
-        # ... (keep existing setup)
         exhibitor = Exhibitor.objects.get(id=exhibitor_id)
         event     = exhibitor.event
 
@@ -46,66 +41,9 @@ def bulk_upload_save_task(self, rows, exhibitor_id):
         skipped     = 0
         seen_emails = set()
 
-        VALID_TICKET_TYPES = {"VIP", "EXHIBITOR", "VISITOR"}
-        NAME_RE = re.compile(r"^[A-Za-z\s\-'.]+$")
-
         # Fetch ALL existing emails for true global uniqueness check
-        existing_emails = set(
-            Attendee.objects.values_list("email", flat=True)
-        )
+        existing_emails = set(Attendee.objects.values_list("email", flat=True))
 
-        def is_valid_row(row, email, ticket_type):
-            first_name   = str(row.get("first_name")  or "").strip()
-            last_name    = str(row.get("last_name")   or "").strip()
-            country      = str(row.get("country")     or "").strip()
-            nationality  = str(row.get("nationality") or "").strip()
-            accepted_terms = row.get("accepted_terms", False)
-
-            if not first_name:
-                return False, "First name is required"
-            if len(first_name) < 2:
-                return False, "First name must be at least 2 characters"
-            if not NAME_RE.match(first_name):
-                return False, "First name contains invalid characters"
-
-            if last_name:
-                if len(last_name) < 2:
-                    return False, "Last name must be at least 2 characters"
-                if not NAME_RE.match(last_name):
-                    return False, "Last name contains invalid characters"
-
-            if not email or "@" not in email:
-                return False, "Invalid email address"
-            try:
-                validate_email(email)
-            except ValidationError:
-                return False, "Email address format is invalid"
-            if email in existing_emails:
-                return False, "Email already exists in database"
-            if email in seen_emails:
-                return False, "Duplicate email within this upload"
-
-            if not country:
-                return False, "Country is required"
-            if not nationality:
-                return False, "Nationality is required"
-
-            if not ticket_type:
-                return False, "Ticket type is required"
-            if ticket_type not in VALID_TICKET_TYPES:
-                return False, f"Invalid ticket type: {ticket_type}"
-
-            if not accepted_terms:
-                return False, "Terms & Conditions must be accepted"
-
-            # ── Per-type limit check ──────────────────────────────────────────
-            total_used_for_type = used_at_start[ticket_type] + created_by_type[ticket_type]
-            if total_used_for_type >= limits[ticket_type]:
-                return False, f"{ticket_type} pass limit reached ({limits[ticket_type]})"
-
-            return True, None
-
-        emails_to_send = []
         DB_BATCH_SIZE = 1000
 
         for i in range(0, len(rows), DB_BATCH_SIZE):
@@ -122,36 +60,45 @@ def bulk_upload_save_task(self, rows, exhibitor_id):
             attendees_to_create = []
             
             for row in batch_rows:
-                raw_email   = row.get("email") or ""
-                email       = raw_email.strip().lower()
-                ticket_type = str(row.get("ticket_type") or "").strip().upper()
+                serializer = BulkAttendeeSerializer(
+                    data=row,
+                    exhibitor=exhibitor,
+                    existing_emails=existing_emails,
+                    seen_emails=seen_emails
+                )
 
-                valid, reason = is_valid_row(row, email, ticket_type)
-                if not valid:
+                if not serializer.is_valid():
                     skipped += 1
                     continue
 
-                seen_emails.add(email)
+                v_data = serializer.validated_data
+                ticket_type = v_data['ticket_type']
+
+                # ── Per-type limit check ──────────────────────────────────────────
+                total_used_for_type = used_at_start[ticket_type] + created_by_type[ticket_type]
+                if total_used_for_type >= limits[ticket_type]:
+                    skipped += 1
+                    continue
+
+                seen_emails.add(v_data['email'])
                 
                 attendee = Attendee(
                     event                = event,
                     exhibitor            = exhibitor,
-                    first_name           = str(row.get("first_name") or "").strip(),
-                    last_name            = str(row.get("last_name")  or "").strip(),
-                    email                = email,
-                    mobile_number        = row.get("mobile_number") or None,
-                    job_title            = row.get("job_title")     or None,
-                    company_name         = row.get("company_name")  or None,
-                    country_of_residence = str(row.get("country")     or "").strip(),
-                    nationality          = str(row.get("nationality") or "").strip(),
+                    first_name           = v_data['first_name'],
+                    last_name            = v_data['last_name'],
+                    email                = v_data['email'],
+                    mobile_number        = v_data['mobile_number'],
+                    job_title            = v_data['job_title'],
+                    company_name         = v_data['company_name'],
+                    country_of_residence = v_data['country'],
+                    nationality          = v_data['nationality'],
                     attendee_type        = ticket_type,
                     source               = "Bulk Upload",
                     status               = "CONFIRMED",
-                    accepted_terms        = bool(row.get("accepted_terms",         False)),
-                    accepted_data_sharing = bool(row.get("accepted_data_sharing",  False)),
-                    accepted_marketing    = bool(row.get("accepted_marketing",      False)),
-                    digital_badge_issued  = bool(row.get("digital_badge_issued",   False)),
-                    onsite_badge_printed  = bool(row.get("onsite_badge_printed",   False)),
+                    accepted_terms        = v_data['accepted_terms'],
+                    accepted_data_sharing = v_data['accepted_data_sharing'],
+                    accepted_marketing    = v_data['accepted_marketing'],
                 )
                 attendees_to_create.append(attendee)
                 created_by_type[ticket_type] += 1
@@ -161,18 +108,13 @@ def bulk_upload_save_task(self, rows, exhibitor_id):
                     with transaction.atomic():
                         created_attendees = Attendee.objects.bulk_create(attendees_to_create)
                         
-                        # Ensure IDs are present (fallback for older SQLite < 3.35)
-                        if created_attendees and not created_attendees[0].pk:
-                            emails = [att.email for att in created_attendees]
-                            id_map = {}
-                            # SQLite has a 999 limit on variables, so chunk the ID fetch
-                            for j in range(0, len(emails), 900):
-                                chunk = emails[j:j+900]
-                                id_map.update(dict(
-                                    Attendee.objects.filter(email__in=chunk).values_list('email', 'id')
-                                ))
-                            for att in created_attendees:
-                                att.pk = id_map.get(att.email)
+                        # Fetch IDs for Badge creation
+                        emails = [att.email for att in created_attendees]
+                        id_map = dict(
+                            Attendee.objects.filter(email__in=emails).values_list('email', 'id')
+                        )
+                        for att in created_attendees:
+                            att.pk = id_map.get(att.email)
 
                         badges_to_create = [
                             Badge(attendee=att)
@@ -186,8 +128,7 @@ def bulk_upload_save_task(self, rows, exhibitor_id):
                                 send_badge_confirmation_email.delay(att.id, att.attendee_type)
                             
                 except IntegrityError as e:
-                    logger.warning(f"Batch IntegrityError: {e}. Falling back to individual creation for this batch.")
-                    # Fallback if bulk_create fails (e.g. race condition with email)
+                    logger.warning(f"Batch IntegrityError: {e}. Falling back to individual creation.")
                     for att in attendees_to_create:
                         try:
                             with transaction.atomic():
@@ -197,12 +138,12 @@ def bulk_upload_save_task(self, rows, exhibitor_id):
                                 send_badge_confirmation_email.delay(att.id, att.attendee_type)
                         except IntegrityError:
                             skipped += 1
-                            created_by_type[att.attendee_type] -= 1 # Revert count
+                            created_by_type[att.attendee_type] -= 1
                 except Exception as e:
                     logger.error(f"Unexpected error in batch: {e}", exc_info=True)
                     skipped += len(attendees_to_create)
                     for att in attendees_to_create:
-                        created_by_type[att.attendee_type] -= 1 # Revert count
+                        created_by_type[att.attendee_type] -= 1
 
     finally:
         from .utils.redis_lock import redis_client
@@ -215,6 +156,7 @@ def bulk_upload_save_task(self, rows, exhibitor_id):
         "total_valid": len(rows),
         "created_by_type": created_by_type,
     }
+
 
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string

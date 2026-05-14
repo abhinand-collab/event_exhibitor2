@@ -1,9 +1,7 @@
 {% load static %}
 {# ============================================================ #}
 {# BULK UPLOAD MODALS + STYLES + SCRIPTS #}
-{# Flow: Upload → Map columns → Preview (paginated) → Save #}
-{# CLIENT-SIDE filtering, validation, pagination #}
-{# Server only: initial load (email-exists) + final save #}
+{# Flow: Upload → Map columns (Backend) → Preview (Backend) → Save #}
 {# ============================================================ #}
 
 
@@ -91,24 +89,19 @@
 
       {# ── Header ── #}
       <div class="modal-header preview-header"
-        style="background:#fff;border-bottom:3px solid #1a56db;padding:16px 24px;align-items:flex-start;">
-        <div style="flex:1;">
-          <div class="d-flex align-items-center gap-3 mb-1">
+        style="background:#fff;border-bottom:3px solid #1a56db;padding:16px 24px;align-items:center;justify-content:space-between;">
+        <div class="d-flex align-items-center gap-3">
             <span style="font-size:18px;font-weight:700;color:#111;">Preview</span>
             <input type="text" class="form-control form-control-sm" id="previewSearchInput"
-              placeholder="Search by name, email, company, ticket type…"
-              style="max-width:280px;border-radius:6px;border:1px solid #ddd;font-size:14px;">
-          </div>
-          <!-- <small class="text-muted" style="font-size:12px;">Name this import batch for reference.</small> -->
+              placeholder="Search data..."
+              style="max-width:200px;border-radius:6px;border:1px solid #ddd;font-size:14px;">
         </div>
-        <!-- ✅ ADD THIS SEARCH BAR -->
-        <!-- <div style="margin-top:10px;">
-      <input type="text" id="previewSearchInput"
-             class="form-control form-control-sm"
-             placeholder="🔍 Search by name, email, company, ticket type…"
-             style="max-width:480px;border-radius:6px;border:1px solid #ddd;font-size:13px;">
-    </div> -->
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-primary" id="validateAllBtn">
+                <i class="fas fa-check-double me-1"></i> Validate All
+            </button>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
       </div>
 
       {# ── Tabs ── #}
@@ -136,18 +129,17 @@
                 <th class="bpt-th">FIRST NAME</th>
                 <th class="bpt-th">LAST NAME</th>
                 <th class="bpt-th">EMAIL</th>
-                <th class="bpt-th">MOBILE</th>
                 <th class="bpt-th">COUNTRY</th>
                 <th class="bpt-th">NATIONALITY</th>
+                <th class="bpt-th">MOBILE</th>
                 <th class="bpt-th">COMPANY</th>
                 <th class="bpt-th">JOB TITLE</th>
                 <th class="bpt-th">TICKET TYPE</th>
                 <th class="bpt-th">TERMS</th>
                 <th class="bpt-th">DATA SHARING</th>
                 <th class="bpt-th">MARKETING</th>
-                <!-- <th class="bpt-th">DIGITAL BADGE</th>
-                <th class="bpt-th">ONSITE BADGE</th> -->
                 <th class="bpt-th">STATUS</th>
+                <th class="bpt-th">ACTION</th>
               </tr>
             </thead>
             <tbody id="previewTableBody"></tbody>
@@ -159,16 +151,6 @@
                     padding:10px 16px;border-top:1px solid #e5e7eb;background:#fafafa;">
           <span id="paginationInfo" style="font-size:13px;color:#6b7280;"></span>
           <div id="paginationBtns" style="display:flex;gap:4px;align-items:center;"></div>
-          <!-- <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#6b7280;">
-            <span>Rows per page</span>
-            <select id="pageSizeSelect"
-                    style="border:1px solid #d1d5db;border-radius:6px;padding:4px 8px;font-size:13px;">
-              <option value="10">10</option>
-              <option value="25">25</option>
-              <option value="50" selected>50</option>
-              <option value="100">100</option>
-            </select>
-          </div> -->
         </div>
       </div>
 
@@ -203,6 +185,42 @@
       <div class="modal-body" id="notificationMessage"></div>
       <div class="modal-footer">
         <button type="button" class="btn btn-primary" id="notificationOkBtn" data-bs-dismiss="modal">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ============================================================ #}
+{# LOADING MODAL #}
+{# ============================================================ #}
+<div class="modal fade" id="bulkLoadingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content" style="border-radius: 12px; border: none; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+      <div class="modal-body text-center py-4">
+        <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
+        <h6 class="fw-bold mb-1">Validating All Rows</h6>
+        <p class="text-muted small mb-0">Please wait while the server verifies all data...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ============================================================ #}
+{# DELETE CONFIRM MODAL #}
+{# ============================================================ #}
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content" style="border-radius: 12px; border: none; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+      <div class="modal-body text-center py-4">
+        <div style="width: 60px; height: 60px; background: #fee2e2; color: #dc2626; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 15px;">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <h6 class="fw-bold mb-2">Remove Row?</h6>
+        <p class="text-muted small mb-4">Are you sure you want to remove this record from the import batch?</p>
+        <div class="d-flex gap-2 justify-content-center">
+            <button type="button" class="btn btn-light btn-sm px-4" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-danger btn-sm px-4" id="confirmDeleteRowBtn">Delete</button>
+        </div>
       </div>
     </div>
   </div>
@@ -313,14 +331,17 @@
   }
 
   .bpt-input-err {
-    border-color: #ef4444;
-    background: #fff5f5;
+    border-color: #ef4444 !important;
+    background: #fff5f5 !important;
   }
 
   .bpt-error {
-    font-size: 11px;
+    font-size: 10px;
     color: #dc2626;
-    margin-top: 3px;
+    margin-top: 2px;
+    white-space: normal;
+    max-width: 150px;
+    line-height: 1.2;
   }
 
   .bpt-status {
@@ -423,55 +444,8 @@
     padding: 16px 20px;
   }
 
-  #fieldMappingModal .modal-dialog {
-    max-height: 90vh;
-    display: flex;
-    flex-direction: column;
-  }
-
-  #fieldMappingModal .modal-content {
-    max-height: 90vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  .preview-header .btn-close {
-    filter: none;
-  }
-
-  .notification-success .modal-header {
-    background-color: #d1fae5;
-    color: #065f46;
-    border-bottom-color: #a7f3d0;
-  }
-
-  .notification-error .modal-header {
-    background-color: #fee2e2;
-    color: #991b1b;
-    border-bottom-color: #fecaca;
-  }
-
-  .notification-warning .modal-header {
-    background-color: #fed7aa;
-    color: #92400e;
-    border-bottom-color: #fdba74;
-  }
-
-  .notification-info .modal-header {
-    background-color: #dbeafe;
-    color: #1e40af;
-    border-bottom-color: #bfdbfe;
-  }
-
-  /* Add inside your <style> block */
   .mobile-number-container .iti {
     width: 100%;
-  }
-
-  .mobile-number-container .iti__tel-input {
-    width: 100%;
-    min-width: 130px;
   }
 </style>
 
@@ -479,1168 +453,603 @@
 {# ============================================================ #}
 {# SCRIPTS #}
 {# ============================================================ #}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
 <script>
-
-  document.getElementById("previewSearchInput").addEventListener("input", debounce(function () {
-    pagination.searchQuery = this.value;
-    pagination.currentPage = 1;   // reset to page 1 on new search
-    renderCurrentView();
-  }, 200));
-  // ═════════════════════════════════════════════════════════════
-  // STATE
-  // ═════════════════════════════════════════════════════════════
-
-  let existingEmailsSet = new Set(); // DB emails — fetched once on "Upload & Process"
-  let parsedFileRows = [];        // Raw rows parsed by SheetJS (never mutated)
-  let allRows = [];        // Working copy with status/errors — single source of truth
-
-  const pagination = {
-    currentPage: 1,
-    pageSize: 50,
-    activeTab: "all",
-    savedMapping: {},
-    searchQuery: "",
-  };
-
-  // ═════════════════════════════════════════════════════════════
-  // HELPERS
-  // ═════════════════════════════════════════════════════════════
-
-  function showNotificationModal(title, message, type = 'info') {
-    const modalEl = document.getElementById('notificationModal');
-    modalEl.classList.remove('notification-success', 'notification-error', 'notification-warning', 'notification-info');
-    modalEl.classList.add(`notification-${type}`);
-    document.getElementById('notificationTitle').textContent = title;
-    document.getElementById('notificationMessage').innerHTML = message;
-    new bootstrap.Modal(modalEl).show();
-    return new Promise(resolve => {
-      modalEl.addEventListener('hidden.bs.modal', function h() {
-        modalEl.removeEventListener('hidden.bs.modal', h);
-        resolve();
-      });
-    });
-  }
-
-  function getCsrfToken() {
-    return document.cookie.split("; ").find(r => r.startsWith("csrftoken"))?.split("=")[1];
-  }
-
-  function postJSON(url, data) {
-    return fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-CSRFToken": getCsrfToken() },
-      body: JSON.stringify(data),
-    }).then(r => r.json());
-  }
-
-  function postFormData(url, fd) {
-    return fetch(url, {
-      method: "POST",
-      headers: { "X-CSRFToken": getCsrfToken() },
-      body: fd,
-    }).then(r => r.json());
-  }
-
-  function escapeHtml(str) {
-    if (str == null) return '';
-    return String(str).replace(/[&<>"']/g, m =>
-      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])
-    );
-  }
-
-  function debounce(fn, ms) {
-    let t;
-    return function (...args) {
-      clearTimeout(t);
-      t = setTimeout(() => fn.apply(this, args), ms);
+(function() {
+    let currentFile = null;
+    let allRows = [];
+    let rowToDelete = null; 
+    const pagination = {
+        currentPage: 1,
+        pageSize: 50,
+        activeTab: "all",
+        searchQuery: "",
+        mapping: {}
     };
-  }
 
-  function cleanVal(v) {
-    if (v == null || v === '') return null;
-    const s = String(v).trim();
-    return s === '' ? null : s;
-  }
-
-  function toBool(v) {
-    if (v == null) return false;
-    if (typeof v === 'boolean') return v;
-    return ['true', '1', 'yes', 'y', 'checked'].includes(String(v).trim().toLowerCase());
-  }
-
-  // ═════════════════════════════════════════════════════════════
-  // CLIENT-SIDE FILE PARSING  (SheetJS — no server needed)
-  // ═════════════════════════════════════════════════════════════
-
-  /**
-   * Read the selected file with SheetJS and return an array of plain objects.
-   * Column headers are trimmed; values are kept as strings/booleans/numbers.
-   */
-  function parseFileInBrowser(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = e => {
-        try {
-          const wb = XLSX.read(e.target.result, { type: 'array' });
-          const ws = wb.Sheets[wb.SheetNames[0]];
-          // defval: '' so missing cells become empty string, not undefined
-          const data = XLSX.utils.sheet_to_json(ws, { defval: '' });
-          // Normalise header names (trim spaces)
-          const rows = data.map(row => {
-            const out = {};
-            Object.keys(row).forEach(k => { out[k.trim()] = row[k]; });
-            return out;
-          });
-          resolve(rows);
-        } catch (err) { reject(err); }
-      };
-      reader.onerror = () => reject(new Error('File read error'));
-      reader.readAsArrayBuffer(file);
-    });
-  }
-
-  /**
-   * Apply savedMapping to raw rows, normalise values, and return the
-   * structured row objects that allRows expects.
-   */
-  function applyMappingAndNormalise(rawRows, mapping) {
-    return rawRows.map((raw, index) => {
-      const mapped = { ...raw };
-      Object.entries(mapping).forEach(([srcCol, sysField]) => {
-        if (srcCol in mapped) {
-          mapped[sysField] = mapped[srcCol];
-          if (srcCol !== sysField) delete mapped[srcCol];
-        }
-      });
-
-      const rawTicket = cleanVal(mapped.ticket_type);
-
-      return {
-        id: index,
-        row: index + 1,
-        first_name: cleanVal(mapped.first_name),
-        last_name: cleanVal(mapped.last_name),
-        email: cleanVal(mapped.email),
-        mobile_number: cleanVal(mapped.mobile_number),
-        country: cleanVal(mapped.country),
-        nationality: cleanVal(mapped.nationality),
-        company_name: cleanVal(mapped.company_name),
-        job_title: cleanVal(mapped.job_title),
-        // ── Uppercase so "vip" / "visitor" match the <option> values ──
-        // ── But keep original if invalid so the error is visible ──
-        ticket_type: rawTicket ? rawTicket.toUpperCase() : null,
-        accepted_terms: toBool(mapped.accepted_terms),
-        accepted_data_sharing: toBool(mapped.accepted_data_sharing),
-        accepted_marketing: toBool(mapped.accepted_marketing),
-      };
-    });
-  }
-
-  // ═════════════════════════════════════════════════════════════
-  // VALIDATION  (100% client-side)
-  // ═════════════════════════════════════════════════════════════
-
-  function validateRowData(data, skipId = null, skipDuplicateCheck = false) {
-    const errors = [];
-    const NAME_RE = /^[A-Za-z\s\-'.]+$/;
-
-    const first_name = String(data.first_name || "").trim();
-    const last_name = String(data.last_name || "").trim();
-    const email = String(data.email || "").trim().toLowerCase();
-    const country = String(data.country || "").trim();
-    const nationality = String(data.nationality || "").trim();
-    const ticket_type = String(data.ticket_type || "").trim();
-
-    if (!first_name) {
-      errors.push("First name required");
-    } else if (first_name.length < 2) {
-      errors.push("First name must be at least 2 characters");
-    } else if (!NAME_RE.test(first_name)) {
-      errors.push("First name should only contain letters");
+    function getCsrfToken() {
+        return document.cookie.split("; ").find(r => r.startsWith("csrftoken"))?.split("=")[1];
     }
 
-    if (last_name) {
-      if (last_name.length < 2) {
-        errors.push("Last name must be at least 2 characters");
-      } else if (!NAME_RE.test(last_name)) {
-        errors.push("Last name should only contain letters");
-      }
-    }
-
-    // ── email ─────────────────────────────────────────────────
-    if (!email || !email.includes("@")) {
-      errors.push("Invalid email");
-    } else if (!skipDuplicateCheck) {
-      const inDb = existingEmailsSet.has(email);
-      const inFile = allRows.some(r =>
-        r.id !== skipId && String(r.email || "").trim().toLowerCase() === email
-      );
-      if (inDb) errors.push("Email already exists");
-      else if (inFile) errors.push("Duplicate email");
-    }
-
-    if (data.mobile_number) {
-      const digits = String(data.mobile_number).replace(/[\s\-().+]/g, '');
-      if (digits.length < 5 || digits.length > 15) {
-        errors.push("Invalid mobile number");
-      }
-    }
-
-    if (!country) {
-      errors.push("Country required");
-    } else {
-      const validCountry = COUNTRIES.some(c => c.name.toLowerCase() === country.toLowerCase());
-      if (!validCountry) errors.push("Country required");
-    }
-
-    if (!nationality) {
-      errors.push("Nationality required");
-    } else {
-      const validNationality = COUNTRIES.some(c => c.nationality.toLowerCase() === nationality.toLowerCase());
-      if (!validNationality) errors.push("Nationality required");
-    }
-
-    if (!ticket_type) {
-      errors.push("Ticket type required");
-    } else if (!["VIP", "VISITOR", "EXHIBITOR"].includes(ticket_type.toUpperCase())) {
-      errors.push("Invalid ticket type");
-    }
-
-    if (!data.accepted_terms) {
-      errors.push("Terms must be accepted");
-    }
-
-    return errors;
-  }
-
-  // ═════════════════════════════════════════════════════════════
-  // MODAL NAVIGATION
-  // ═════════════════════════════════════════════════════════════
-
-  document.getElementById("backToUploadBtn").addEventListener("click", () => {
-    bootstrap.Modal.getInstance(document.getElementById("bulkPreviewModal")).hide();
-    setTimeout(() => new bootstrap.Modal(document.getElementById("bulkUploadModal")).show(), 350);
-  });
-
-  // ═════════════════════════════════════════════════════════════
-  // STEP 1 — "Upload & Process" clicked
-  //   • Parse file in browser with SheetJS  (no server call)
-  //   • Fetch existing DB emails from server (one lightweight call)
-  //   • Show column-mapping modal
-  // ═════════════════════════════════════════════════════════════
-
-  document.getElementById("uploadBulkBtn").addEventListener("click", async () => {
-    const file = document.getElementById("bulkFile").files[0];
-    if (!file) return showNotificationModal('No File', 'Please select a file first.', 'warning');
-
-    const btn = document.getElementById("uploadBulkBtn");
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Reading…';
-
-    try {
-      // Parse file entirely in the browser
-      parsedFileRows = await parseFileInBrowser(file);
-
-      if (!parsedFileRows.length) {
-        showNotificationModal('Empty File', 'The file contains no data rows.', 'warning');
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-upload me-2"></i>Upload &amp; Process';
-        return;
-      }
-
-      // Fetch DB existing emails — the ONLY remaining server call before submit
-      const emailRes = await postJSON("/get-existing-emails/", {});
-      existingEmailsSet = new Set((emailRes.emails || []).map(e => String(e).toLowerCase()));
-
-      // Derive column headers from first row
-      const columns = Object.keys(parsedFileRows[0]);
-      renderFieldMapping(columns);
-
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-upload me-2"></i>Upload &amp; Process';
-
-      new bootstrap.Modal(document.getElementById("fieldMappingModal")).show();
-    } catch (err) {
-      console.error(err);
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-upload me-2"></i>Upload &amp; Process';
-      showNotificationModal('Parse Error', 'Could not read the file. Please check the format and try again.', 'error');
-    }
-  });
-
-  // ═════════════════════════════════════════════════════════════
-  // STEP 2 — Column-mapping UI
-  // ═════════════════════════════════════════════════════════════
-
-  const SYSTEM_FIELDS = [
-    "first_name", "last_name", "email", "mobile_number",
-    "country", "nationality", "company_name", "job_title",
-    "ticket_type", "accepted_terms", "accepted_data_sharing",
-    "accepted_marketing"
-    // , "digital_badge_issued", "onsite_badge_printed",
-  ];
-
-  function toLabel(str) {
-    return str.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-  }
-
-  function toSnakeCase(str) {
-    return str
-      .trim()
-      .toLowerCase()
-      .replace(/[\s\-]+/g, '_')      // spaces/hyphens → underscore
-      .replace(/[^a-z0-9_]/g, '');   // remove special chars
-  }
-
-  function renderFieldMapping(columns) {
-    const container = document.getElementById("mappingContainer");
-    container.innerHTML = "";
-    columns.forEach(col => {
-      // Normalize the column name and try to match a system field
-      const normalized = toSnakeCase(col);
-      const autoMatch = SYSTEM_FIELDS.find(f => f === normalized) || "";
-
-      const row = document.createElement("div");
-      row.className = "fm-row";
-      row.innerHTML = `
-      <div class="fm-left">${escapeHtml(col)}</div>
-      <div class="fm-right">
-        <select class="fm-select" data-col="${escapeHtml(col)}">
-          <option value="">— skip —</option>
-          ${SYSTEM_FIELDS.map(f =>
-        `<option value="${f}" ${autoMatch === f ? 'selected' : ''}>${toLabel(f)}</option>`
-      ).join("")}
-        </select>
-        <button class="fm-delete" title="Clear"><i class="fas fa-trash"></i></button>
-      </div>`;
-      row.querySelector(".fm-delete").onclick = () => row.querySelector("select").value = "";
-      container.appendChild(row);
-    });
-  }
-
-  // ═════════════════════════════════════════════════════════════
-  // STEP 3 — "Continue" on mapping modal
-  //   • Apply mapping to parsedFileRows entirely in JS
-  //   • Validate every row client-side
-  //   • Show preview modal — zero server calls
-  // ═════════════════════════════════════════════════════════════
-
-  document.getElementById("confirmMappingBtn").addEventListener("click", async () => {
-    const btn = document.getElementById("confirmMappingBtn");
-    const origText = btn.innerHTML;
-    
-    // 1. Show loading state
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing…';
-
-    // 2. Wrap in setTimeout to allow UI to render spinner before heavy JS execution
-    setTimeout(async () => {
-      try {
-        pagination.savedMapping = {};
-        document.querySelectorAll(".fm-select").forEach(sel => {
-          if (sel.value) pagination.savedMapping[sel.dataset.col] = sel.value;
-        });
-
-        pagination.currentPage = 1;
-        const pageSizeSel = document.getElementById("pageSizeSelect");
-        pagination.pageSize = pageSizeSel ? parseInt(pageSizeSel.value) : 50;
-        pagination.activeTab = "all";
-        document.querySelectorAll(".bulk-preview-tab").forEach(b => b.classList.remove("active"));
-        document.querySelector('[data-bptab="all"]').classList.add("active");
-
-        const structured = applyMappingAndNormalise(parsedFileRows, pagination.savedMapping);
-
-        // ── STEP 1: Build allRows with basic validation ──
-        allRows = structured.map(r => {
-          const errors = validateRowData(r, r.id, true);
-          return { ...r, status: errors.length === 0 ? "valid" : "invalid", errors };
-        });
-
-        // ── STEP 2: Full duplicate email pass ──
-        flagDuplicateEmailsInFile();
-
-        // ── STEP 3: Render view ──
-        renderCurrentView();
-
-        // ── STEP 4: Switch Modals ──
-        bootstrap.Modal.getInstance(document.getElementById("fieldMappingModal")).hide();
-        setTimeout(() => {
-          new bootstrap.Modal(document.getElementById("bulkPreviewModal")).show();
-        }, 400);
-
-      } catch (err) {
-        console.error(err);
-        showNotificationModal('Error', 'An error occurred while processing the data.', 'error');
-      } finally {
-        // Restore button for next use
-        btn.disabled = false;
-        btn.innerHTML = origText;
-      }
-    }, 100);
-  });
-
-  function flagDuplicateEmailsInFile() {
-    const emailCount = {};
-    allRows.forEach(r => {
-      const email = String(r.email || "").trim().toLowerCase();
-      if (!email) return;
-      emailCount[email] = (emailCount[email] || 0) + 1;
-    });
-
-    allRows.forEach(r => {
-      const email = String(r.email || "").trim().toLowerCase();
-      const isDuplicateInFile = email && emailCount[email] > 1;
-      const isInDb = email && existingEmailsSet.has(email);
-
-      // Remove both stale messages
-      r.errors = r.errors.filter(e => e !== "Email already exists" && e !== "Duplicate email");
-
-      if (isInDb) {
-        r.errors.push("Email already exists");
-        r.status = "invalid";
-      } else if (isDuplicateInFile) {
-        r.errors.push("Duplicate email");
-        r.status = "invalid";
-      } else {
-        if (r.errors.length === 0) r.status = "valid";
-      }
-    });
-  }
-
-
-  // ═════════════════════════════════════════════════════════════
-  // DERIVED VIEWS  (filter + paginate allRows in memory)
-  // ═════════════════════════════════════════════════════════════
-
-  function getFilteredRows() {
-    const tab = pagination.activeTab;
-    let rows = allRows;
-    if (tab === "valid") rows = rows.filter(r => r.status === "valid");
-    if (tab === "invalid") rows = rows.filter(r => r.status === "invalid");
-
-    // ✅ ADD THIS BLOCK
-    const q = pagination.searchQuery.toLowerCase().trim();
-    if (q) {
-      rows = rows.filter(r =>
-        [r.first_name, r.last_name, r.email, r.company_name,
-        r.job_title, r.mobile_number, r.ticket_type, r.country, r.nationality]
-          .some(v => v && String(v).toLowerCase().includes(q))
-      );
-    }
-
-    return rows;
-  }
-
-  function renderCurrentView() {
-    const filtered = getFilteredRows();
-    const total = filtered.length;
-    const totalPages = Math.max(1, Math.ceil(total / pagination.pageSize));
-
-    if (pagination.currentPage > totalPages) pagination.currentPage = totalPages;
-
-    const start = (pagination.currentPage - 1) * pagination.pageSize;
-    const page = filtered.slice(start, start + pagination.pageSize);
-
-    const validCount = allRows.filter(r => r.status === "valid").length;
-    const invalidCount = allRows.filter(r => r.status === "invalid").length;
-
-    updateTabCounts(validCount, invalidCount, allRows.length);
-    renderPreviewTable(page);
-    renderPagination(total, totalPages);
-  }
-
-  // ═════════════════════════════════════════════════════════════
-  // TAB COUNTS
-  // ═════════════════════════════════════════════════════════════
-
-  function updateTabCounts(valid, invalid, totalAll) {
-    document.getElementById("tab-count-all").textContent = totalAll;
-    document.getElementById("tab-count-valid").textContent = valid;
-    document.getElementById("tab-count-invalid").textContent = invalid;
-  }
-
-  // ── Countries Data ──────────────────────────────────────────────────────
-  // ═════════════════════════════════════════════════════════
-  // RENDER TABLE
-  // ═════════════════════════════════════════════════════════════
-
-  // ── Populate selects BEFORE modal opens ─────────────────────────────────
-  function populateCountrySelect(selectId, useNationality = false) {
-    const select = document.getElementById(selectId);
-    if (!select || select.dataset.populated) return; // prevent double population
-    COUNTRIES.forEach(c => {
-      const opt = document.createElement("option");
-      opt.value = useNationality ? c.nationality : c.name;
-      opt.dataset.code = c.code;
-      opt.text = useNationality ? c.nationality : c.name;
-      select.appendChild(opt);
-    });
-    select.dataset.populated = "true";
-  }
-
-  populateCountrySelect("countryResidence", false);
-  populateCountrySelect("nationality", true);
-
-  // ── Flag image helper ───────────────────────────────────────────────────
-  function getFlagImg(code) {
-    return `<img src="https://flagcdn.com/20x15/${code.toLowerCase()}.png"
-                     width="20" height="15"
-                     style="margin-right:6px;vertical-align:middle;border-radius:2px;flex-shrink:0;"
-                     onerror="this.style.display='none'">`;
-  }
-
-  // ── Select2 templates ───────────────────────────────────────────────────
-  function countryTemplate(option) {
-    if (!option.id) return option.text;
-    const code = option.element && option.element.dataset.code;
-    if (!code) return option.text;
-    return $(`<span style="display:flex;align-items:center;">
-                    ${getFlagImg(code)}<span>${option.text}</span>
-                  </span>`);
-  }
-
-  function countrySelection(option) {
-    if (!option.id) return option.text;
-    const code = option.element && option.element.dataset.code;
-    if (!code) return option.text;
-    return $(`<span style="display:flex;align-items:center;">
-                    ${getFlagImg(code)}<span>${option.text}</span>
-                  </span>`);
-  }
-
-  function renderPreviewTable(rows) {
-    const tbody = document.getElementById("previewTableBody");
-    tbody.innerHTML = "";
-
-    function initPreviewSelect2() {
-      // Destroy any existing Select2 instances inside the preview modal
-      $('.bpt-country-select, .bpt-nationality-select').each(function () {
-        if ($(this).hasClass('select2-hidden-accessible')) {
-          $(this).select2('destroy');
-        }
-      });
-
-      // Initialise country select with flags
-      $('.bpt-country-select').select2({
-        theme: 'bootstrap-5',
-        dropdownParent: $('#bulkPreviewModal'),
-        placeholder: 'Select Country',
-        allowClear: true,
-        templateResult: countryTemplate,
-        templateSelection: countrySelection,
-        width: '100%'
-      });
-
-      // Initialise nationality select with flags
-      $('.bpt-nationality-select').select2({
-        theme: 'bootstrap-5',
-        dropdownParent: $('#bulkPreviewModal'),
-        placeholder: 'Select Nationality',
-        allowClear: true,
-        templateResult: countryTemplate,
-        templateSelection: countrySelection,
-        width: '100%'
-      });
-    }
-
-
-
-    rows.forEach(r => {
-      const isInvalid = r.status === "invalid";
-
-      // ✅ FIX: accept multiple error messages
-      const err = (...msgs) => msgs
-        .filter(m => r.errors.includes(m))
-        .map(m => `<div class="bpt-error">${m}</div>`)
-        .join("");
-
-      const cls = (...msgs) => msgs.some(m => r.errors.includes(m)) ? "bpt-input-err" : "";
-
-      const tr = document.createElement("tr");
-      tr.className = `bpt-row ${isInvalid ? "bpt-row-invalid" : ""}`;
-      tr.dataset.bpstatus = r.status;
-      tr.dataset.rowId = r.id;
-
-      tr.innerHTML = `
-      <td class="bpt-td" style="color:#888;font-weight:600;">${r.row}</td>
-
-      <td class="bpt-td">
-        <input class="bpt-input ${cls(
-        'First name required',
-        'First name must be at least 2 characters',
-        'First name should only contain letters'
-      )}" value="${escapeHtml(r.first_name)}">
-        ${err(
-        'First name required',
-        'First name must be at least 2 characters',
-        'First name should only contain letters'
-      )}
-      </td>
-
-      <td class="bpt-td">
-        <input class="bpt-input ${cls(
-        'Last name must be at least 2 characters',
-        'Last name should only contain letters'
-      )}" value="${escapeHtml(r.last_name)}">
-        ${err(
-        'Last name must be at least 2 characters',
-        'Last name should only contain letters'
-      )}
-      </td>
-
-      <td class="bpt-td">
-  <input class="bpt-input ${cls('Invalid email', 'Email already exists', 'Duplicate email')}"
-         value="${escapeHtml(r.email)}">
-  ${err('Invalid email', 'Email already exists', 'Duplicate email')}
-</td>
-
-      <td class="bpt-td" style="min-width:200px;">
-  <div class="mobile-number-container" style="display:flex;align-items:center;">
-    <input class="bpt-input mobile-number-input ${cls('Invalid mobile number')}"
-           data-row-id="${r.id}"
-           value="${escapeHtml(r.mobile_number || '')}"
-           style="width:100%;min-width:150px;">
-  </div>
-  ${err('Invalid mobile number')}
-</td>
-
-      <td class="bpt-td">
-  <select class="bpt-country-select form-select" data-row-id="${r.id}" style="width:100%;">
-    <option value="">Select Country</option>
-    ${COUNTRIES.map(c => `<option value="${escapeHtml(c.name)}" data-code="${c.code}"  ${r.country === c.name ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('')}
-  </select>
-  ${err('Country required')}
-</td>
-
-      <td class="bpt-td">
-  <select class="bpt-nationality-select form-select"  data-row-id="${r.id}" style="width:100%;">
-    <option value="">Select Nationality</option>
-    ${COUNTRIES.map(c => `<option value="${escapeHtml(c.nationality)}" data-code="${c.code}" ${r.nationality === c.nationality ? 'selected' : ''}>${escapeHtml(c.nationality)}</option>`).join('')}
-  </select>
-  ${err('Nationality required')}
-</td>
-
-      <td class="bpt-td"><input class="bpt-input" value="${escapeHtml(r.company_name)}"></td>
-      <td class="bpt-td"><input class="bpt-input" value="${escapeHtml(r.job_title)}"></td>
-
-      <td class="bpt-td">
-  <select class="bpt-input bpt-ticket-type ${cls('Ticket type required', 'Invalid ticket type')}">
-    <option value="">Select</option>
-    ${!["VIP", "VISITOR", "EXHIBITOR"].includes(r.ticket_type || "") && r.ticket_type
-          ? `<option value="${escapeHtml(r.ticket_type)}" selected style="color:#dc2626;">
-           ${escapeHtml(r.ticket_type)} (invalid)
-         </option>`
-          : ""
-        }
-    <option value="VIP"       ${r.ticket_type === "VIP" ? "selected" : ""}>VIP</option>
-    <option value="VISITOR"   ${r.ticket_type === "VISITOR" ? "selected" : ""}>Visitor</option>
-    <option value="EXHIBITOR" ${r.ticket_type === "EXHIBITOR" ? "selected" : ""}>Exhibitor</option>
-  </select>
-  ${err('Ticket type required', 'Invalid ticket type')}
-</td>
-
-      <td class="bpt-td text-center">
-        <input type="checkbox" ${r.accepted_terms ? "checked" : ""}>
-        ${err('Terms must be accepted')}
-      </td>
-      <td class="bpt-td text-center"><input type="checkbox" ${r.accepted_data_sharing ? "checked" : ""}></td>
-      <td class="bpt-td text-center"><input type="checkbox" ${r.accepted_marketing ? "checked" : ""}></td>
-
-      <td class="bpt-td">
-        <span class="bpt-status ${isInvalid ? 'bpt-s-invalid' : 'bpt-s-valid'}">${r.status}</span>
-        <button class="btn btn-sm btn-outline-primary check-row-btn ms-1">✔ Check</button>
-      </td>`;
-
-      tbody.appendChild(tr);
-    });
-
-
-    attachRowEventListeners();
-    initPreviewSelect2();
-    initMobileFields();
-  }
-
-
-  // Initialize intl-tel-input on all mobile number inputs
-  function initMobileFields() {
-    $('.mobile-number-input').each(function () {
-      const input = this;
-      if (input.itiInstance) {
-        input.itiInstance.destroy();
-        delete input.itiInstance;
-      }
-      const initialValue = input.value.trim();
-      const rowId = parseInt(input.dataset.rowId);  // ✅ declare rowId first
-      const iti = intlTelInput(input, {
-        initialCountry: 'in',
-        separateDialCode: false,
-        utilsScript: 'https://cdn.jsdelivr.net/npm/intl-tel-input@23.1.0/build/js/utils.js',
-        autoPlaceholder: 'aggressive',
-        formatOnDisplay: true,
-      });
-      input.itiInstance = iti;
-      const countrySelect = document.querySelector(
-            `.bpt-country-select[data-row-id="${rowId}"]`
+    function escapeHtml(str) {
+        if (str == null) return '';
+        return String(str).replace(/[&<>"']/g, m =>
+            ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])
         );
+    }
 
-        if (countrySelect) {
-            $(countrySelect).on('select2:select select2:clear', function () {
-                const selectedOption = this.options[this.selectedIndex];
-                const code = selectedOption && selectedOption.dataset.code;
-                if (code) {
-                    iti.setCountry(code.toLowerCase());
-                } else {
-                    iti.setCountry("us");
-                }
+    function debounce(fn, ms) {
+        let t;
+        return function (...args) {
+            clearTimeout(t);
+            t = setTimeout(() => fn.apply(this, args), ms);
+        };
+    }
+
+    function showNotificationModal(title, message, type = 'info') {
+        const modalEl = document.getElementById('notificationModal');
+        modalEl.className = 'modal fade'; // Reset
+        modalEl.classList.add(`notification-${type}`);
+        document.getElementById('notificationTitle').textContent = title;
+        document.getElementById('notificationMessage').innerHTML = message;
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    }
+
+    // 1. Upload -> Get Headers
+    document.getElementById("uploadBulkBtn").addEventListener("click", async () => {
+        const fileInput = document.getElementById("bulkFile");
+        if (!fileInput.files.length) {
+            showNotificationModal('No File', 'Please select an Excel or CSV file first.', 'warning');
+            return;
+        }
+        
+        currentFile = fileInput.files[0];
+        const fd = new FormData();
+        fd.append("file", currentFile);
+
+        const btn = document.getElementById("uploadBulkBtn");
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+
+        try {
+            const res = await fetch("/api/bulk-upload/headers/", {
+                method: "POST",
+                headers: { "X-CSRFToken": getCsrfToken() },
+                body: fd
             });
-        }
-
-      // Wait for utils to be fully loaded before validating
-      iti.promise.then(() => {
-        const countrySelect = document.querySelector(
-    `.bpt-country-select[data-row-id="${rowId}"]`
-);
-
-        if (initialValue !== "") {
-          if (!iti.isValidNumber()) {
-            // Mark as invalid in allRows and refresh UI
-            const rowId = parseInt(input.dataset.rowId);   
-            const idx = allRows.findIndex(r => r.id === rowId);
-            if (idx !== -1 && !allRows[idx].errors.includes("Invalid mobile number")) {
-              allRows[idx].errors.push("Invalid mobile number");
-              allRows[idx].status = "invalid";
-              const tr = $(input).closest('tr')[0];
-              if (tr) updateRowUI(tr, allRows[idx]);
-              // Refresh tab counts
-              const validCount = allRows.filter(r => r.status === "valid").length;
-              const invalidCount = allRows.filter(r => r.status === "invalid").length;
-              updateTabCounts(validCount, invalidCount, allRows.length);
+            const data = await res.json();
+            if (data.success) {
+                renderMappingUI(data.columns);
+                bootstrap.Modal.getOrCreateInstance(document.getElementById("bulkUploadModal")).hide();
+                new bootstrap.Modal(document.getElementById("fieldMappingModal")).show();
+            } else { 
+                showNotificationModal('Error', data.error || 'Failed to process file headers.', 'error');
             }
-          }
+        } catch (e) { 
+            console.error(e);
+            showNotificationModal('System Error', 'An unexpected error occurred during upload.', 'error');
         }
-      });
-
-      // Sync changes back to allRows (debounced)
-      const syncMobile = debounce(function () {
-        const rowId = parseInt(input.dataset.rowId);
-        const idx = allRows.findIndex(r => r.id === rowId);
-        if (idx !== -1) {
-          const e164 = iti.getNumber();
-          allRows[idx].mobile_number = e164 || input.value.trim();
-        }
-      }, 300);
-
-      input.addEventListener('countrychange', syncMobile);
-      input.addEventListener('input', syncMobile);
-      input.addEventListener('blur', syncMobile);
+        finally { btn.disabled = false; btn.innerHTML = "Upload & Process"; }
     });
 
-    // Refresh tab counts after initial validation
-    const validCount = allRows.filter(r => r.status === "valid").length;
-    const invalidCount = allRows.filter(r => r.status === "invalid").length;
-    updateTabCounts(validCount, invalidCount, allRows.length);
-  }
-
-  // ═════════════════════════════════════════════════════════════
-  // ROW INPUT CHANGE — silent sync only (no validation on typing)
-  // ═════════════════════════════════════════════════════════════
-
-  function attachRowEventListeners() {
-    document.querySelectorAll(".bpt-row").forEach(tr => {
-      tr.querySelectorAll("input, select").forEach(inp => {
-        inp.removeEventListener("input", handleFieldChange);
-        inp.removeEventListener("change", handleFieldChange);
-        inp.addEventListener("input", handleFieldChange);
-        inp.addEventListener("change", handleFieldChange);
-      });
-    });
-  }
-
-  const handleFieldChange = debounce(function () {
-    const tr = this.closest(".bpt-row");
-    if (!tr) return;
-    const rowId = parseInt(tr.dataset.rowId);
-    const idx = allRows.findIndex(r => r.id === rowId);
-    if (idx === -1) return;
-    // Silently keep allRows in sync with DOM — no re-validation
-    Object.assign(allRows[idx], readRowFromDOM(tr));
-  }, 150);
-
-  
-  function readRowFromDOM(tr) {
-    const mobileInput = tr.children[4].querySelector(".mobile-number-input");
-    const iti = mobileInput ? mobileInput.itiInstance : null;
-
-    let mobileNumber = '';
-    if (iti) {
-      const e164 = iti.getNumber();          // always returns E.164 if user typed anything
-      mobileNumber = e164 || mobileInput.value.trim();
-    } else if (mobileInput) {
-      mobileNumber = mobileInput.value.trim();
-    }
-
-    return {
-      first_name: tr.children[1].querySelector("input").value.trim(),
-      last_name: tr.children[2].querySelector("input").value.trim(),
-      email: tr.children[3].querySelector("input").value.trim(),
-      mobile_number: mobileNumber,
-      country: tr.children[5].querySelector("select.bpt-country-select").value,
-      nationality: tr.children[6].querySelector("select.bpt-nationality-select").value,
-      company_name: tr.children[7].querySelector("input").value.trim(),
-      job_title: tr.children[8].querySelector("input").value.trim(),
-      ticket_type: (() => {
-        const val = tr.children[9].querySelector("select").value;
-        return ["VIP", "VISITOR", "EXHIBITOR"].includes(val) ? val : (val || null);
-      })(),
-      accepted_terms: tr.children[10].querySelector("input").checked,
-      accepted_data_sharing: tr.children[11].querySelector("input").checked,
-      accepted_marketing: tr.children[12].querySelector("input").checked,
-      // digital_badge_issued: tr.children[13].querySelector("input").checked,
-      // onsite_badge_printed: tr.children[14].querySelector("input").checked,
-    };
-  }
-
-  // ═════════════════════════════════════════════════════════════
-  // "✔ CHECK" BUTTON — validate row, update status + counts
-  // ═════════════════════════════════════════════════════════════
-
-  document.addEventListener("click", e => {
-    if (!e.target.classList.contains("check-row-btn")) return;
-
-    const tr = e.target.closest("tr");
-    const rowId = parseInt(tr.dataset.rowId);
-    const idx = allRows.findIndex(r => r.id === rowId);
-    if (idx === -1) return;
-
-    const mobileInput = tr.querySelector(".mobile-number-input");
-    if (mobileInput && mobileInput.itiInstance) {
-      allRows[idx].mobile_number = mobileInput.itiInstance.getNumber() || mobileInput.value.trim();
-    }
-
-    const updated = readRowFromDOM(tr);
-    // skipDuplicateCheck=true here — flagDuplicateEmailsInFile handles it globally below
-    const errors = validateRowData(updated, rowId, true);
-
-    if (mobileInput && mobileInput.itiInstance) {
-      const rawValue = mobileInput.value.trim();
-      if (rawValue !== "") {
-        const iti = mobileInput.itiInstance;
-        if (!iti.isValidNumber()) {
-          if (!errors.includes("Invalid mobile number")) errors.push("Invalid mobile number");
-        } else {
-          const i2 = errors.indexOf("Invalid mobile number");
-          if (i2 !== -1) errors.splice(i2, 1);
-        }
-      }
-    }
-
-    const status = errors.length === 0 ? "valid" : "invalid";
-    Object.assign(allRows[idx], updated, { errors, status });
-
-    // ── Re-run global duplicate pass so sibling rows update too ──
-    flagDuplicateEmailsInFile();
-
-    // Re-render the whole view so sibling duplicate rows reflect new status
-    renderCurrentView();
-
-    const validCount = allRows.filter(r => r.status === "valid").length;
-    const invalidCount = allRows.filter(r => r.status === "invalid").length;
-    updateTabCounts(validCount, invalidCount, allRows.length);
-  });
-
-
-  // Update error markers + status pill for a single row (no table re-render)
-  function updateRowUI(tr, rowData) {
-    const { errors, status } = rowData;
-    const isInvalid = status === "invalid";
-
-    const refreshCell = (cellIdx, inputSel, ...messages) => {
-      const td = tr.children[cellIdx];
-      const inp = td.querySelector(inputSel);
-      td.querySelectorAll(".bpt-error").forEach(el => el.remove());
-      inp.classList.remove("bpt-input-err");
-      const mine = messages.filter(m => errors.includes(m));
-      if (mine.length) {
-        inp.classList.add("bpt-input-err");
-        mine.forEach(m => inp.insertAdjacentHTML("afterend", `<div class="bpt-error">${m}</div>`));
-      }
-    };
-
-    // ── now covers all error messages including new name rules ──
-    refreshCell(1, "input",
-      "First name required",
-      "First name must be at least 2 characters",   // ✅ new
-      "First name should only contain letters"       // ✅ new
-    );
-    refreshCell(2, "input",
-      "Last name must be at least 2 characters",     // ✅ new
-      "Last name should only contain letters"        // ✅ new
-    );
-    refreshCell(3, "input", "Invalid email", "Email already exists", "Duplicate email");
-    // Country
-    let countryTd = tr.children[5];
-    let countrySelect = countryTd.querySelector(".bpt-country-select");
-    countryTd.querySelectorAll(".bpt-error").forEach(el => el.remove());
-    countrySelect.classList.remove("bpt-input-err");
-    if (errors.includes("Country required")) {
-      countrySelect.classList.add("bpt-input-err");
-      // Also add red border to Select2 container
-      $(countrySelect).next('.select2-container').find('.select2-selection').css('border', '1px solid red');
-      countryTd.insertAdjacentHTML("beforeend", `<div class="bpt-error">Country required</div>`);
-    } else {
-      $(countrySelect).next('.select2-container').find('.select2-selection').css('border', '1px solid #ddd');
-    }
-    // Nationality (similar)
-    let nationalityTd = tr.children[6];
-    let nationalitySelect = nationalityTd.querySelector(".bpt-nationality-select");
-    nationalityTd.querySelectorAll(".bpt-error").forEach(el => el.remove());
-    nationalitySelect.classList.remove("bpt-input-err");
-    if (errors.includes("Nationality required")) {
-      nationalitySelect.classList.add("bpt-input-err");
-      $(nationalitySelect).next('.select2-container').find('.select2-selection').css('border', '1px solid red');
-      nationalityTd.insertAdjacentHTML("beforeend", `<div class="bpt-error">Nationality required</div>`);
-    } else {
-      $(nationalitySelect).next('.select2-container').find('.select2-selection').css('border', '1px solid #ddd');
-    }
-    refreshCell(9, "select",
-      "Ticket type required",
-      "Invalid ticket type"                          // ✅ new
-    );
-
-    const mobileTd = tr.children[4];
-    const mobileContainer = mobileTd.querySelector('.mobile-number-container');
-    const mobileRawInput = mobileContainer.querySelector('input.mobile-number-input');
-    console.log(mobileContainer, 'mobileraw')
-    const itiWrapper = mobileContainer.querySelector('.iti');
-
-    mobileTd.querySelectorAll(".bpt-error").forEach(el => el.remove());
-    if (errors.includes("Invalid mobile number")) {
-      mobileContainer.insertAdjacentHTML("afterend", `<div class="bpt-error">Invalid mobile number</div>`);
-      mobileRawInput.classList.add("bpt-input-err");
-      if (itiWrapper) {
-        itiWrapper.style.border = '1px solid #ef4444';
-        itiWrapper.style.borderRadius = '5px';
-      }
-    } else {
-      console.log(mobileRawInput, 'checkmobilerawinput')
-      mobileRawInput.classList.remove("bpt-input-err");
-
-      mobileRawInput.style.borderColor = '';
-      if (itiWrapper) {
-        itiWrapper.style.border = '';
-        itiWrapper.style.borderRadius = '';
-      }
-    }
-
-    const termsTd = tr.children[10];
-    termsTd.querySelectorAll(".bpt-error").forEach(el => el.remove());
-    if (errors.includes("Terms must be accepted"))
-      termsTd.insertAdjacentHTML("beforeend", `<div class="bpt-error">Required</div>`);
-
-    tr.dataset.bpstatus = status;
-    tr.classList.toggle("bpt-row-invalid", isInvalid);
-
-    const pill = tr.children[13].querySelector(".bpt-status");
-    pill.className = `bpt-status ${isInvalid ? "bpt-s-invalid" : "bpt-s-valid"}`;
-    pill.textContent = status;
-  }
-
-  // ═════════════════════════════════════════════════════════════
-  // TAB FILTER
-  // ═════════════════════════════════════════════════════════════
-
-  document.querySelectorAll(".bulk-preview-tab").forEach(btn => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll(".bulk-preview-tab").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      pagination.activeTab = btn.dataset.bptab;
-      pagination.currentPage = 1;
-      renderCurrentView();
-    });
-  });
-
-  // ═════════════════════════════════════════════════════════════
-  // PAGINATION
-  // ═════════════════════════════════════════════════════════════
-
-  function renderPagination(total, totalPages) {
-    const { currentPage, pageSize } = pagination;
-    const from = total === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-    const to = Math.min(currentPage * pageSize, total);
-
-    document.getElementById("paginationInfo").textContent =
-      total === 0 ? "No rows" : `Showing ${from}–${to} of ${total} rows`;
-
-    const container = document.getElementById("paginationBtns");
-    container.innerHTML = "";
-    if (totalPages <= 1) return;
-
-    container.appendChild(makePageBtn("‹", currentPage === 1, () => goToPage(currentPage - 1)));
-    buildPageRange(currentPage, totalPages).forEach(p => {
-      if (p === "…") {
-        const dot = document.createElement("span");
-        dot.textContent = "…";
-        dot.style.cssText = "padding:0 4px;color:#9ca3af;line-height:32px;";
-        container.appendChild(dot);
-      } else {
-        const btn = makePageBtn(p, false, () => goToPage(p));
-        if (p === currentPage) btn.classList.add("active");
-        container.appendChild(btn);
-      }
-    });
-    container.appendChild(makePageBtn("›", currentPage === totalPages, () => goToPage(currentPage + 1)));
-  }
-
-  function buildPageRange(current, total) {
-    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-    const pages = new Set([1, total]);
-    for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) pages.add(i);
-    const sorted = [...pages].sort((a, b) => a - b);
-    const result = [];
-    sorted.forEach((p, i) => {
-      if (i > 0 && p - sorted[i - 1] > 1) result.push("…");
-      result.push(p);
-    });
-    return result;
-  }
-
-  function makePageBtn(label, disabled, onClick) {
-    const btn = document.createElement("button");
-    btn.className = "pg-btn";
-    btn.textContent = label;
-    btn.disabled = disabled;
-    if (!disabled) btn.addEventListener("click", onClick);
-    return btn;
-  }
-
-  function goToPage(page) {
-    if (page < 1) return;
-    pagination.currentPage = page;
-    renderCurrentView();
-  }
-
-  document.getElementById("pageSizeSelect").addEventListener("change", function () {
-    pagination.pageSize = parseInt(this.value);
-    pagination.currentPage = 1;
-    renderCurrentView();
-  });
-
-  // ═════════════════════════════════════════════════════════════
-  // SUBMIT — POST allRows JSON to server → Celery task
-  // ═════════════════════════════════════════════════════════════
-
-  document.getElementById("submitBulkBtn").addEventListener("click", async () => {
-    const submitBtn = document.getElementById("submitBulkBtn");
-    const origText = submitBtn.innerHTML;
-    submitBtn.disabled = true;
-
-    const SAVE_FIELDS = [
-      "first_name", "last_name", "email", "mobile_number",
-      "country", "nationality", "company_name", "job_title", "ticket_type",
-      "accepted_terms", "accepted_data_sharing", "accepted_marketing",
-      // "digital_badge_issued", "onsite_badge_printed",
+    const SYSTEM_FIELDS = [
+        "first_name", "last_name", "email", "mobile_number",
+        "country", "nationality", "company_name", "job_title",
+        "ticket_type", "accepted_terms", "accepted_data_sharing", "accepted_marketing"
     ];
 
-    const validRows = allRows
-      .filter(r => r.status === "valid")
-      .map(r => {
-        const out = {};
-        SAVE_FIELDS.forEach(f => { out[f] = r[f] ?? null; });
-        return out;
-      });
-
-    if (!validRows.length) {
-      await showNotificationModal('Nothing to Save', 'There are no valid rows to import.', 'warning');
-      submitBtn.disabled = false;
-      return;
+    function toLabel(str) {
+        return str.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
     }
 
-    try {
-      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading…';
+    function renderMappingUI(columns) {
+        const container = document.getElementById("mappingContainer");
+        container.innerHTML = "";
+        
+        // Keywords that should trigger an auto-match for ticket_type
+        const ticketTypeKeywords = ["visitor", "exhibitor", "vip", "ticket", "type", "class", "pass"];
 
-      const response = await fetch("/bulk-upload-save/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-CSRFToken": getCsrfToken() },
-        body: JSON.stringify({ rows: validRows }),
-      });
+        columns.forEach(col => {
+            const cleanCol = col.trim().toLowerCase();
+            const norm = cleanCol.replace(/[\s_]+/g, '');
+            
+            let auto = SYSTEM_FIELDS.find(f => f.replace(/_/g, '') === norm) || "";
+            
+            // Smarter auto-mapping for ticket_type
+            if (!auto) {
+                if (ticketTypeKeywords.some(kw => cleanCol.includes(kw))) {
+                    auto = "ticket_type";
+                }
+            }
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        if (response.status === 409) {
-          // Task already in progress (Locked)
-          await showNotificationModal(
-            'Upload in Progress',
-            `<div class="text-center p-3">
-              <i class="fas fa-spinner fa-spin mb-3" style="font-size: 32px; color: #1a56db;"></i>
-              <p>${data.errors || "A bulk upload is already in progress for your account. Please wait until it finishes."}</p>
-            </div>`,
-            'info'
-          );
-        } else {
-          // Format pipe-separated per-type errors into a readable list
-          const errorLines = (data.errors || "Unknown error")
-            .split(" | ")
-            .map(e => `<li>${e}</li>`)
-            .join("");
-          await showNotificationModal(
-            'Error Starting Upload',
-            `<ul style="margin:0;padding-left:18px;">${errorLines}</ul>`,
-            'error'
-          );
-        }
-        submitBtn.innerHTML = origText;
-        submitBtn.disabled = false;
-        return;
-      }
-
-      // ✅ SUCCESS: Close all active modals immediately and track in background
-      document.querySelectorAll('.modal.show').forEach(m => {
-          const inst = bootstrap.Modal.getInstance(m) || bootstrap.Modal.getOrCreateInstance(m);
-          inst.hide();
-      });
-      
-      if (window.startTrackingTask) {
-          // Store task info in localStorage for persistence across refreshes
-          const pendingTasks = JSON.parse(localStorage.getItem('pendingBulkTasks') || '[]');
-          pendingTasks.push({ id: data.task_id, label: "Bulk Badge Import" });
-          localStorage.setItem('pendingBulkTasks', JSON.stringify(pendingTasks));
-
-          window.startTrackingTask(data.task_id, "Bulk Badge Import");
-      } else {
-          // Fallback if global function not found
-          location.reload();
-      }
-
-    } catch (error) {
-      console.error(error);
-      await showNotificationModal('Unexpected Error', error.message || 'Something went wrong.', 'error');
-      submitBtn.innerHTML = origText;
-      submitBtn.disabled = false;
+            const div = document.createElement("div");
+            div.className = "fm-row";
+            div.innerHTML = `
+                <div class="fm-left">${escapeHtml(col)}</div>
+                <div class="fm-right">
+                    <select class="fm-select mapping-select" data-col="${escapeHtml(col)}">
+                        <option value="">— skip —</option>
+                        ${SYSTEM_FIELDS.map(f => `<option value="${f}" ${auto === f ? 'selected' : ''}>${toLabel(f)}</option>`).join('')}
+                    </select>
+                    <button class="fm-delete" title="Clear" onclick="this.previousElementSibling.value=''"><i class="fas fa-trash"></i></button>
+                </div>
+            `;
+            container.appendChild(div);
+        });
     }
-  });
 
-  // ═════════════════════════════════════════════════════════════
-  // CELERY TASK POLLER
-  // ═════════════════════════════════════════════════════════════
+    // 2. Mapping -> Get Preview
+    document.getElementById("confirmMappingBtn").addEventListener("click", async () => {
+        const mapping = {};
+        document.querySelectorAll(".mapping-select").forEach(s => {
+            if (s.value) mapping[s.dataset.col] = s.value;
+        });
+        pagination.mapping = mapping;
 
-  function pollTaskStatus(taskId, intervalMs = 1500, timeoutMs = 600000) {
-    return new Promise((resolve, reject) => {
-      const start = Date.now();
-      const iv = setInterval(async () => {
+        const fd = new FormData();
+        fd.append("file", currentFile);
+        fd.append("mapping", JSON.stringify(mapping));
+
+        const btn = document.getElementById("confirmMappingBtn");
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Validating...';
+
         try {
-          if (Date.now() - start > timeoutMs) {
-            clearInterval(iv);
-            reject(new Error("Task timed out. Please check your records manually."));
-            return;
-          }
-          const json = await fetch(`/bulk-task-status/${taskId}/`).then(r => r.json());
-          if (json.state === "SUCCESS") { clearInterval(iv); resolve(json); }
-          else if (json.state === "FAILURE") { clearInterval(iv); reject(new Error(json.error || "Task failed")); }
-        } catch (err) { clearInterval(iv); reject(err); }
-      }, intervalMs);
+            const res = await fetch("/api/bulk-upload/preview/", {
+                method: "POST",
+                headers: { "X-CSRFToken": getCsrfToken() },
+                body: fd
+            });
+            const data = await res.json();
+            if (data.success) {
+                allRows = data.data;
+                pagination.currentPage = 1;
+                renderCurrentView();
+                bootstrap.Modal.getInstance(document.getElementById("fieldMappingModal")).hide();
+                new bootstrap.Modal(document.getElementById("bulkPreviewModal")).show();
+            } else { 
+                showNotificationModal('Validation Error', data.error || 'Failed to generate preview.', 'error');
+            }
+        } catch (e) { 
+            console.error(e);
+            showNotificationModal('System Error', 'An error occurred during data validation.', 'error');
+        }
+        finally { btn.disabled = false; btn.innerHTML = "Continue"; }
     });
-  }
+
+    function renderCurrentView() {
+        const filtered = allRows.filter(r => {
+            if (pagination.activeTab === "valid") return r.status === "valid";
+            if (pagination.activeTab === "invalid") return r.status === "invalid";
+            return true;
+        }).filter(r => {
+            const q = pagination.searchQuery.toLowerCase().trim();
+            return !q || [r.first_name, r.last_name, r.email].some(v => v && String(v).toLowerCase().includes(q));
+        });
+
+        const start = (pagination.currentPage - 1) * pagination.pageSize;
+        const page = filtered.slice(start, start + pagination.pageSize);
+
+        updateTabCounts();
+        renderTable(page);
+        bulkRenderPagination(filtered.length, Math.ceil(filtered.length / pagination.pageSize));
+    }
+
+    function getFlagImg(code) {
+        if (!code) return "";
+        return `<img src="https://flagcdn.com/20x15/${code.toLowerCase()}.png" 
+                     width="20" height="15" 
+                     style="margin-right:8px; vertical-align:middle; border-radius:2px;">`;
+    }
+
+    function countryTemplate(option) {
+        if (!option.id) return option.text;
+        const code = option.element ? option.element.dataset.code : null;
+        if (!code) return option.text;
+        return $(`<span style="display:flex; align-items:center;">${getFlagImg(code)}<span>${option.text}</span></span>`);
+    }
+
+    function initPreviewSelect2() {
+        $('.bpt-country-select, .bpt-nationality-select').each(function() {
+            if ($(this).data('select2')) $(this).select2('destroy');
+        });
+
+        const select2Config = {
+            theme: 'bootstrap-5',
+            dropdownParent: $('#bulkPreviewModal'),
+            templateResult: countryTemplate,
+            templateSelection: countryTemplate,
+            width: '100%',
+            allowClear: true,
+            placeholder: "-- select --"
+        };
+
+        $('.bpt-country-select').select2(select2Config).on('change', function() {
+            const rowId = this.dataset.rowId;
+            const selectedOpt = this.options[this.selectedIndex];
+            const code = selectedOpt ? selectedOpt.dataset.code : null;
+            
+            // Sync with mobile input
+            const mobileInput = document.querySelector(`.mobile-number-input[data-row-id="${rowId}"]`);
+            if (mobileInput && mobileInput.itiInstance && code) {
+                mobileInput.itiInstance.setCountry(code.toLowerCase());
+            }
+            handleFieldChange.call(this);
+        });
+        
+        $('.bpt-nationality-select').select2(select2Config).on('change', handleFieldChange);
+    }
+
+    function renderTable(rows) {
+        const tbody = document.getElementById("previewTableBody");
+        tbody.innerHTML = "";
+        
+        const getFieldErr = (fieldErrors) => {
+            if (!fieldErrors || !fieldErrors.length) return "";
+            return fieldErrors.map(e => `<div class="bpt-error">${escapeHtml(e)}</div>`).join("");
+        };
+
+        const hasErr = (fieldErrors) => (fieldErrors && fieldErrors.length) ? "bpt-input-err" : "";
+
+        rows.forEach(r => {
+            const isInvalid = r.status === "invalid";
+            const errs = r.errors || {}; 
+            const tr = document.createElement("tr");
+            tr.className = `bpt-row ${isInvalid ? "bpt-row-invalid" : ""}`;
+            tr.dataset.idx = r.id;
+            
+            tr.innerHTML = `
+                <td class="bpt-td" style="color:#888;font-weight:600;">${r.row}</td>
+                <td class="bpt-td">
+                    <input class="bpt-input ${hasErr(errs.first_name)}" value="${escapeHtml(r.first_name)}" data-field="first_name">
+                    ${getFieldErr(errs.first_name)}
+                </td>
+                <td class="bpt-td">
+                    <input class="bpt-input ${hasErr(errs.last_name)}" value="${escapeHtml(r.last_name)}" data-field="last_name">
+                    ${getFieldErr(errs.last_name)}
+                </td>
+                <td class="bpt-td">
+                    <input class="bpt-input ${hasErr(errs.email)}" value="${escapeHtml(r.email)}" data-field="email">
+                    ${getFieldErr(errs.email)}
+                </td>
+                <td class="bpt-td">
+                    <select class="bpt-input bpt-country-select ${hasErr(errs.country)}" data-field="country" data-row-id="${r.id}">
+                        <option value="">-- select --</option>
+                        ${COUNTRIES.map(c => `<option value="${escapeHtml(c.name)}" data-code="${c.code}" ${r.country === c.name ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('')}
+                    </select>
+                    ${getFieldErr(errs.country)}
+                </td>
+                <td class="bpt-td">
+                    <select class="bpt-input bpt-nationality-select ${hasErr(errs.nationality)}" data-field="nationality">
+                        <option value="">-- select --</option>
+                        ${COUNTRIES.map(c => `<option value="${escapeHtml(c.nationality)}" data-code="${c.code}" ${r.nationality === c.nationality ? 'selected' : ''}>${escapeHtml(c.nationality)}</option>`).join('')}
+                    </select>
+                    ${getFieldErr(errs.nationality)}
+                </td>
+                <td class="bpt-td">
+                    <div class="mobile-number-container">
+                        <input class="bpt-input mobile-number-input ${hasErr(errs.mobile_number)}" value="${escapeHtml(r.mobile_number || '')}" data-field="mobile_number" data-row-id="${r.id}">
+                    </div>
+                    ${getFieldErr(errs.mobile_number)}
+                </td>
+                <td class="bpt-td">
+                    <input class="bpt-input" value="${escapeHtml(r.company_name)}" data-field="company_name">
+                </td>
+                <td class="bpt-td">
+                    <input class="bpt-input" value="${escapeHtml(r.job_title)}" data-field="job_title">
+                </td>
+                <td class="bpt-td">
+                    <select class="bpt-input ${hasErr(errs.ticket_type)}" data-field="ticket_type">
+                        <option value="">-- select --</option>
+                        <option value="VIP" ${r.ticket_type==='VIP'?'selected':''}>VIP</option>
+                        <option value="EXHIBITOR" ${r.ticket_type==='EXHIBITOR'?'selected':''}>Exhibitor</option>
+                        <option value="VISITOR" ${r.ticket_type==='VISITOR'?'selected':''}>Visitor</option>
+                    </select>
+                    ${getFieldErr(errs.ticket_type)}
+                </td>
+                <td class="bpt-td text-center">
+                    <input type="checkbox" ${r.accepted_terms ? 'checked' : ''} data-field="accepted_terms">
+                    ${getFieldErr(errs.accepted_terms)}
+                </td>
+                <td class="bpt-td text-center"><input type="checkbox" ${r.accepted_data_sharing ? 'checked' : ''} data-field="accepted_data_sharing"></td>
+                <td class="bpt-td text-center"><input type="checkbox" ${r.accepted_marketing ? 'checked' : ''} data-field="accepted_marketing"></td>
+                <td class="bpt-td">
+                    <span class="bpt-status ${isInvalid ? 'bpt-s-invalid' : 'bpt-s-valid'}">${r.status}</span>
+                </td>
+                <td class="bpt-td">
+                    <div class="d-flex gap-1">
+                        <button class="btn btn-sm btn-outline-primary check-row-btn" data-idx="${r.id}" title="Check Row">✔ Check</button>
+                        <button class="btn btn-sm btn-outline-danger delete-row-btn" data-idx="${r.id}" title="Delete Row">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+        attachRowListeners();
+        initMobileFields();
+        initPreviewSelect2();
+    }
+
+    function attachRowListeners() {
+        document.querySelectorAll('.bpt-row').forEach(tr => {
+            tr.querySelectorAll('input, select').forEach(el => {
+                const eventType = el.type === 'checkbox' || el.tagName === 'SELECT' ? 'change' : 'input';
+                el.addEventListener(eventType, debounce(handleFieldChange.bind(el), 200));
+            });
+        });
+    }
+
+    const handleFieldChange = function () {
+        const tr = this.closest(".bpt-row");
+        if (!tr) return;
+        const rowId = parseInt(tr.dataset.idx);
+        const idx = allRows.findIndex(r => r.id === rowId);
+        if (idx === -1) return;
+        Object.assign(allRows[idx], readRowFromDOM(tr));
+    };
+
+    function readRowFromDOM(tr) {
+        const rowId = parseInt(tr.dataset.idx);
+        const mobileInput = tr.querySelector(".mobile-number-input");
+        const iti = mobileInput ? mobileInput.itiInstance : null;
+        let mobileNumber = mobileInput ? mobileInput.value.trim() : '';
+        if (iti) mobileNumber = iti.getNumber() || mobileNumber;
+
+        return {
+            first_name: tr.querySelector("[data-field='first_name']").value.trim(),
+            last_name: tr.querySelector("[data-field='last_name']").value.trim(),
+            email: tr.querySelector("[data-field='email']").value.trim(),
+            mobile_number: mobileNumber,
+            country: tr.querySelector("[data-field='country']").value,
+            nationality: tr.querySelector("[data-field='nationality']").value,
+            company_name: tr.querySelector("[data-field='company_name']").value.trim(),
+            job_title: tr.querySelector("[data-field='job_title']").value.trim(),
+            ticket_type: tr.querySelector("[data-field='ticket_type']").value,
+            accepted_terms: tr.querySelector("[data-field='accepted_terms']").checked,
+            accepted_data_sharing: tr.querySelector("[data-field='accepted_data_sharing']").checked,
+            accepted_marketing: tr.querySelector("[data-field='accepted_marketing']").checked,
+        };
+    }
+
+    function initMobileFields() {
+        $('.mobile-number-input').each(function() {
+            if (this.itiInstance) this.itiInstance.destroy();
+            this.itiInstance = intlTelInput(this, {
+                initialCountry: 'in',
+                utilsScript: 'https://cdn.jsdelivr.net/npm/intl-tel-input@23.1.0/build/js/utils.js',
+                autoPlaceholder: 'aggressive',
+            });
+        });
+    }
+
+    // 3. Batch Validate
+    document.getElementById("validateAllBtn").addEventListener("click", async () => {
+        const btn = document.getElementById("validateAllBtn");
+        const origText = btn.innerHTML;
+        
+        // 1. Sync only the VISIBLE rows from DOM to allRows before sending
+        document.querySelectorAll('.bpt-row').forEach(tr => {
+            const rowId = parseInt(tr.dataset.idx);
+            const idx = allRows.findIndex(r => r.id === rowId);
+            if (idx !== -1) {
+                Object.assign(allRows[idx], readRowFromDOM(tr));
+            }
+        });
+
+        // Show loading modal
+        const loadingModalEl = document.getElementById('bulkLoadingModal');
+        const loadingModal = bootstrap.Modal.getOrCreateInstance(loadingModalEl);
+        loadingModal.show();
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Validating...';
+
+        try {
+            const res = await fetch("/api/bulk-upload/validate-batch/", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-CSRFToken": getCsrfToken() },
+                body: JSON.stringify({ rows: allRows })
+            });
+            const data = await res.json();
+            if (data.success) {
+                const rowLookup = {};
+                allRows.forEach((r, i) => { rowLookup[r.id] = i; });
+
+                data.results.forEach(resItem => {
+                    const idx = rowLookup[resItem.id];
+                    if (idx !== undefined) {
+                        const rowData = allRows[idx];
+                        const finalData = resItem.is_valid && resItem.validated_data 
+                            ? { ...resItem.validated_data, id: resItem.id } 
+                            : { ...rowData };
+                        
+                        allRows[idx] = { 
+                            ...rowData, 
+                            ...finalData, 
+                            status: resItem.is_valid ? "valid" : "invalid", 
+                            errors: resItem.errors 
+                        };
+                    }
+                });
+                renderCurrentView();
+            } else {
+                showNotificationModal('Validation Error', data.error || 'Batch validation failed.', 'error');
+            }
+        } catch (e) {
+            console.error(e);
+            showNotificationModal('System Error', 'An error occurred during batch validation.', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = origText;
+            loadingModal.hide();
+        }
+    });
+
+    // 4. Check & Delete Row
+    document.addEventListener("click", async (e) => {
+        const checkBtn = e.target.closest(".check-row-btn");
+        const deleteBtn = e.target.closest(".delete-row-btn");
+
+        if (deleteBtn) {
+            rowToDelete = parseInt(deleteBtn.dataset.idx);
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteConfirmModal')).show();
+            return;
+        }
+
+        if (!checkBtn) return;
+        const btn = checkBtn;
+        const rowId = parseInt(btn.dataset.idx);
+        const tr = btn.closest("tr");
+        
+        const rowData = { id: rowId };
+        tr.querySelectorAll("[data-field]").forEach(el => {
+            rowData[el.dataset.field] = el.type === 'checkbox' ? el.checked : el.value;
+        });
+        
+        if (rowData.ticket_type) rowData.ticket_type = rowData.ticket_type.toUpperCase();
+
+        const mobInp = tr.querySelector('.mobile-number-input');
+        if (mobInp && mobInp.itiInstance) rowData.mobile_number = mobInp.itiInstance.getNumber() || mobInp.value;
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        try {
+            const res = await fetch("/api/bulk-upload/validate-row/", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-CSRFToken": getCsrfToken() },
+                body: JSON.stringify({
+                    row: rowData,
+                    all_other_emails: allRows.filter(r => r.id !== rowId).map(r => r.email)
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                const idx = allRows.findIndex(r => r.id === rowId);
+                const finalData = data.is_valid && data.validated_data ? { ...data.validated_data, id: rowId } : { ...rowData };
+                allRows[idx] = { ...allRows[idx], ...finalData, status: data.is_valid ? "valid" : "invalid", errors: data.errors };
+                renderCurrentView();
+            } else {
+                showNotificationModal('Validation Error', data.error || 'Failed to validate row.', 'error');
+            }
+        } catch (e) { 
+            console.error(e);
+            showNotificationModal('System Error', 'An unexpected error occurred during validation.', 'error');
+        } finally { 
+            btn.disabled = false; 
+            btn.innerHTML = '✔ Check';
+        }
+    });
+
+    // 5. Confirm Batch Delete
+    document.getElementById("confirmDeleteRowBtn").addEventListener("click", () => {
+        if (rowToDelete !== null) {
+            allRows = allRows.filter(r => r.id !== rowToDelete);
+            rowToDelete = null;
+            renderCurrentView();
+            bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal')).hide();
+        }
+    });
+
+    // 6. Submit
+    document.getElementById("submitBulkBtn").addEventListener("click", async () => {
+        const validRows = allRows.filter(r => r.status === "valid");
+        if (!validRows.length) {
+            showNotificationModal('No Valid Data', 'There are no valid rows to submit. Please correct errors or remove invalid rows first.', 'warning');
+            return;
+        }
+
+        const btn = document.getElementById("submitBulkBtn");
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Submitting...';
+
+        try {
+            const res = await fetch("/bulk-upload-save/", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-CSRFToken": getCsrfToken() },
+                body: JSON.stringify({ rows: validRows })
+            });
+            const data = await res.json();
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById("bulkPreviewModal")).hide();
+                
+                // Show success modal
+                showNotificationModal('Success', data.message || `Successfully created ${data.created || validRows.length} records.`, 'success');
+                
+                // Refresh list if helper is available
+                if (window.refreshRegistrations) window.refreshRegistrations();
+                
+                // Track task if async mode used
+                if (data.task_id && window.startTrackingTask) {
+                    window.startTrackingTask(data.task_id, "Bulk Import");
+                }
+            } else { 
+                showNotificationModal('Import Error', data.errors || 'The server rejected the import batch.', 'error');
+            }
+        } catch (e) {
+            console.error(e);
+            showNotificationModal('System Error', 'An unexpected error occurred while submitting data.', 'error');
+        } finally { btn.disabled = false; btn.innerHTML = "Submit"; }
+    });
+
+    function updateTabCounts() {
+        document.getElementById("tab-count-all").textContent = allRows.length;
+        document.getElementById("tab-count-valid").textContent = allRows.filter(r => r.status === "valid").length;
+        document.getElementById("tab-count-invalid").textContent = allRows.filter(r => r.status === "invalid").length;
+    }
+
+    function bulkRenderPagination(total, totalPages) {
+        const { currentPage, pageSize } = pagination;
+        const from = total === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+        const to = Math.min(currentPage * pageSize, total);
+
+        document.getElementById("paginationInfo").textContent = total === 0 ? "No rows" : `Showing ${from}–${to} of ${total} rows`;
+
+        const container = document.getElementById("paginationBtns");
+        container.innerHTML = "";
+        if (totalPages <= 1) return;
+
+        const makeBtn = (l, d, fn) => {
+            const b = document.createElement("button");
+            b.className = "pg-btn"; b.textContent = l; b.disabled = d;
+            if (!d) b.onclick = fn; return b;
+        };
+
+        container.appendChild(makeBtn("‹", currentPage === 1, () => { pagination.currentPage--; renderCurrentView(); }));
+        for (let i = 1; i <= totalPages; i++) {
+            if (totalPages > 7 && (i > 2 && i < totalPages - 1 && Math.abs(i - currentPage) > 1)) {
+                if (i === 3 || i === totalPages - 1) {
+                    const s = document.createElement("span"); s.textContent = "…"; s.style.padding="0 4px"; container.appendChild(s);
+                }
+                continue;
+            }
+            const b = makeBtn(i, false, () => { pagination.currentPage = i; renderCurrentView(); });
+            if (i === currentPage) b.classList.add("active");
+            container.appendChild(b);
+        }
+        container.appendChild(makeBtn("›", currentPage === totalPages, () => { pagination.currentPage++; renderCurrentView(); }));
+    }
+
+    document.querySelectorAll(".bulk-preview-tab").forEach(btn => {
+        btn.onclick = () => {
+            document.querySelectorAll(".bulk-preview-tab").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            pagination.activeTab = btn.dataset.bptab;
+            pagination.currentPage = 1;
+            renderCurrentView();
+        };
+    });
+
+    document.getElementById("previewSearchInput").oninput = debounce(e => {
+        pagination.searchQuery = e.target.value;
+        pagination.currentPage = 1;
+        renderCurrentView();
+    }, 300);
+
+    document.getElementById("backToUploadBtn").onclick = () => {
+        bootstrap.Modal.getInstance(document.getElementById("bulkPreviewModal")).hide();
+        setTimeout(() => new bootstrap.Modal(document.getElementById("bulkUploadModal")).show(), 350);
+    };
+
+})();
 </script>

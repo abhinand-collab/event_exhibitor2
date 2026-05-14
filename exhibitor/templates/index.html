@@ -93,59 +93,7 @@
     <main class="main-content">
         <!-- Badge Stats Card -->
         <div class="badge-stats-card animate-fade-in" style="background: linear-gradient(45deg, #3f0e60, #891487); border: none; padding: 25px;">
-            <div class="row g-3">
-                <!-- Total Passes Card -->
-                <div class="col-lg-3 col-md-6">
-                    <div class="stats-item p-3 rounded" style="background: rgba(255, 255, 255, 0.15); border: 2px solid rgba(255, 255, 255, 0.3); height: 100%; transition: all 0.3s; position: relative; overflow: hidden;">
-                        <div class="d-flex align-items-center mb-3">
-                            <div class="stats-icon me-3" style="width: 48px; height: 48px; background: #fff; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #3f0e60; font-size: 22px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
-                                <i class="fas fa-chart-pie"></i>
-                            </div>
-                            <div>
-                                <div class="stats-label" style="font-size: 11px; color: rgba(255,255,255,0.9); font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px;">TOTAL PASSES</div>
-                                <div class="stats-number" style="font-size: 28px; font-weight: 800; color: #fff; line-height: 1.2;">{{ used_pass }} <span style="font-size: 16px; opacity: 0.7; font-weight: 400;">/ {{ total_pass }}</span></div>
-                            </div>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-end">
-                            <div class="stats-breakdown" style="font-size: 12px; color: #fff;">
-                                <div class="mb-2 d-flex align-items-center"><i class="fas fa-check-circle me-2" style="color: #2ecc71;"></i> Confirmed: <strong class="ms-1">{{ total_counts.confirmed }}</strong></div>
-                                <div class="mb-2 d-flex align-items-center"><i class="fas fa-clock me-2" style="color: #f1c40f;"></i> Pending: <strong class="ms-1">{{ total_counts.pending }}</strong></div>
-                                <div class="d-flex align-items-center"><i class="fas fa-paper-plane me-2" style="color: #3498db;"></i> Invited: <strong class="ms-1">{{ total_counts.invited }}</strong></div>
-                            </div>
-                            <div class="usage-badge" style="background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 6px; color: #fff; font-size: 12px; font-weight: 700;">
-                                {{ total_percent }}%
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {% for stat in badge_stats %}
-                <div class="col-lg-3 col-md-6">
-                    <div class="stats-item p-3 rounded" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); height: 100%; transition: all 0.3s;">
-                        <div class="d-flex align-items-center mb-3">
-                            <div class="stats-icon me-3" style="width: 48px; height: 48px; background: #fff; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #891487; font-size: 22px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
-                                <i class="fas {% if 'VIP' in stat.label %}fa-crown{% elif 'EXHIBITOR' in stat.label %}fa-id-badge{% else %}fa-user{% endif %}"></i>
-                            </div>
-                            <div>
-                                <div class="stats-label" style="font-size: 11px; color: rgba(255,255,255,0.7); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">{{ stat.label }}</div>
-                                <div class="stats-number" style="font-size: 26px; font-weight: 700; color: #fff; line-height: 1.2;">{{ stat.used }} <span style="font-size: 15px; opacity: 0.6; font-weight: 400;">/ {{ stat.limit }}</span></div>
-                            </div>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-end">
-                            <div class="stats-breakdown" style="font-size: 12px; color: #fff;">
-                                <div class="mb-2 d-flex align-items-center"><i class="fas fa-check-circle me-2" style="color: #2ecc71;"></i> Confirmed: <strong class="ms-1">{{ stat.confirmed }}</strong></div>
-                                <div class="mb-2 d-flex align-items-center"><i class="fas fa-clock me-2" style="color: #f1c40f;"></i> Pending: <strong class="ms-1">{{ stat.pending }}</strong></div>
-                                <div class="d-flex align-items-center"><i class="fas fa-paper-plane me-2" style="color: #3498db;"></i> Invited: <strong class="ms-1">{{ stat.invited }}</strong></div>
-                            </div>
-                            <div class="circular-progress" style="width: 50px; height: 50px; background: conic-gradient(#2ecc71 0deg {{ stat.percent }}%, rgba(255,255,255,0.15) {{ stat.percent }}% 360deg); border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative;">
-                                <div style="position: absolute; width: 38px; height: 38px; background: #5c1274; border-radius: 50%;"></div>
-                                <span style="position: relative; z-index: 1; font-size: 11px; color: #fff; font-weight: 700;">{{ stat.percent }}%</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
+            {% include 'includes/stats.html' %}
         </div>
 
         <!-- Action Cards -->
@@ -287,73 +235,151 @@
 {% block scripts %}
 <script>
     // ═══════════════════════════════════════════
-    //  PARTIAL REFRESH (Table & Stats)
+    //  DATA LOADING (AJAX JSON)
     // ═══════════════════════════════════════════
+    let currentFilters = {
+        search: '',
+        status: '',
+        ticket_type: '',
+        page: 1,
+        page_size: 10
+    };
+
     window.refreshRegistrations = function() {
-        const tableContainer = document.querySelector('.registrations-section');
+        loadRegistrations(currentFilters);
+        refreshStats();
+    };
+
+    function refreshStats() {
         const statsContainer = document.querySelector('.badge-stats-card');
-        
-        if (tableContainer) tableContainer.style.opacity = '0.5';
         if (statsContainer) statsContainer.style.opacity = '0.5';
 
-        fetch(window.location.href)
-            .then(response => response.text())
-            .then(html => {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                
-                // Update Registrations Table
-                const newTableContent = doc.querySelector('.registrations-section');
-                if (newTableContent && tableContainer) {
-                    tableContainer.innerHTML = newTableContent.innerHTML;
-                    // Re-bind all listeners for the new HTML
-                    initializeRegistrationListeners();
-                    // Re-init select2 for filters if they were replaced
-                    $('.select2-filter').select2({
-                        theme: 'bootstrap-5',
-                        allowClear: true,
-                        width: '100%',
-                        minimumResultsForSearch: Infinity
+        fetch(window.location.href, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.stats_html && statsContainer) {
+                statsContainer.innerHTML = data.stats_html;
+            }
+        })
+        .catch(err => console.error('Error refreshing stats:', err))
+        .finally(() => {
+            if (statsContainer) statsContainer.style.opacity = '1';
+        });
+    }
+
+    function loadRegistrations(params) {
+        const tbody = document.getElementById('registrationsTableBody');
+        const paginationUl = document.getElementById('registrationsPagination');
+        const paginationInfo = document.getElementById('paginationInfo');
+        const tableContainer = document.querySelector('.table-responsive');
+
+        if (tableContainer) tableContainer.style.opacity = '0.5';
+
+        const queryParams = new URLSearchParams(params).toString();
+        fetch(`/api/registrations/?${queryParams}`)
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) return;
+
+                // Render Table Body
+                tbody.innerHTML = '';
+                if (data.registrations.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="10" class="text-center py-5">
+                                <div class="empty-state">
+                                    <i class="fas fa-folder-open mb-3" style="font-size: 40px; color: #cbd5e1;"></i>
+                                    <p class="text-muted">No registrations found</p>
+                                </div>
+                            </td>
+                        </tr>`;
+                } else {
+                    data.registrations.forEach(reg => {
+                        const row = document.createElement('tr');
+                        row.dataset.attendeeId = reg.id;
+                        row.innerHTML = `
+                            <td>
+                                <a href="${reg.audit_url}" class="user-info" style="text-decoration:none;">
+                                    <span class="name">${reg.first_name} ${reg.last_name}</span>
+                                    <span class="email">${reg.email}</span>
+                                </a>
+                            </td>
+                            <td>${reg.job_title || ' '}</td>
+                            <td>${reg.country || ' '}</td>
+                            <td>${reg.nationality || ' '}</td>
+                            <td>${reg.mobile || ' '}</td>
+                            <td>${reg.source || 'Portal'}</td>
+                            <td>${reg.ticket_type}</td>
+                            <td>${reg.company_name || ' '}</td>
+                            <td><span class="status-badge ${reg.status.toLowerCase()}">${reg.status_display}</span></td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn-action-table edit" title="Edit" data-bs-toggle="modal" data-bs-target="#createBadgeModal">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn-action-table delete" title="Delete" onclick="confirmDelete('${reg.id}', '${reg.first_name} ${reg.last_name}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>`;
+                        tbody.appendChild(row);
                     });
                 }
-                
-                // Update Stats Card
-                const newStatsContent = doc.querySelector('.badge-stats-card');
-                if (newStatsContent && statsContainer) {
-                    statsContainer.innerHTML = newStatsContent.innerHTML;
-                }
+
+                // Render Pagination
+                renderPagination(data.pagination);
+
+                // Update Info
+                paginationInfo.innerText = `Showing ${data.pagination.start_index} to ${data.pagination.end_index} of ${data.pagination.total_count} entries`;
                 
                 // Sync export link
                 syncExportLink();
             })
-            .catch(err => console.error('Error refreshing registrations:', err))
+            .catch(err => console.error('Error loading registrations:', err))
             .finally(() => {
                 if (tableContainer) tableContainer.style.opacity = '1';
-                if (statsContainer) statsContainer.style.opacity = '1';
             });
+    }
+
+    function renderPagination(pagination) {
+        const ul = document.getElementById('registrationsPagination');
+        ul.innerHTML = '';
+
+        // Previous
+        const prevLi = document.createElement('li');
+        prevLi.className = `page-item ${!pagination.has_previous ? 'disabled' : ''}`;
+        prevLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${pagination.current_page - 1})"><i class="fas fa-angle-left"></i></a>`;
+        ul.appendChild(prevLi);
+
+        // Page range
+        pagination.page_range.forEach(p => {
+            const li = document.createElement('li');
+            if (p === '...') {
+                li.className = 'page-item disabled';
+                li.innerHTML = '<span class="page-link">...</span>';
+            } else {
+                li.className = `page-item ${p === pagination.current_page ? 'active' : ''}`;
+                li.innerHTML = `<a class="page-link" href="#" onclick="changePage(${p})">${p}</a>`;
+            }
+            ul.appendChild(li);
+        });
+
+        // Next
+        const nextLi = document.createElement('li');
+        nextLi.className = `page-item ${!pagination.has_next ? 'disabled' : ''}`;
+        nextLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${pagination.current_page + 1})"><i class="fas fa-angle-right"></i></a>`;
+        ul.appendChild(nextLi);
+    }
+
+    window.changePage = function(p) {
+        if (p < 1) return;
+        currentFilters.page = p;
+        loadRegistrations(currentFilters);
     };
 
     function initializeRegistrationListeners() {
-        // ── Delete Button Listeners ──────────────────────────────────────────
-        document.querySelectorAll('.btn-action-table.delete').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                const row = this.closest('tr');
-                const attendeeId = row.dataset.attendeeId;
-                const name = row.querySelector('.name')?.textContent?.trim() || 'this record';
-
-                deleteTargetId = attendeeId;
-                deleteTargetRow = row;
-
-                document.getElementById('deleteTargetName').textContent = name;
-                document.getElementById('deleteBtnText').style.display = 'inline';
-                document.getElementById('deleteBtnSpinner').style.display = 'none';
-                document.getElementById('confirmDeleteBtn').disabled = false;
-
-                bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteModal')).show();
-            });
-        });
-
-        // ── Filter & Pagination Listeners ────────────────────────────────────
         const searchInput = $('#searchKeyword');
         const statusSelect = $('#filterStatus');
         const ticketSelect = $('#filterTickets');
@@ -361,55 +387,60 @@
         const applyBtn = $('#applyFiltersBtn');
         const clearBtn = $('#clearFiltersBtn');
 
-        applyBtn.off('click').on('click', (e) => { e.preventDefault(); applyFilters(); });
+        // Initialise Select2 for filters
+        $('.select2-filter').select2({
+            theme: 'bootstrap-5',
+            allowClear: true,
+            width: '100%',
+            minimumResultsForSearch: Infinity
+        });
+
+        applyBtn.off('click').on('click', (e) => { 
+            e.preventDefault(); 
+            currentFilters.search = searchInput.val().trim();
+            currentFilters.status = statusSelect.val();
+            currentFilters.ticket_type = ticketSelect.val();
+            currentFilters.page = 1;
+            loadRegistrations(currentFilters);
+        });
         
         searchInput.off('keypress').on('keypress', function (e) {
             if (e.which == 13) {
                 e.preventDefault();
-                applyFilters();
+                applyBtn.click();
             }
         });
 
         clearBtn.off('click').on('click', function (e) {
             e.preventDefault();
-            const newUrl = window.location.pathname;
-            window.history.pushState({}, '', newUrl);
-            window.refreshRegistrations();
+            searchInput.val('');
+            statusSelect.val('').trigger('change');
+            ticketSelect.val('').trigger('change');
+            currentFilters = { 
+                search: '', 
+                status: '', 
+                ticket_type: '', 
+                page: 1, 
+                page_size: pageSizeSelect.val() 
+            };
+            loadRegistrations(currentFilters);
         });
 
-        pageSizeSelect.off('change').on('change', applyFilters);
-
-        $('.pagination .page-link').off('click').on('click', function (e) {
-            const href = $(this).attr('href');
-            if (href && href.includes('page=')) {
-                e.preventDefault();
-                const urlParams = new URLSearchParams(window.location.search);
-                const linkParams = new URLSearchParams(href.substring(href.indexOf('?')));
-                if (linkParams.has('page')) urlParams.set('page', linkParams.get('page'));
-                
-                const newUrl = window.location.pathname + '?' + urlParams.toString();
-                window.history.pushState({}, '', newUrl);
-                window.refreshRegistrations();
-            }
+        pageSizeSelect.off('change').on('change', function() {
+            currentFilters.page_size = $(this).val();
+            currentFilters.page = 1;
+            loadRegistrations(currentFilters);
         });
-
-        function applyFilters() {
-            const params = new URLSearchParams();
-            const search = searchInput.val().trim();
-            const status = statusSelect.val();
-            const ticket = ticketSelect.val();
-            const pageSize = pageSizeSelect.val();
-
-            if (search) params.set('search', search);
-            if (status) params.set('status', status);
-            if (ticket) params.set('ticket_type', ticket);
-            if (pageSize && pageSize !== '10') params.set('page_size', pageSize);
-
-            const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
-            window.history.pushState({}, '', newUrl);
-            window.refreshRegistrations();
-        }
     }
+
+    window.confirmDelete = function(id, name) {
+        deleteTargetId = id;
+        document.getElementById('deleteTargetName').textContent = name;
+        document.getElementById('deleteBtnText').style.display = 'inline';
+        document.getElementById('deleteBtnSpinner').style.display = 'none';
+        document.getElementById('confirmDeleteBtn').disabled = false;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteModal')).show();
+    };
 
     // ═══════════════════════════════════════════
     //  TASK TRACKING (Live Progress)
@@ -418,20 +449,14 @@
         const container = document.getElementById('taskProgressContainer');
         const cardId = `task-${taskId}`;
         
-        // Prevent duplicate cards for same task
         if (document.getElementById(cardId)) return;
 
-        // Create progress card
         const card = document.createElement('div');
         card.id = cardId;
         card.className = 'animate-fade-in';
         card.style.cssText = `
-            background: white; 
-            border-radius: 12px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15); 
-            padding: 15px; 
-            border-left: 5px solid #1a56db;
-            transition: all 0.3s ease;
+            background: white; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); 
+            padding: 15px; border-left: 5px solid #1a56db; transition: all 0.3s ease;
         `;
         
         card.innerHTML = `
@@ -450,14 +475,12 @@
         
         container.appendChild(card);
         
-        // Helper to remove task from localStorage
         const removeFromPersistence = (tid) => {
             const pending = JSON.parse(localStorage.getItem('pendingBulkTasks') || '[]');
             const filtered = pending.filter(t => t.id !== tid);
             localStorage.setItem('pendingBulkTasks', JSON.stringify(filtered));
         };
 
-        // Polling loop
         const interval = setInterval(async () => {
             try {
                 const res = await fetch(`/bulk-task-status/${taskId}/`);
@@ -474,71 +497,50 @@
                         const percent = Math.round((prog.current / prog.total) * 100);
                         bar.style.width = `${percent}%`;
                         percentLabel.innerText = `${percent}%`;
+                        statusLabel.innerText = 'Processing...';
                         
-                        if (prog.phase === 'IMPORTING') {
-                            statusLabel.innerText = 'Importing attendees...';
-                        } else if (prog.phase === 'SENDING') {
-                            statusLabel.innerText = 'Sending invitations...';
-                            statusLabel.style.color = '#16a34a'; // Greenish for sending phase
+                        // Show live counts if available
+                        if (prog.created !== undefined && prog.skipped !== undefined) {
+                            countsLabel.innerText = `${prog.created} created, ${prog.skipped} skipped`;
                         } else {
-                            statusLabel.innerText = 'Processing rows...';
+                            countsLabel.innerText = `${prog.current}/${prog.total}`;
                         }
-                        
-                        countsLabel.innerText = `${prog.current}/${prog.total}`;
-                    } else {
-                        statusLabel.innerText = 'Waiting for worker...';
                     }
                 } 
                 else if (data.state === 'SUCCESS') {
                     clearInterval(interval);
                     removeFromPersistence(taskId);
                     
-                    const resData = data.result;
                     bar.style.width = '100%';
                     bar.classList.remove('progress-bar-animated');
                     bar.classList.add('bg-success');
-                    percentLabel.innerText = '100%';
                     percentLabel.className = 'badge rounded-pill bg-success';
+                    percentLabel.innerText = '100%';
                     statusLabel.innerText = 'Complete!';
-                    countsLabel.innerText = `${resData.created} created, ${resData.skipped} skipped`;
+                    countsLabel.innerText = `${data.result.created} created, ${data.result.skipped} skipped`;
                     
-                    // Auto-dismiss after 5 seconds
+                    window.refreshRegistrations();
+
                     setTimeout(() => {
                         card.style.opacity = '0';
-                        card.style.transform = 'translateX(20px)';
-                        setTimeout(() => {
-                            card.remove();
-                            if (container.children.length === 0) {
-                                if (window.refreshRegistrations) {
-                                    window.refreshRegistrations();
-                                } else {
-                                    location.reload();
-                                }
-                            }
-                        }, 300);
+                        setTimeout(() => card.remove(), 300);
                     }, 5000);
                 }
                 else if (data.state === 'FAILURE') {
                     clearInterval(interval);
                     removeFromPersistence(taskId);
-                    
                     bar.classList.add('bg-danger');
                     statusLabel.innerText = 'Failed';
-                    statusLabel.style.color = '#dc3545';
-                    percentLabel.className = 'badge rounded-pill bg-danger';
-                    console.error('Task failed:', data.error);
-                    
-                    setTimeout(() => { card.remove(); }, 8000);
+                    setTimeout(() => card.remove(), 8000);
                 }
-            } catch (err) {
-                console.error('Polling error:', err);
-            }
+            } catch (err) { console.error('Polling error:', err); }
         }, 2000);
     };
 
     // Auto-resume tasks on load
     $(document).ready(function() {
-        // 1. Initialize registration listeners
+        // 1. Initial Load
+        loadRegistrations(currentFilters);
         initializeRegistrationListeners();
 
         // 2. Fallback to localStorage for any other tracked tasks
@@ -548,15 +550,6 @@
                 window.startTrackingTask(task.id, task.label);
             }
         });
-
-        // 3. Pre-fill filters from URL
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('search')) $('#searchKeyword').val(urlParams.get('search'));
-        if (urlParams.has('status')) $('#filterStatus').val(urlParams.get('status')).trigger('change');
-        if (urlParams.has('ticket_type')) $('#filterTickets').val(urlParams.get('ticket_type')).trigger('change');
-        
-        // 4. Initial sync of export link
-        syncExportLink();
     });
 
     function getCsrfToken() {
