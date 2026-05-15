@@ -1,12 +1,12 @@
 <!-- ═══════════════════════════════════════════════════════════
-     SEND INVITATION MODAL
+     ADD INVITATION MODAL
 ═══════════════════════════════════════════════════════════ -->
 <div class="modal fade" id="sendInvitationModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content" style="border-radius:12px; overflow:hidden; border:none;">
             <div class="modal-header border-bottom">
                 <h5 class="modal-title">
-                    <i class="fas fa-envelope me-2" style="color:#e74c3c;"></i>Send Invitations
+                    <i class="fas fa-user-plus me-2" style="color:#e74c3c;"></i>Add Invitations
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
@@ -50,7 +50,7 @@
                 <div>
                     <button type="button" id="sendInviteBtn"
                         style="background:linear-gradient(135deg,#e74c3c 0%,#c0392b 100%); color:white; border:none; border-radius:8px; padding:9px 22px; font-weight:500; margin-right:8px; cursor:pointer;">
-                        <i class="fas fa-paper-plane me-2"></i>Send Invitation
+                        <i class="fas fa-user-plus me-2"></i>Add Invitation
                     </button>
                     <button type="button" class="btn" data-bs-dismiss="modal"
                         style="background:white; color:#333; border:1px solid #ddd; border-radius:8px; padding:9px 22px; font-weight:500;">
@@ -116,12 +116,17 @@
 
             <!-- Header -->
             <div class="modal-header"
-                style="background:linear-gradient(135deg,#1a56db,#0c3a9e); color:white; padding:18px 25px;">
+                style="background:linear-gradient(135deg,#1a56db,#0c3a9e); color:white; padding:18px 25px; justify-content: space-between;">
                 <div>
                     <h5 class="modal-title mb-0"><i class="fas fa-table me-2"></i>Preview &amp; Review</h5>
                     <small id="invitePreviewSubtitle" style="opacity:.75; font-size:12px;"></small>
                 </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <div class="d-flex align-items-center gap-3">
+                     <button class="btn btn-sm btn-outline-light" id="validateAllInviteBtn">
+                        <i class="fas fa-check-double me-1"></i> Validate All
+                    </button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
             </div>
 
             <!-- Summary Bar -->
@@ -174,6 +179,9 @@
                                 Email</th>
                             <th
                                 style="padding:11px 14px; text-align:left; color:#555; font-weight:600; border-bottom:2px solid #dde3f0; white-space:nowrap;">
+                                Mobile</th>
+                            <th
+                                style="padding:11px 14px; text-align:left; color:#555; font-weight:600; border-bottom:2px solid #dde3f0; white-space:nowrap;">
                                 Ticket</th>
                             <th
                                 style="padding:11px 14px; text-align:left; color:#555; font-weight:600; border-bottom:2px solid #dde3f0; white-space:nowrap;">
@@ -209,8 +217,9 @@
                     <span id="inviteSubmitHint" style="font-size:12px; color:#666; font-weight:500;"></span>
                     <button type="button" id="bulkSendBtn"
                         style="background:linear-gradient(135deg,#e74c3c 0%,#c0392b 100%); color:white; border:none; border-radius:8px; padding:10px 26px; font-weight:600; cursor:pointer; font-size:14px;">
-                        <i class="fas fa-paper-plane me-2"></i>Send Valid Invitations
+                        <i class="fas fa-user-plus me-2"></i>Send Valid Invitations
                     </button>
+
                 </div>
             </div>
         </div>
@@ -235,7 +244,7 @@
                         style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:20px; text-align:center;">
                         <div style="font-size:40px; font-weight:700; color:#16a34a;" id="resSent">0</div>
                         <div style="font-size:12px; color:#166534; margin-top:4px; font-weight:600;">
-                            <i class="fas fa-check-circle me-1"></i>Sent
+                            <i class="fas fa-check-circle me-1"></i>Added
                         </div>
                     </div>
                     <div
@@ -270,9 +279,9 @@
                     style="width:60px; height:60px; background:#f0fdf4; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 18px;">
                     <i class="fas fa-check" style="font-size:26px; color:#16a34a;"></i>
                 </div>
-                <h5 style="color:#1e293b; font-weight:600; font-size:18px; margin-bottom:8px;">Invitations Sent!</h5>
+                <h5 style="color:#1e293b; font-weight:600; font-size:18px; margin-bottom:8px;">Invitations Added!</h5>
                 <p style="color:#64748b; font-size:14px; margin-bottom:24px;">
-                    <strong id="successModalCount" style="color:#1e293b;">0</strong> invitation(s) have been sent
+                    <strong id="successModalCount" style="color:#1e293b;">0</strong> invitation(s) have been added
                     successfully.
                 </p>
                 <button type="button" id="successModalOkBtn"
@@ -315,7 +324,7 @@
         "></div>
 
         <h5 style="color:#1e293b;font-weight:700;font-size:18px;margin:0 0 8px;">
-            Sending Invitations...
+            Adding Invitations...
         </h5>
         <p style="color:#64748b;font-size:14px;margin:0 0 20px;line-height:1.5;">
             Processing in the background.<br>This may take a moment.
@@ -443,51 +452,18 @@
             { key: 'first_name', label: 'First Name', required: true },
             { key: 'last_name', label: 'Last Name', required: false },
             { key: 'email', label: 'Email', required: true },
+            { key: 'mobile_number', label: 'Mobile Number', required: false },
             { key: 'ticket_type', label: 'Ticket Type', required: true },
         ];
         const VALID_TICKETS = ['VIP', 'EXHIBITOR', 'VISITOR'];
-        const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        const NAME_RE = /^[A-Za-z\s\-'.]+$/;
-        const PAGE_SIZE = 10;
+        const PAGE_SIZE = 50;
 
         /* ── STATE ─────────────────────────────────────────────────── */
+        let currentFile = null;
         let fileHeaders = [];
-        let fileRows = [];
         let parsedData = [];
         let currentFilter = 'all';
         let currentPage = 1;
-        let existingEmailsSet = new Set(); // 👈 add this
-
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let cookie of cookies) {
-                    cookie = cookie.trim();
-                    if (cookie.startsWith(name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
-        // ── Fetch existing emails once on page load ──────────────────
-        fetch('/get-existing-emails/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')  // required for Django
-            },
-            body: JSON.stringify({})
-        })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    existingEmailsSet = new Set(data.emails.map(e => e.toLowerCase()));
-                }
-            })
-            .catch(() => console.warn('Could not load existing emails.'));
 
         /* ── UTILS ─────────────────────────────────────────────────── */
         function getCsrf() {
@@ -496,67 +472,17 @@
         function getModal(id) {
             return bootstrap.Modal.getOrCreateInstance(document.getElementById(id));
         }
-        function normaliseTicket(val) {
-            if (!val) return '';
-            const v = String(val).toUpperCase().trim();
-            if (v.includes('VIP')) return 'VIP';
-            if (v.includes('EXHIBITOR')) return 'EXHIBITOR';
-            if (v.includes('VISITOR')) return 'VISITOR';
-            return v;
-        }
         function escHtml(str) {
             return String(str || '')
                 .replace(/&/g, '&amp;').replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
-
-        /* ── SHARED VALIDATION ─────────────────────────────────────── */
-        function validateRowData(first_name, last_name, email, ticket_type, ticket_raw, otherEmails) {
-            const issues = [];
-
-            // first_name
-            if (!first_name) {
-                issues.push('Missing first name');
-            } else if (first_name.length < 2) {
-                issues.push('First name must be at least 2 characters');
-            } else if (!NAME_RE.test(first_name)) {
-                issues.push('First name should only contain letters');
-            }
-
-            // last_name (optional, validated only if provided)
-            if (last_name) {
-                if (last_name.length < 2) {
-                    issues.push('Last name must be at least 2 characters');
-                } else if (!NAME_RE.test(last_name)) {
-                    issues.push('Last name should only contain letters');
-                }
-            }
-
-            // email
-            if (!email) {
-                issues.push('Missing email');
-            } else if (!EMAIL_RE.test(email)) {
-                issues.push('Invalid email format');
-            } else if (existingEmailsSet.has(email.toLowerCase())) {
-                // 👇 Check against DB emails
-                issues.push('Email already exists in the system');
-            }
-
-            // ticket_type
-            if (!ticket_type) {
-                issues.push('Missing ticket type');
-            } else if (!VALID_TICKETS.includes(ticket_type)) {
-                issues.push('Unknown ticket: "' + (ticket_raw || ticket_type) + '" (use VIP / EXHIBITOR / VISITOR)');
-            }
-
-            // duplicate against other rows
-            let isDupe = false;
-            if (email && EMAIL_RE.test(email) && otherEmails && otherEmails.includes(email)) {
-                issues.push('Duplicate email in this file');
-                isDupe = true;
-            }
-
-            return { issues, isDupe, valid: issues.length === 0 };
+        function debounce(fn, ms) {
+            let t;
+            return function (...args) {
+                clearTimeout(t);
+                t = setTimeout(() => fn.apply(this, args), ms);
+            };
         }
 
         /* ── SUCCESS MODAL ─────────────────────────────────────────── */
@@ -573,32 +499,54 @@
             }
         });
 
+        function initMobileFields() {
+            $('.inv-mobile').each(function() {
+                if (this.itiInstance) this.itiInstance.destroy();
+                this.itiInstance = window.intlTelInput(this, {
+                    initialCountry: 'in',
+                    utilsScript: 'https://cdn.jsdelivr.net/npm/intl-tel-input@23.1.0/build/js/utils.js',
+                    autoPlaceholder: 'aggressive',
+                    separateDialCode: true,
+                });
+            });
+        }
+
         /* ══════════════════════════════════════════════════════════════
            MANUAL ROWS
         ══════════════════════════════════════════════════════════════ */
         function createEntryRow() {
             const row = document.createElement('div');
             row.className = 'invitation-entry-row';
-            row.style.cssText = 'display:flex; gap:10px; align-items:flex-start; margin-bottom:12px; flex-wrap:wrap;';
+            row.style.cssText = 'display:flex; gap:10px; align-items:flex-start; margin-bottom:12px; flex-wrap:wrap; background:white; padding:12px; border-radius:10px; border:1.5px solid #eee;';
             row.innerHTML = `
         <div style="flex:1; min-width:110px;">
+            <label style="font-size:10px; color:#888; font-weight:600; text-transform:uppercase; margin-bottom:4px; display:block;">First Name <span class="text-danger">*</span></label>
             <input type="text" class="form-control inv-first-name" placeholder="First Name"
-                   style="border-radius:8px; border:1.5px solid #ddd; padding:10px 13px; width:100%;">
+                   style="border-radius:8px; border:1.5px solid #ddd; padding:10px 13px; width:100%; font-size:13px;">
             <div class="inv-err-first" style="color:#e74c3c; font-size:11px; margin-top:3px; display:none;"></div>
         </div>
         <div style="flex:1; min-width:110px;">
+            <label style="font-size:10px; color:#888; font-weight:600; text-transform:uppercase; margin-bottom:4px; display:block;">Last Name</label>
             <input type="text" class="form-control inv-last-name" placeholder="Last Name"
-                   style="border-radius:8px; border:1.5px solid #ddd; padding:10px 13px; width:100%;">
+                   style="border-radius:8px; border:1.5px solid #ddd; padding:10px 13px; width:100%; font-size:13px;">
             <div class="inv-err-last" style="color:#e74c3c; font-size:11px; margin-top:3px; display:none;"></div>
         </div>
-        <div style="flex:1.4; min-width:150px;">
+        <div style="flex:1.5; min-width:160px;">
+            <label style="font-size:10px; color:#888; font-weight:600; text-transform:uppercase; margin-bottom:4px; display:block;">Email Address <span class="text-danger">*</span></label>
             <input type="email" class="form-control inv-email" placeholder="Email Address"
-                   style="border-radius:8px; border:1.5px solid #ddd; padding:10px 13px; width:100%;">
+                   style="border-radius:8px; border:1.5px solid #ddd; padding:10px 13px; width:100%; font-size:13px;">
             <div class="inv-err-email" style="color:#e74c3c; font-size:11px; margin-top:3px; display:none;"></div>
         </div>
+        <div style="flex:1.5; min-width:180px;">
+            <label style="font-size:10px; color:#888; font-weight:600; text-transform:uppercase; margin-bottom:4px; display:block;">Mobile Number</label>
+            <input type="text" class="form-control inv-mobile" placeholder="Mobile"
+                   style="border-radius:8px; border:1.5px solid #ddd; padding:10px 13px; width:100%; font-size:13px;">
+            <div class="inv-err-mobile" style="color:#e74c3c; font-size:11px; margin-top:3px; display:none;"></div>
+        </div>
         <div style="flex:1; min-width:130px;">
+            <label style="font-size:10px; color:#888; font-weight:600; text-transform:uppercase; margin-bottom:4px; display:block;">Ticket Type <span class="text-danger">*</span></label>
             <select class="form-select inv-ticket"
-                    style="border-radius:8px; border:1.5px solid #ddd; padding:10px 13px; width:100%;">
+                    style="border-radius:8px; border:1.5px solid #ddd; padding:10px 13px; width:100%; font-size:13px;">
                 <option value="">Select Ticket</option>
                 <option value="VIP">VIP Pass</option>
                 <option value="EXHIBITOR">Exhibitor Pass</option>
@@ -606,30 +554,117 @@
             </select>
             <div class="inv-err-ticket" style="color:#e74c3c; font-size:11px; margin-top:3px; display:none;"></div>
         </div>
-        <button type="button" class="remove-entry-btn"
-                style="background:none; border:none; color:#e74c3c; font-size:17px; cursor:pointer; padding:10px 4px; flex-shrink:0;">
-            <i class="fas fa-trash-alt"></i>
-        </button>`;
-            // 👇 Check existing email on input (real-time) and on blur
-            const emailInput = row.querySelector('.inv-email');
-            const emailErr = row.querySelector('.inv-err-email');
+        <div style="display:flex; gap:8px; padding-top:22px;">
+            <button type="button" class="check-entry-btn btn btn-sm btn-outline-primary"
+                    style="border-radius:8px; padding:8px 12px; font-weight:500;" title="Validate this row">
+                <i class="fas fa-check"></i>
+            </button>
+            <button type="button" class="remove-entry-btn btn btn-sm btn-outline-danger"
+                    style="border-radius:8px; padding:8px 12px; font-weight:500;" title="Remove row">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
+        <div class="row-status-msg" style="width:100%; font-size:11px; margin-top:5px; font-weight:600; display:none;"></div>`;
+            
+            // Add listeners to new row
+            row.querySelector('.check-entry-btn').addEventListener('click', () => validateManualRow(row));
+            row.querySelectorAll('input, select').forEach(el => {
+                el.addEventListener('input', () => {
+                    el.style.borderColor = '#ddd';
+                    row.querySelector('.row-status-msg').style.display = 'none';
+                    row.dataset.valid = "false";
+                });
+            });
 
-            emailInput.addEventListener('input', () => {
-                const val = emailInput.value.trim().toLowerCase();
-                if (val && existingEmailsSet.has(val)) {
-                    emailInput.style.borderColor = '#e74c3c';
-                    emailErr.innerHTML = '<i class="fas fa-exclamation-circle me-1"></i>This email is already registered.';
-                    emailErr.style.display = 'block';
-                } else {
-                    // Only clear if the error was the "already exists" one
-                    if (emailErr.textContent.includes('already registered')) {
-                        emailInput.style.borderColor = '#ddd';
-                        emailErr.textContent = '';
-                        emailErr.style.display = 'none';
+            // Initialize intlTelInput on the new mobile input
+            setTimeout(() => {
+                const mobInp = row.querySelector('.inv-mobile');
+                if (mobInp) {
+                    mobInp.itiInstance = window.intlTelInput(mobInp, {
+                        initialCountry: 'in',
+                        utilsScript: 'https://cdn.jsdelivr.net/npm/intl-tel-input@23.1.0/build/js/utils.js',
+                        autoPlaceholder: 'aggressive',
+                        separateDialCode: true,
+                    });
+                }
+            }, 0);
+
+            return row;
+        }
+
+        async function validateManualRow(row) {
+            const mobInp = row.querySelector('.inv-mobile');
+            const rowData = {
+                first_name: row.querySelector('.inv-first-name').value.trim(),
+                last_name: row.querySelector('.inv-last-name').value.trim(),
+                email: row.querySelector('.inv-email').value.trim().toLowerCase(),
+                mobile_number: mobInp && mobInp.itiInstance ? mobInp.itiInstance.getNumber() : mobInp.value.trim(),
+                ticket_type: row.querySelector('.inv-ticket').value
+            };
+
+            const btn = row.querySelector('.check-entry-btn');
+            const statusMsg = row.querySelector('.row-status-msg');
+            const origContent = btn.innerHTML;
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            statusMsg.style.display = 'none';
+
+            // Clear previous errors
+            row.querySelectorAll('.form-control, .form-select').forEach(el => el.style.borderColor = '#ddd');
+            row.querySelectorAll('div[class^="inv-err-"]').forEach(el => { el.textContent = ''; el.style.display = 'none'; });
+
+            try {
+                // Collect other emails from other manual rows
+                const otherEmails = Array.from(document.querySelectorAll('.invitation-entry-row'))
+                    .filter(r => r !== row)
+                    .map(r => r.querySelector('.inv-email').value.trim().toLowerCase())
+                    .filter(e => e);
+
+                const res = await fetch("/api/invitations/validate-row/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "X-CSRFToken": getCsrf() },
+                    body: JSON.stringify({ row: rowData, all_other_emails: otherEmails })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    if (data.is_valid) {
+                        row.dataset.valid = "true";
+                        statusMsg.textContent = "✓ Valid and ready";
+                        statusMsg.style.color = "#16a34a";
+                        statusMsg.style.display = "block";
+                        row.style.borderColor = "#bbf7d0";
+                        row.style.background = "#f0fdf4";
+                    } else {
+                        row.dataset.valid = "false";
+                        row.style.borderColor = "#fecaca";
+                        row.style.background = "#fff5f5";
+                        
+                        const fieldMap = {
+                            'first_name': ['.inv-first-name', '.inv-err-first'],
+                            'last_name': ['.inv-last-name', '.inv-err-last'],
+                            'email': ['.inv-email', '.inv-err-email'],
+                            'mobile_number': ['.inv-mobile', '.inv-err-mobile'],
+                            'ticket_type': ['.inv-ticket', '.inv-err-ticket']
+                        };
+
+                        for (const [field, msgs] of Object.entries(data.errors)) {
+                            const [inputSel, errSel] = fieldMap[field];
+                            const inputEl = row.querySelector(inputSel);
+                            const errEl = row.querySelector(errSel);
+                            inputEl.style.borderColor = '#e74c3c';
+                            errEl.textContent = msgs.join("; ");
+                            errEl.style.display = 'block';
+                        }
                     }
                 }
-            });
-            return row;
+            } catch (e) {
+                console.error(e);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = origContent;
+            }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -657,124 +692,143 @@
         });
 
         function showLimitError(errorsString) {
-    const lines = errorsString.split(' | ').filter(Boolean);
-    const body = document.getElementById('limitErrorBody');
-    body.innerHTML = lines.map(line =>
-        `<div style="display:flex; gap:10px; align-items:flex-start; background:#fff5f5; border:1px solid #fecaca; border-radius:8px; padding:12px 14px;">
-            <i class="fas fa-ban" style="color:#e74c3c; margin-top:1px; flex-shrink:0;"></i>
-            <span>${escHtml(line)}</span>
-        </div>`
-    ).join('');
-    bootstrap.Modal.getOrCreateInstance(document.getElementById('limitErrorModal')).show();
-}
+            const lines = errorsString.split(' | ').filter(Boolean);
+            const body = document.getElementById('limitErrorBody');
+            body.innerHTML = lines.map(line =>
+                `<div style="display:flex; gap:10px; align-items:flex-start; background:#fff5f5; border:1px solid #fecaca; border-radius:8px; padding:12px 14px;">
+                    <i class="fas fa-ban" style="color:#e74c3c; margin-top:1px; flex-shrink:0;"></i>
+                    <span>${escHtml(line)}</span>
+                </div>`
+            ).join('');
+            getModal('limitErrorModal').show();
+        }
 
         /* Manual send */
-        document.getElementById('sendInviteBtn').addEventListener('click', () => {
+        document.getElementById('sendInviteBtn').addEventListener('click', async () => {
             hideAlert();
-            const entries = [];
-            let allOk = true;
-
-            document.querySelectorAll('.invitation-entry-row').forEach(row => {
-                const fEl = row.querySelector('.inv-first-name');
-                const lEl = row.querySelector('.inv-last-name');
-                const eEl = row.querySelector('.inv-email');
-                const tEl = row.querySelector('.inv-ticket');
-                const ef = row.querySelector('.inv-err-first');
-                const el = row.querySelector('.inv-err-last');
-                const ee = row.querySelector('.inv-err-email');
-                const et = row.querySelector('.inv-err-ticket');
-
-                [fEl, lEl, eEl, tEl].forEach(el => el.style.borderColor = '#ddd');
-                [ef, el, ee, et].forEach(el => { if (el) { el.textContent = ''; el.style.display = 'none'; } });
-
-                const first = fEl.value.trim();
-                const last = lEl.value.trim();
-                const email = eEl.value.trim();
-                const ticket = tEl.value;
-
-                let ok = true;
-
-                // first_name
-                if (!first) {
-                    fEl.style.borderColor = '#e74c3c'; ef.textContent = 'Required.'; ef.style.display = 'block'; ok = false;
-                } else if (first.length < 2) {
-                    fEl.style.borderColor = '#e74c3c'; ef.textContent = 'At least 2 characters.'; ef.style.display = 'block'; ok = false;
-                } else if (!NAME_RE.test(first)) {
-                    fEl.style.borderColor = '#e74c3c'; ef.textContent = 'Letters only.'; ef.style.display = 'block'; ok = false;
-                }
-
-                // last_name (optional but validated if filled)
-                if (last) {
-                    if (last.length < 2) {
-                        lEl.style.borderColor = '#e74c3c';
-                        if (el) { el.textContent = 'At least 2 characters.'; el.style.display = 'block'; }
-                        ok = false;
-                    } else if (!NAME_RE.test(last)) {
-                        lEl.style.borderColor = '#e74c3c';
-                        if (el) { el.textContent = 'Letters only.'; el.style.display = 'block'; }
-                        ok = false;
-                    }
-                }
-
-                // email
-                if (!email) {
-                    eEl.style.borderColor = '#e74c3c'; ee.textContent = 'Required.'; ee.style.display = 'block'; ok = false;
-                } else if (!EMAIL_RE.test(email)) {
-                    eEl.style.borderColor = '#e74c3c'; ee.textContent = 'Invalid email.'; ee.style.display = 'block'; ok = false;
-                }
-
-                // ticket
-                if (!ticket) {
-                    tEl.style.borderColor = '#e74c3c'; et.textContent = 'Required.'; et.style.display = 'block'; ok = false;
-                }
-
-                if (ok) entries.push({ first_name: first, last_name: last, email, ticket_type: ticket });
-                else allOk = false;
+            
+            const rows = Array.from(document.querySelectorAll('.invitation-entry-row'));
+            const entries = rows.map(row => {
+                const mobInp = row.querySelector('.inv-mobile');
+                return {
+                    id: row.id || Math.random().toString(36).substr(2, 9),
+                    first_name: row.querySelector('.inv-first-name').value.trim(),
+                    last_name: row.querySelector('.inv-last-name').value.trim(),
+                    email: row.querySelector('.inv-email').value.trim().toLowerCase(),
+                    mobile_number: mobInp && mobInp.itiInstance ? mobInp.itiInstance.getNumber() : mobInp.value.trim(),
+                    ticket_type: row.querySelector('.inv-ticket').value
+                };
             });
 
-            if (!allOk) { showAlert('danger', '<i class="fas fa-exclamation-triangle me-2"></i>Please fix the highlighted fields.'); return; }
+            // Final check: filter out empty rows if there are multiple, but if only one, it must be filled.
+            const filledEntries = entries.filter(e => e.first_name || e.email || e.ticket_type);
+            if (!filledEntries.length) { showAlert('danger', 'Please fill in invitation details.'); return; }
 
             const btn = document.getElementById('sendInviteBtn');
+            const origContent = btn.innerHTML;
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Sending...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Validating...';
 
-            fetch('/send-invitations/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
-                body: JSON.stringify({ entries }),
-            })
-                .then(async r => {
-                    const data = await r.json();
-                    if (r.status === 409) {
-                        showAlert('info', `<i class="fas fa-spinner fa-spin me-2"></i>${data.errors || 'A bulk operation is already in progress. Please wait.'}`);
-                        return;
-                    }
-                    if (r.status === 400) {          // ← ADD THIS
-        showLimitError(data.errors || data.error || 'Limit exceeded.');
-        return;
-    }
-                    if (data.success) {
-                        // Close all modals
-                        document.querySelectorAll('.modal.show').forEach(m => {
-                            bootstrap.Modal.getOrCreateInstance(m).hide();
-                        });
-                        
-                        if (window.startTrackingTask) {
-                            // Persistence
-                            const pending = JSON.parse(localStorage.getItem('pendingBulkTasks') || '[]');
-                            pending.push({ id: data.task_id, label: "Invitations" });
-                            localStorage.setItem('pendingBulkTasks', JSON.stringify(pending));
+            try {
+                // Batch validate manual entries
+                const valRes = await fetch("/api/invitations/validate-batch/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "X-CSRFToken": getCsrf() },
+                    body: JSON.stringify({ rows: filledEntries })
+                });
+                const valData = await valRes.json();
+                
+                if (!valData.success) {
+                    showAlert('danger', valData.error || 'Validation failed.');
+                    return;
+                }
 
-                            window.startTrackingTask(data.task_id, "Invitations");
-                        } else {
-                            location.reload();
-                        }
+                let allValid = true;
+                const fieldMap = {
+                    'first_name': ['.inv-first-name', '.inv-err-first'],
+                    'last_name': ['.inv-last-name', '.inv-err-last'],
+                    'email': ['.inv-email', '.inv-err-email'],
+                    'mobile_number': ['.inv-mobile', '.inv-err-mobile'],
+                    'ticket_type': ['.inv-ticket', '.inv-err-ticket']
+                };
+
+                // Apply errors to rows
+                valData.results.forEach((res, i) => {
+                    const row = rows[i];
+                    const statusMsg = row.querySelector('.row-status-msg');
+                    row.querySelectorAll('.form-control, .form-select').forEach(el => el.style.borderColor = '#ddd');
+                    row.querySelectorAll('div[class^="inv-err-"]').forEach(el => { el.textContent = ''; el.style.display = 'none'; });
+
+                    if (res.is_valid) {
+                        row.dataset.valid = "true";
+                        statusMsg.textContent = "✓ Valid";
+                        statusMsg.style.color = "#16a34a";
+                        statusMsg.style.display = "block";
+                        row.style.borderColor = "#bbf7d0";
+                        row.style.background = "#f0fdf4";
                     } else {
-                        showAlert('danger', '<i class="fas fa-times-circle me-2"></i>' + (data.error || 'Something went wrong.'));
+                        allValid = false;
+                        row.dataset.valid = "false";
+                        row.style.borderColor = "#fecaca";
+                        row.style.background = "#fff5f5";
+                        statusMsg.textContent = "⚠ Invalid data";
+                        statusMsg.style.color = "#dc2626";
+                        statusMsg.style.display = "block";
+
+                        for (const [field, msgs] of Object.entries(res.errors)) {
+                            const [inputSel, errSel] = fieldMap[field];
+                            const inputEl = row.querySelector(inputSel);
+                            const errEl = row.querySelector(errSel);
+                            inputEl.style.borderColor = '#e74c3c';
+                            errEl.textContent = msgs.join("; ");
+                            errEl.style.display = 'block';
+                        }
                     }
-                })
-                .catch(() => showAlert('danger', '<i class="fas fa-wifi me-2"></i>Network error. Please try again.'))
-                .finally(() => { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Send Invitation'; });
+                });
+
+                if (!allValid) {
+                    showAlert('danger', 'Please correct the errors in the highlighted rows.');
+                    return;
+                }
+
+                // If all valid, proceed to send
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Adding...';
+                const sendRes = await fetch('/send-invitations/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+                    body: JSON.stringify({ entries: filledEntries.map(({id, ...rest}) => rest) }),
+                });
+                const sendData = await sendRes.json();
+                
+                if (sendRes.status === 409) {
+                    showAlert('info', sendData.errors || 'A bulk operation is already in progress.');
+                    return;
+                }
+                if (sendRes.status === 400) {
+                    showLimitError(sendData.errors || 'Limit exceeded.');
+                    return;
+                }
+                
+                if (sendData.success) {
+                    getModal('sendInvitationModal').hide();
+
+                    // Refresh list immediately if helper is available
+                    if (window.refreshRegistrations) window.refreshRegistrations();
+
+                    if (window.startTrackingTask) window.startTrackingTask(sendData.task_id, "Invitations");
+                    else location.reload();
+                }
+ else {
+                    showAlert('danger', sendData.error || 'Something went wrong.');
+                }
+
+            } catch (e) {
+                console.error(e);
+                showAlert('danger', 'Network error.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = origContent;
+            }
         });
 
         /* ══════════════════════════════════════════════════════════════
@@ -784,200 +838,140 @@
             document.getElementById('importFileInput').click();
         });
 
-        document.getElementById('importFileInput').addEventListener('change', function () {
+        document.getElementById('importFileInput').addEventListener('change', async function () {
             if (!this.files.length) return;
-            const file = this.files[0];
-            this.value = '';
+            currentFile = this.files[0];
+            const fd = new FormData();
+            fd.append("file", currentFile);
 
-            const reader = new FileReader();
-            reader.onload = e => {
-                try {
-                    const wb = XLSX.read(e.target.result, { type: 'array' });
-                    const ws = wb.Sheets[wb.SheetNames[0]];
-                    const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+            const btn = document.getElementById("importFileBtn");
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
 
-                    if (!rows.length) { showAlert('danger', '<i class="fas fa-times-circle me-2"></i>File appears to be empty.'); return; }
-
-                    fileHeaders = Object.keys(rows[0]);
-                    fileRows = rows;
-
-                    buildMappingModal(file.name, rows.length);
+            try {
+                const res = await fetch("/api/invitations/headers/", {
+                    method: "POST",
+                    headers: { "X-CSRFToken": getCsrf() },
+                    body: fd
+                });
+                const data = await res.json();
+                if (data.success) {
+                    fileHeaders = data.columns;
+                    buildMappingModal(currentFile.name, data.columns);
                     getModal('sendInvitationModal').hide();
-                    setTimeout(() => getModal('mappingModal').show(), 420);
-                } catch (err) {
-                    showAlert('danger', '<i class="fas fa-times-circle me-2"></i>Could not parse file — please use CSV or XLSX.');
+                    getModal('mappingModal').show();
+                } else {
+                    alert(data.error || "Failed to parse headers.");
                 }
-            };
-            reader.readAsArrayBuffer(file);
+            } catch (e) {
+                console.error(e);
+                alert("Upload error.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-cloud-upload-alt me-2"></i>Upload';
+                this.value = '';
+            }
         });
 
         /* ══════════════════════════════════════════════════════════════
            MAPPING MODAL
         ══════════════════════════════════════════════════════════════ */
-        function buildMappingModal(fileName, rowCount) {
-            document.getElementById('mappingFileInfo').textContent =
-                '📄 ' + fileName + '  ·  ' + rowCount + ' data rows  ·  ' + fileHeaders.length + ' columns detected';
-
+        function buildMappingModal(fileName, headers) {
+            document.getElementById('mappingFileInfo').textContent = `📄 ${fileName} · ${headers.length} columns`;
             const container = document.getElementById('mappingRows');
             container.innerHTML = '';
 
+            const ticketTypeKeywords = ["visitor", "exhibitor", "vip", "ticket", "type", "class", "pass"];
+            const mobileKeywords = ["mobile", "phone", "tel", "contact", "number"];
+
             OUR_FIELDS.forEach(field => {
-                const autoMatch = fileHeaders.find(h => {
+                const autoMatch = headers.find(h => {
                     const hn = h.toLowerCase().replace(/[\s_\-]/g, '');
                     const fk = field.key.toLowerCase().replace(/[\s_\-]/g, '');
-                    return hn === fk || hn.includes(fk) || fk.includes(hn);
+                    if (hn === fk || hn.includes(fk) || fk.includes(hn)) return true;
+                    if (field.key === 'ticket_type' && ticketTypeKeywords.some(kw => hn.includes(kw))) return true;
+                    if (field.key === 'mobile_number' && mobileKeywords.some(kw => hn.includes(kw))) return true;
+                    return false;
                 }) || '';
 
                 const div = document.createElement('div');
                 div.style.cssText = 'display:grid; grid-template-columns:1fr 44px 1fr; gap:12px; align-items:center; background:white; border:1px solid #e2e8f0; border-radius:10px; padding:14px 18px;';
-                div.innerHTML =
-                    '<div>' +
-                    '<div style="font-weight:600; font-size:14px; color:#1e293b;">' +
-                    field.label + (field.required ? ' <span style="color:#e74c3c;">*</span>' : '') +
-                    '</div>' +
-                    '<div style="font-size:11px; color:#94a3b8; margin-top:3px;">' +
-                    (field.required ? 'Required field' : 'Optional') +
-                    '</div>' +
-                    '</div>' +
-                    '<div style="text-align:center; font-size:18px; color:#94a3b8;">→</div>' +
-                    '<select data-field="' + field.key + '" style="border:1.5px solid ' + (autoMatch ? '#2ecc71' : '#e2e8f0') + '; border-radius:8px; padding:9px 12px; font-size:13px; width:100%; outline:none; background:white; cursor:pointer;">' +
-                    '<option value="">— Skip this field —</option>' +
-                    fileHeaders.map(h => '<option value="' + escHtml(h) + '"' + (h === autoMatch ? ' selected' : '') + '>' + escHtml(h) + '</option>').join('') +
-                    '</select>';
-
-                const sel = div.querySelector('select');
-                sel.addEventListener('change', () => {
-                    sel.style.borderColor = sel.value ? '#2ecc71' : '#e2e8f0';
-                });
+                div.innerHTML = `
+                    <div>
+                        <div style="font-weight:600; font-size:14px; color:#1e293b;">${field.label}${field.required ? ' <span style="color:#e74c3c;">*</span>' : ''}</div>
+                        <div style="font-size:11px; color:#94a3b8; margin-top:3px;">${field.required ? 'Required' : 'Optional'}</div>
+                    </div>
+                    <div style="text-align:center; font-size:18px; color:#94a3b8;">→</div>
+                    <select class="mapping-select" data-field="${field.key}" style="border:1.5px solid ${autoMatch ? '#2ecc71' : '#e2e8f0'}; border-radius:8px; padding:9px 12px; font-size:13px; width:100%; outline:none; background:white;">
+                        <option value="">— Skip —</option>
+                        ${headers.map(h => `<option value="${escHtml(h)}"${h === autoMatch ? ' selected' : ''}>${escHtml(h)}</option>`).join('')}
+                    </select>
+                `;
                 container.appendChild(div);
             });
         }
 
-        document.getElementById('applyMappingBtn').addEventListener('click', () => {
+        document.getElementById('applyMappingBtn').addEventListener('click', async () => {
             const mapping = {};
-            document.querySelectorAll('#mappingRows select').forEach(sel => {
-                if (sel.value) mapping[sel.dataset.field] = sel.value;
+            document.querySelectorAll('.mapping-select').forEach(sel => {
+                if (sel.value) mapping[sel.value] = sel.dataset.field;
             });
 
-            const missing = OUR_FIELDS.filter(f => f.required && !mapping[f.key]).map(f => f.label);
-            if (missing.length) {
-                alert('Please map these required field(s): ' + missing.join(', '));
-                return;
-            }
+            const fd = new FormData();
+            fd.append("file", currentFile);
+            fd.append("mapping", JSON.stringify(mapping));
 
-            applyMappingAndBuildPreview(mapping);
+            const btn = document.getElementById("applyMappingBtn");
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Validating...';
+
+            try {
+                const res = await fetch("/api/invitations/preview/", {
+                    method: "POST",
+                    headers: { "X-CSRFToken": getCsrf() },
+                    body: fd
+                });
+                const data = await res.json();
+                if (data.success) {
+                    parsedData = data.data;
+                    currentPage = 1;
+                    currentFilter = 'all';
+                    getModal('mappingModal').hide();
+                    renderSummaryBar();
+                    renderPreviewTable();
+                    getModal('bulkPreviewModal2').show();
+                } else {
+                    alert(data.error || "Preview failed.");
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Validation error.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check me-2"></i>Apply &amp; Preview';
+            }
         });
-
-        function applyMappingAndBuildPreview(mapping) {
-    // ── Pass 1: collect all valid emails to find within-file duplicates ──
-    const emailCounts = {};
-    fileRows.forEach(row => {
-        const email = String(row[mapping.email] || '').trim().toLowerCase();
-        if (email && EMAIL_RE.test(email)) {
-            emailCounts[email] = (emailCounts[email] || 0) + 1;
-        }
-    });
-
-    // ── Pass 2: validate each row ──
-    const seenEmails = {};
-
-    parsedData = fileRows.map((row, idx) => {
-        const first_name  = String(row[mapping.first_name]  || '').trim();
-        const last_name   = String(row[mapping.last_name]   || '').trim();
-        const email       = String(row[mapping.email]       || '').trim().toLowerCase();
-        const ticket_raw  = String(row[mapping.ticket_type] || '').trim();
-        const ticket_type = normaliseTicket(ticket_raw);
-
-        const issues = [];
-
-        // first_name
-        if (!first_name) {
-            issues.push('Missing first name');
-        } else if (first_name.length < 2) {
-            issues.push('First name must be at least 2 characters');
-        } else if (!NAME_RE.test(first_name)) {
-            issues.push('First name should only contain letters');
-        }
-
-        // last_name (optional)
-        if (last_name) {
-            if (last_name.length < 2) {
-                issues.push('Last name must be at least 2 characters');
-            } else if (!NAME_RE.test(last_name)) {
-                issues.push('Last name should only contain letters');
-            }
-        }
-
-        // email
-        if (!email) {
-            issues.push('Missing email');
-        } else if (!EMAIL_RE.test(email)) {
-            issues.push('Invalid email format');
-        } else if (existingEmailsSet.has(email)) {
-            issues.push('Email already exists in the system');
-        }
-
-        // ticket
-        if (!ticket_type) {
-            issues.push('Missing ticket type');
-        } else if (!VALID_TICKETS.includes(ticket_type)) {
-            issues.push('Unknown ticket: "' + ticket_raw + '" (use VIP / EXHIBITOR / VISITOR)');
-        }
-
-        // within-file duplicate check (flag every occurrence, not just 2nd+)
-        let isDupe = false;
-        if (email && EMAIL_RE.test(email) && !existingEmailsSet.has(email)) {
-            if (emailCounts[email] > 1) {
-                issues.push('Duplicate email in this file');
-                isDupe = true;
-            }
-        }
-
-        return {
-            _row:        idx + 1,
-            first_name,
-            last_name,
-            email,
-            ticket_type,
-            _issues:     issues,
-            _valid:      issues.length === 0,
-            _isDupe:     isDupe,
-            _existsInDb: existingEmailsSet.has(email),
-        };
-    });
-
-    currentFilter = 'all';
-    currentPage   = 1;
-
-    getModal('mappingModal').hide();
-    setTimeout(() => {
-        renderSummaryBar();
-        renderPreviewTable();
-        getModal('bulkPreviewModal2').show();
-    }, 420);
-}
 
         /* ══════════════════════════════════════════════════════════════
            SUMMARY BAR
         ══════════════════════════════════════════════════════════════ */
         function renderSummaryBar() {
-            const valid = parsedData.filter(r => r._valid).length;
-            const invalid = parsedData.filter(r => !r._valid).length;
-            const dupe = parsedData.filter(r => r._isDupe).length;
+            const valid = parsedData.filter(r => r.status === "valid").length;
+            const invalid = parsedData.filter(r => r.status === "invalid").length;
+            const dupe = parsedData.filter(r => r.errors?.email?.some(e => e.includes("Duplicate") || e.includes("exists"))).length;
 
             document.getElementById('inviteStatValid').textContent = valid;
             document.getElementById('inviteStatInvalid').textContent = invalid;
             document.getElementById('inviteStatDupe').textContent = dupe;
             document.getElementById('inviteStatTotal').textContent = parsedData.length;
-            document.getElementById('invitePreviewSubtitle').textContent = parsedData.length + ' rows from file';
-            document.getElementById('inviteSubmitHint').textContent =
-                valid ? ('✓ ' + valid + ' valid row(s) ready to send') : '⚠ No valid rows to send';
+            document.getElementById('invitePreviewSubtitle').textContent = `${parsedData.length} rows from file`;
+            document.getElementById('inviteSubmitHint').textContent = valid ? `✓ ${valid} valid ready to send` : '⚠ No valid rows';
             document.getElementById('inviteSubmitHint').style.color = valid ? '#16a34a' : '#dc2626';
         }
 
         function getFilteredData() {
-            if (currentFilter === 'valid') return parsedData.filter(r => r._valid);
-            if (currentFilter === 'invalid') return parsedData.filter(r => !r._valid);
+            if (currentFilter === 'valid') return parsedData.filter(r => r.status === "valid");
+            if (currentFilter === 'invalid') return parsedData.filter(r => r.status === "invalid");
             return parsedData;
         }
 
@@ -988,116 +982,112 @@
 
         function buildEditRow(tr, r, dataIndex) {
             const ticketOpts = VALID_TICKETS
-                .map(t => '<option value="' + t + '"' + (r.ticket_type === t ? ' selected' : '') + '>' + t + '</option>')
+                .map(t => `<option value="${t}"${r.ticket_type === t ? ' selected' : ''}>${t}</option>`)
                 .join('');
 
             tr.style.background = '#fffbeb';
+            tr.innerHTML = `
+                <td style="padding:8px 10px;color:#aaa;font-size:12px;vertical-align:top;">${r.row}</td>
+                <td style="padding:6px 8px;vertical-align:top;">
+                    <input class="ep-first" value="${escHtml(r.first_name)}" style="${CELL_INPUT_STYLE}">
+                    <div class="ep-err ep-err-first" style="color:#dc2626;font-size:11px;margin-top:2px;display:none;"></div>
+                </td>
+                <td style="padding:6px 8px;vertical-align:top;">
+                    <input class="ep-last" value="${escHtml(r.last_name)}" style="${CELL_INPUT_STYLE}">
+                    <div class="ep-err ep-err-last" style="color:#dc2626;font-size:11px;margin-top:2px;display:none;"></div>
+                </td>
+                <td style="padding:6px 8px;vertical-align:top;">
+                    <input class="ep-email" value="${escHtml(r.email)}" style="${CELL_INPUT_STYLE}font-family:monospace;">
+                    <div class="ep-err ep-err-email" style="color:#dc2626;font-size:11px;margin-top:2px;display:none;"></div>
+                </td>
+                <td style="padding:6px 8px;vertical-align:top;">
+                    <input class="ep-mobile" value="${escHtml(r.mobile_number || '')}" style="${CELL_INPUT_STYLE}">
+                    <div class="ep-err ep-err-mobile" style="color:#dc2626;font-size:11px;margin-top:2px;display:none;"></div>
+                </td>
+                <td style="padding:6px 8px;vertical-align:top;">
+                    <select class="ep-ticket" style="${CELL_INPUT_STYLE}padding:5px 7px;">
+                        <option value="">Select...</option>
+                        ${ticketOpts}
+                    </select>
+                    <div class="ep-err ep-err-ticket" style="color:#dc2626;font-size:11px;margin-top:2px;display:none;"></div>
+                </td>
+                <td style="padding:6px 8px;vertical-align:middle;">
+                    <span style="background:#fef9c3;color:#854d0e;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">Editing</span>
+                </td>
+                <td style="padding:6px 10px;vertical-align:middle;white-space:nowrap;">
+                    <button class="ep-done-btn" style="background:#16a34a;color:white;border:none;border-radius:6px;padding:5px 13px;font-size:12px;font-weight:600;cursor:pointer;margin-right:5px;">Done</button>
+                    <button class="ep-cancel-btn" style="background:white;color:#555;border:1px solid #ddd;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;">Cancel</button>
+                </td>
+            `;
 
-            tr.innerHTML =
-                '<td style="padding:8px 10px;color:#aaa;font-size:12px;vertical-align:top;">' + r._row + '</td>' +
-
-                '<td style="padding:6px 8px;vertical-align:top;">' +
-                '<input class="ep-first" value="' + escHtml(r.first_name) + '" placeholder="First Name" style="' + CELL_INPUT_STYLE + '">' +
-                '<div class="ep-err ep-err-first" style="color:#dc2626;font-size:11px;margin-top:2px;display:none;"></div>' +
-                '</td>' +
-
-                '<td style="padding:6px 8px;vertical-align:top;">' +
-                '<input class="ep-last" value="' + escHtml(r.last_name) + '" placeholder="Last Name" style="' + CELL_INPUT_STYLE + '">' +
-                '<div class="ep-err ep-err-last" style="color:#dc2626;font-size:11px;margin-top:2px;display:none;"></div>' +
-                '</td>' +
-
-                '<td style="padding:6px 8px;vertical-align:top;">' +
-                '<input class="ep-email" value="' + escHtml(r.email) + '" placeholder="Email" style="' + CELL_INPUT_STYLE + 'font-family:monospace;">' +
-                '<div class="ep-err ep-err-email" style="color:#dc2626;font-size:11px;margin-top:2px;display:none;"></div>' +
-                '</td>' +
-
-                '<td style="padding:6px 8px;vertical-align:top;">' +
-                '<select class="ep-ticket" style="' + CELL_INPUT_STYLE + 'padding:5px 7px;">' +
-                '<option value="">Select...</option>' +
-                ticketOpts +
-                '</select>' +
-                '<div class="ep-err ep-err-ticket" style="color:#dc2626;font-size:11px;margin-top:2px;display:none;"></div>' +
-                '</td>' +
-
-                '<td style="padding:6px 8px;vertical-align:middle;">' +
-                '<span style="background:#fef9c3;color:#854d0e;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">Editing</span>' +
-                '</td>' +
-
-                '<td style="padding:6px 10px;vertical-align:middle;white-space:nowrap;">' +
-                '<button class="ep-done-btn" style="background:#16a34a;color:white;border:none;border-radius:6px;padding:5px 13px;font-size:12px;font-weight:600;cursor:pointer;margin-right:5px;">' +
-                '<i class="fas fa-check me-1"></i>Done' +
-                '</button>' +
-                '<button class="ep-cancel-btn" style="background:white;color:#555;border:1px solid #ddd;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;">' +
-                'Cancel' +
-                '</button>' +
-                '</td>';
-
-            /* ── Done click ── */
-            tr.querySelector('.ep-done-btn').addEventListener('click', () => {
-                const first = tr.querySelector('.ep-first').value.trim();
-                const last = tr.querySelector('.ep-last').value.trim();
-                const email = tr.querySelector('.ep-email').value.trim().toLowerCase();
-                const ticketRaw = tr.querySelector('.ep-ticket').value;
-                const ticket = normaliseTicket(ticketRaw);
-
-                /* reset inline error state */
-                tr.querySelectorAll('.ep-err').forEach(el => { el.textContent = ''; el.style.display = 'none'; });
-                tr.querySelectorAll('.ep-first,.ep-last,.ep-email,.ep-ticket').forEach(el => el.style.borderColor = '#ddd');
-
-                /* collect all OTHER rows' emails for dupe check */
-                const otherEmails = parsedData
-                    .filter((_, i) => i !== dataIndex)
-                    .map(d => d.email)
-                    .filter(e => e && EMAIL_RE.test(e));
-
-                const { issues, isDupe, valid } = validateRowData(first, last, email, ticket, ticketRaw, otherEmails);
-
-                if (!valid) {
-                    /* map issue messages to input + error div pairs */
-                    const fieldMap = {
-                        'Missing first name': ['ep-first', 'ep-err-first'],
-                        'First name must be at least 2 characters': ['ep-first', 'ep-err-first'],
-                        'First name should only contain letters': ['ep-first', 'ep-err-first'],
-                        'Last name must be at least 2 characters': ['ep-last', 'ep-err-last'],
-                        'Last name should only contain letters': ['ep-last', 'ep-err-last'],
-                        'Missing email': ['ep-email', 'ep-err-email'],
-                        'Invalid email format': ['ep-email', 'ep-err-email'],
-                        'Duplicate email in this file': ['ep-email', 'ep-err-email'],
-                        'Email already exists in the system': ['ep-email', 'ep-err-email'],  //
-                        'Missing ticket type': ['ep-ticket', 'ep-err-ticket'],
-                    };
-
-                    issues.forEach(msg => {
-                        let pair = fieldMap[msg];
-                        if (!pair && msg.indexOf('Unknown ticket') === 0) pair = ['ep-ticket', 'ep-err-ticket'];
-                        if (!pair) return;
-                        tr.querySelector('.' + pair[0]).style.borderColor = '#e74c3c';
-                        const errEl = tr.querySelector('.' + pair[1]);
-                        errEl.textContent = msg;
-                        errEl.style.display = 'block';
-                    });
-                    return; /* stay in edit mode */
-                }
-
-                /* ✅ commit to parsedData */
-                parsedData[dataIndex] = Object.assign({}, parsedData[dataIndex], {
-                    first_name: first,
-                    last_name: last,
-                    email: email,
-                    ticket_type: ticket,
-                    _issues: [],
-                    _valid: true,
-                    _isDupe: false,
+            // Initialize intlTelInput on the edit row mobile input
+            const mobInp = tr.querySelector('.ep-mobile');
+            if (mobInp) {
+                mobInp.itiInstance = window.intlTelInput(mobInp, {
+                    initialCountry: 'in',
+                    utilsScript: 'https://cdn.jsdelivr.net/npm/intl-tel-input@23.1.0/build/js/utils.js',
+                    autoPlaceholder: 'aggressive',
+                    separateDialCode: true,
                 });
+            }
 
-                renderSummaryBar();
-                renderPreviewTable();
+            tr.querySelector('.ep-done-btn').addEventListener('click', async () => {
+                const mobInp = tr.querySelector('.ep-mobile');
+                const rowData = {
+                    first_name: tr.querySelector('.ep-first').value.trim(),
+                    last_name: tr.querySelector('.ep-last').value.trim(),
+                    email: tr.querySelector('.ep-email').value.trim().toLowerCase(),
+                    mobile_number: mobInp && mobInp.itiInstance ? mobInp.itiInstance.getNumber() : mobInp.value.trim(),
+                    ticket_type: tr.querySelector('.ep-ticket').value
+                };
+
+                const btn = tr.querySelector('.ep-done-btn');
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                try {
+                    const res = await fetch("/api/invitations/validate-row/", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "X-CSRFToken": getCsrf() },
+                        body: JSON.stringify({
+                            row: rowData,
+                            all_other_emails: parsedData.filter((_, i) => i !== dataIndex).map(d => d.email)
+                        })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        if (data.is_valid) {
+                            parsedData[dataIndex] = { ...parsedData[dataIndex], ...data.validated_data, status: "valid", errors: {} };
+                            renderSummaryBar();
+                            renderPreviewTable();
+                        } else {
+                            tr.querySelectorAll('.ep-err').forEach(el => { el.textContent = ''; el.style.display = 'none'; });
+                            tr.querySelectorAll('input, select').forEach(el => el.style.borderColor = '#ddd');
+                            
+                            const fieldMap = { 
+                                'first_name': 'ep-err-first', 
+                                'last_name': 'ep-err-last', 
+                                'email': 'ep-err-email', 
+                                'mobile_number': 'ep-err-mobile',
+                                'ticket_type': 'ep-err-ticket' 
+                            };
+                            for (const [field, msgs] of Object.entries(data.errors)) {
+                                const errEl = tr.querySelector('.' + fieldMap[field]);
+                                if (errEl) {
+                                    errEl.textContent = msgs.join("; ");
+                                    errEl.style.display = 'block';
+                                    const inputField = field.split('_')[0];
+                                    const inputEl = tr.querySelector(`.ep-${inputField === 'mobile' ? 'mobile' : inputField}`);
+                                    if (inputEl) inputEl.style.borderColor = '#e74c3c';
+                                }
+                            }
+                        }
+                    }
+                } catch (e) { console.error(e); }
+                finally { btn.disabled = false; btn.innerHTML = 'Done'; }
             });
 
-            /* ── Cancel click ── */
-            tr.querySelector('.ep-cancel-btn').addEventListener('click', () => {
-                renderPreviewTable();
-            });
+            tr.querySelector('.ep-cancel-btn').addEventListener('click', () => renderPreviewTable());
         }
 
         /* ══════════════════════════════════════════════════════════════
@@ -1105,8 +1095,7 @@
         ══════════════════════════════════════════════════════════════ */
         function renderPreviewTable() {
             const data = getFilteredData();
-            const total = data.length;
-            const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+            const pages = Math.max(1, Math.ceil(data.length / PAGE_SIZE));
             if (currentPage > pages) currentPage = 1;
 
             const start = (currentPage - 1) * PAGE_SIZE;
@@ -1120,322 +1109,176 @@
                 empty.style.display = 'block';
             } else {
                 empty.style.display = 'none';
-
                 pageData.forEach(r => {
                     const dataIndex = parsedData.indexOf(r);
-                    const bg = r._valid ? '#ffffff' : '#fff8f8';
-
-                    const statusPill = r._valid
-                        ? '<span style="background:#dcfce7;color:#15803d;padding:3px 11px;border-radius:20px;font-size:11px;font-weight:700;">✓ Valid</span>'
-                        : '<span style="background:#fee2e2;color:#dc2626;padding:3px 11px;border-radius:20px;font-size:11px;font-weight:700;">✗ Error</span>';
-
-                    const ticketMap = { VIP: 'VIP Pass', EXHIBITOR: 'Exhibitor Pass', VISITOR: 'Visitor Pass' };
-                    const ticketDisplay = ticketMap[r.ticket_type] || (r.ticket_type || '<em style="color:#aaa">—</em>');
-
-                    const issueText = r._issues.length
-                        ? '<span style="color:#dc2626;font-size:12px;"><i class="fas fa-exclamation-triangle" style="margin-right:4px;"></i>' + escHtml(r._issues.join('; ')) + '</span>'
-                        : '<span style="color:#16a34a;font-size:12px;"><i class="fas fa-check" style="margin-right:4px;"></i>—</span>';
-
+                    const isInvalid = r.status === "invalid";
                     const tr = document.createElement('tr');
-                    tr.style.cssText = 'background:' + bg + '; border-bottom:1px solid #f0f0f0;';
-                    tr.innerHTML =
-                        '<td style="padding:10px 14px;color:#aaa;font-size:12px;">' + r._row + '</td>' +
-                        '<td style="padding:10px 14px;font-weight:500;color:#1e293b;">' + (escHtml(r.first_name) || '<em style="color:#ddd">—</em>') + '</td>' +
-                        '<td style="padding:10px 14px;color:#475569;">' + (escHtml(r.last_name) || '<em style="color:#ddd">—</em>') + '</td>' +
-                        '<td style="padding:10px 14px;color:#475569;font-family:monospace;font-size:12px;">' + (escHtml(r.email) || '<em style="color:#ddd">—</em>') + '</td>' +
-                        '<td style="padding:10px 14px;color:#475569;">' + ticketDisplay + '</td>' +
-                        '<td style="padding:10px 14px;">' + statusPill + '</td>' +
-                        '<td style="padding:10px 12px;max-width:280px;word-break:break-word;">' +
-                        '<div style="display:flex;align-items:flex-start;gap:8px;">' +
-                        '<span style="flex:1;font-size:12px;">' + issueText + '</span>' +
-                        '<button class="row-edit-btn" style="flex-shrink:0;background:white;color:#1a56db;border:1px solid #1a56db;border-radius:6px;padding:3px 11px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">' +
-                        '<i class="fas fa-pencil-alt me-1"></i>Edit' +
-                        '</button>' +
-                        '</div>' +
-                        '</td>';
+                    tr.style.cssText = `background:${isInvalid ? '#fff8f8' : '#fff'}; border-bottom:1px solid #f0f0f0;`;
+                    
+                    const errMsgs = Object.values(r.errors || {}).flat().join("; ");
 
-                    tr.querySelector('.row-edit-btn').addEventListener('click', () => {
-                        buildEditRow(tr, r, dataIndex);
-                    });
-
+                    tr.innerHTML = `
+                        <td style="padding:10px 14px;color:#aaa;font-size:12px;">${r.row}</td>
+                        <td style="padding:10px 14px;font-weight:500;">${escHtml(r.first_name)}</td>
+                        <td style="padding:10px 14px;">${escHtml(r.last_name)}</td>
+                        <td style="padding:10px 14px;font-family:monospace;">${escHtml(r.email)}</td>
+                        <td style="padding:10px 14px;">${escHtml(r.mobile_number || '')}</td>
+                        <td style="padding:10px 14px;">${r.ticket_type}</td>
+                        <td style="padding:10px 14px;">
+                            <span style="background:${isInvalid ? '#fee2e2' : '#dcfce7'};color:${isInvalid ? '#dc2626' : '#15803d'};padding:3px 11px;border-radius:20px;font-size:11px;font-weight:700;">${isInvalid ? '✗ Error' : '✓ Valid'}</span>
+                        </td>
+                        <td style="padding:10px 12px;max-width:280px;">
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <span style="flex:1;font-size:11px;color:#dc2626;">${escHtml(errMsgs)}</span>
+                                <button class="row-edit-btn" style="background:white;color:#1a56db;border:1px solid #1a56db;border-radius:6px;padding:3px 11px;font-size:11px;cursor:pointer;">Edit</button>
+                            </div>
+                        </td>
+                    `;
+                    tr.querySelector('.row-edit-btn').onclick = () => buildEditRow(tr, r, dataIndex);
                     tbody.appendChild(tr);
                 });
             }
 
-            /* Pagination info */
-            document.getElementById('invitePaginationInfo').textContent =
-                total ? ('Showing ' + (start + 1) + '–' + Math.min(start + PAGE_SIZE, total) + ' of ' + total + ' rows') : '';
+            document.getElementById('invitePaginationInfo').textContent = data.length ? `Showing ${start + 1}–${Math.min(start + PAGE_SIZE, data.length)} of ${data.length}` : '';
+            renderPaginationButtons(pages);
+        }
 
-            /* Pagination buttons */
+        function renderPaginationButtons(pages) {
             const btnWrap = document.getElementById('invitePaginationBtns');
             btnWrap.innerHTML = '';
-            if (pages > 1) {
-                const prev = document.createElement('button');
-                prev.innerHTML = '‹';
-                prev.disabled = currentPage === 1;
-                stylePageBtn(prev, false);
-                prev.addEventListener('click', () => { currentPage--; renderPreviewTable(); });
-                btnWrap.appendChild(prev);
+            if (pages <= 1) return;
 
-                let pageNums = [];
-                if (pages <= 7) {
-                    pageNums = Array.from({ length: pages }, (_, i) => i + 1);
-                } else {
-                    pageNums = [1];
-                    if (currentPage > 3) pageNums.push('…');
-                    for (let p = Math.max(2, currentPage - 1); p <= Math.min(pages - 1, currentPage + 1); p++) pageNums.push(p);
-                    if (currentPage < pages - 2) pageNums.push('…');
-                    pageNums.push(pages);
-                }
+            const makeBtn = (label, active, disabled, onClick) => {
+                const b = document.createElement('button');
+                b.textContent = label;
+                b.disabled = disabled;
+                b.style.cssText = `border:1px solid ${active ? '#1a56db' : '#ddd'}; background:${active ? '#1a56db' : 'white'}; color:${active ? 'white' : '#555'}; border-radius:6px; padding:4px 10px; font-size:12px; cursor:pointer; min-width:30px;`;
+                if (!disabled) b.onclick = onClick;
+                btnWrap.appendChild(b);
+            };
 
-                pageNums.forEach(p => {
-                    const b = document.createElement('button');
-                    if (p === '…') { b.textContent = '…'; b.disabled = true; stylePageBtn(b, false); }
-                    else {
-                        b.textContent = p;
-                        stylePageBtn(b, p === currentPage);
-                        b.addEventListener('click', () => { currentPage = p; renderPreviewTable(); });
+            makeBtn('‹', false, currentPage === 1, () => { currentPage--; renderPreviewTable(); });
+            for (let i = 1; i <= pages; i++) {
+                if (pages > 7 && (i > 2 && i < pages - 1 && Math.abs(i - currentPage) > 1)) {
+                    if (i === 3 || i === pages - 1) {
+                        const s = document.createElement('span'); s.textContent = '…'; s.style.padding = '0 5px'; btnWrap.appendChild(s);
                     }
-                    btnWrap.appendChild(b);
-                });
-
-                const next = document.createElement('button');
-                next.innerHTML = '›';
-                next.disabled = currentPage === pages;
-                stylePageBtn(next, false);
-                next.addEventListener('click', () => { currentPage++; renderPreviewTable(); });
-                btnWrap.appendChild(next);
-            }
-
-            /* Sync filter pill active states */
-            document.querySelectorAll('.preview-filter-btn').forEach(btn => {
-                const active = btn.dataset.filter === currentFilter;
-                if (active) {
-                    btn.style.background = '#1a56db';
-                    btn.style.color = 'white';
-                    btn.style.borderColor = '#1a56db';
-                } else {
-                    btn.style.background = 'white';
-                    const colorMap = { valid: '#2ecc71', invalid: '#e74c3c', all: '#ddd' };
-                    btn.style.borderColor = colorMap[btn.dataset.filter] || '#ddd';
-                    btn.style.color = btn.dataset.filter === 'valid' ? '#27ae60' : btn.dataset.filter === 'invalid' ? '#c0392b' : '#333';
+                    continue;
                 }
-            });
+                makeBtn(i, i === currentPage, false, () => { currentPage = i; renderPreviewTable(); });
+            }
+            makeBtn('›', false, currentPage === pages, () => { currentPage++; renderPreviewTable(); });
         }
 
-        function stylePageBtn(btn, active) {
-            btn.style.cssText = 'border:1px solid ' + (active ? '#1a56db' : '#ddd') + '; background:' + (active ? '#1a56db' : 'white') + '; color:' + (active ? 'white' : '#555') + '; border-radius:6px; padding:4px 10px; font-size:12px; cursor:pointer; min-width:30px;';
-        }
-
-        /* Filter pills */
         document.querySelectorAll('.preview-filter-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.onclick = () => {
                 currentFilter = btn.dataset.filter;
                 currentPage = 1;
                 renderPreviewTable();
-            });
+            };
         });
 
-        /* Back button */
-        document.getElementById('backToMappingBtn').addEventListener('click', () => {
+        document.getElementById('backToMappingBtn').onclick = () => {
             getModal('bulkPreviewModal2').hide();
-            setTimeout(() => getModal('mappingModal').show(), 420);
+            getModal('mappingModal').show();
+        };
+
+        /* ══════════════════════════════════════════════════════════════
+           VALIDATE ALL
+        ══════════════════════════════════════════════════════════════ */
+        document.getElementById("validateAllInviteBtn").addEventListener("click", async () => {
+            const btn = document.getElementById("validateAllInviteBtn");
+            const origText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Validating...';
+
+            try {
+                const res = await fetch("/api/invitations/validate-batch/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "X-CSRFToken": getCsrf() },
+                    body: JSON.stringify({ rows: parsedData })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    const rowLookup = {};
+                    parsedData.forEach((r, i) => { rowLookup[r.id] = i; });
+
+                    data.results.forEach(resItem => {
+                        const idx = rowLookup[resItem.id];
+                        if (idx !== undefined) {
+                            const rowData = parsedData[idx];
+                            const finalData = resItem.is_valid && resItem.validated_data 
+                                ? { ...resItem.validated_data, id: resItem.id } 
+                                : { ...rowData };
+                            
+                            parsedData[idx] = { 
+                                ...rowData, 
+                                ...finalData, 
+                                status: resItem.is_valid ? "valid" : "invalid", 
+                                errors: resItem.errors 
+                            };
+                        }
+                    });
+                    renderSummaryBar();
+                    renderPreviewTable();
+                }
+            } catch (e) { console.error(e); }
+            finally { btn.disabled = false; btn.innerHTML = origText; }
         });
 
         /* ══════════════════════════════════════════════════════════════
            BULK SEND
         ══════════════════════════════════════════════════════════════ */
-        document.getElementById('bulkSendBtn').addEventListener('click', () => {
-            const validEntries = parsedData.filter(r => r._valid).map(r => ({
-                first_name: r.first_name,
-                last_name: r.last_name,
-                email: r.email,
-                ticket_type: r.ticket_type,
+        document.getElementById('bulkSendBtn').onclick = () => {
+            const valid = parsedData.filter(r => r.status === "valid").map(r => ({
+                first_name: r.first_name, 
+                last_name: r.last_name, 
+                email: r.email, 
+                mobile_number: r.mobile_number,
+                ticket_type: r.ticket_type
             }));
 
-            if (!validEntries.length) {
+            if (!valid.length) {
                 document.getElementById('noValidRowsOverlay').style.display = 'flex';
                 return;
             }
 
             const btn = document.getElementById('bulkSendBtn');
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Sending...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Adding...';
 
             fetch('/send-invitations/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
-                body: JSON.stringify({ entries: validEntries }),
+                body: JSON.stringify({ entries: valid }),
             })
-                .then(async r => {
-                    const data = await r.json();
-                    if (r.status === 409) {
-                        alert(data.errors || 'A bulk operation is already in progress. Please wait.');
-                        return;
-                    }
-                    if (r.status === 400) {          // ← ADD THIS
-        showLimitError(data.errors || data.error || 'Limit exceeded.');
-        return;
-    }
-                    if (!data.success) throw new Error(data.error || 'Failed to queue task.');
-                    
-                    // Close all modals
-                    document.querySelectorAll('.modal.show').forEach(m => {
-                        bootstrap.Modal.getOrCreateInstance(m).hide();
-                    });
+            .then(async r => {
+                const data = await r.json();
+                if (data.success) {
+                    getModal('bulkPreviewModal2').hide();
 
-                    if (window.startTrackingTask) {
-                        // Persistence
-                        const pending = JSON.parse(localStorage.getItem('pendingBulkTasks') || '[]');
-                        pending.push({ id: data.task_id, label: "Bulk Invitations" });
-                        localStorage.setItem('pendingBulkTasks', JSON.stringify(pending));
+                    // Refresh list immediately if helper is available
+                    if (window.refreshRegistrations) window.refreshRegistrations();
 
-                        window.startTrackingTask(data.task_id, "Bulk Invitations");
-                    } else {
-                        location.reload();
-                    }
-                })
-                .catch(() => alert('Network error. Please try again.'))
-                .finally(() => {
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Send Valid Invitations';
-                });
-        });
+                    if (window.startTrackingTask) window.startTrackingTask(data.task_id, "Bulk Invitations");
+                    else location.reload();
+                } else if (r.status === 400) {
+                    showLimitError(data.errors || data.error || "Pass limit reached.");
+                } else {
+                    alert(data.errors || data.error || "Submit failed.");
+                }
+            })
+            .catch(() => alert("Network error."))
+            .finally(() => { btn.disabled = false; btn.innerHTML = '<i class="fas fa-user-plus me-2"></i>Send Valid Invitations'; });
+        };
 
-        /* ── Overlay helpers ────────────────────────────────────────── */
-        function showInviteProcessing(msg) {
-            const overlay = document.getElementById('inviteProcessingOverlay');
-            overlay.style.display = 'flex';
-            if (msg) document.getElementById('inviteProcessingStatus').textContent = msg;
-        }
-
-        function hideInviteProcessing() {
-            document.getElementById('inviteProcessingOverlay').style.display = 'none';
-        }
-
-        function setInviteProcessingStatus(msg) {
-            const el = document.getElementById('inviteProcessingStatus');
-            if (el) el.textContent = msg;
-        }
-
-        /* ── Poll until task finishes ───────────────────────────────── */
-        function pollTaskResult(taskId, attempted, tries = 0) {
-            const MAX_TRIES = 60;
-            const INTERVAL = 2000;
-
-            // Show overlay on first call
-            if (tries === 0) {
-                showInviteProcessing('Waiting for task to start...');
-            }
-
-            if (tries >= MAX_TRIES) {
-                hideInviteProcessing();
-                openResultsModal({ sent_count: attempted, skipped_count: 0 }, attempted);
-                return;
-            }
-
-            // Update status message with elapsed time
-            const elapsed = tries * (INTERVAL / 1000);
-            setInviteProcessingStatus(
-                tries === 0
-                    ? 'Waiting for task to start...'
-                    : `Processing... (${elapsed}s elapsed)`
-            );
-
-            fetch(`/task-status-invitation/${taskId}/`)
-                .then(r => r.json())
-                .then(data => {
-                    if (data.state === 'PROGRESS' && data.progress) {
-                        const p = data.progress;
-                        if (p.phase === 'IMPORTING') {
-                            setInviteProcessingStatus(`Importing attendees: ${p.current} / ${p.total}`);
-                        } else if (p.phase === 'SENDING') {
-                            setInviteProcessingStatus(`Queueing emails: ${p.current} / ${p.total} (Sent: ${p.sent}, Skipped: ${p.skipped})`);
-                        }
-                        setTimeout(() => pollTaskResult(taskId, attempted, tries + 1), INTERVAL);
-
-                    } else if (data.state === 'SUCCESS') {
-                        setInviteProcessingStatus('Done! Loading results...');
-                        setTimeout(() => {
-                            hideInviteProcessing();
-                            openResultsModal(data.result, attempted);
-                        }, 400);
-
-                    } else if (data.state === 'FAILURE') {
-    hideInviteProcessing();
-    const overlay = document.getElementById('inviteProcessingOverlay');
-    overlay.style.display = 'flex';
-    const errorMsg = data.error || 'The invitation task failed. Please try again.';
-    const container = overlay.querySelector('div');
-    container.innerHTML = `
-        <div style="width:64px;height:64px;background:#fee2e2;border-radius:50%;
-                    display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
-            <i class="fas fa-times" style="font-size:28px;color:#dc2626;"></i>
-        </div>
-        <h5 style="color:#1e293b;font-weight:700;font-size:18px;margin:0 0 8px;">Invitation Failed</h5>
-        <p style="color:#64748b;font-size:14px;margin:0 0 20px;max-width:280px;">
-            ${errorMsg.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
-        </p>
-        <button id="failureCloseBtn"
-                style="background:#e74c3c;color:white;border:none;border-radius:8px;
-                       padding:10px 28px;font-weight:600;cursor:pointer;font-size:14px;">
-            Close
-        </button>`;
-    document.getElementById('failureCloseBtn').addEventListener('click', () => {
-        overlay.style.display = 'none';
-    });
-}
- else {
-                        // PENDING / STARTED — keep polling
-                        setTimeout(() => pollTaskResult(taskId, attempted, tries + 1), INTERVAL);
-                    }
-                })
-                .catch(() => {
-                    setInviteProcessingStatus(`Retrying... (attempt ${tries + 1})`);
-                    setTimeout(() => pollTaskResult(taskId, attempted, tries + 1), INTERVAL);
-                });
-        }
-
-        /* ══════════════════════════════════════════════════════════════
-           RESULTS MODAL (kept for reference)
-        ══════════════════════════════════════════════════════════════ */
-        function openResultsModal(result, attempted) {
-            const sent = result.sent_count ?? attempted;
-            const skipped = result.skipped_count ?? 0;
-
-            document.getElementById('resSent').textContent = sent;
-            document.getElementById('resSkipped').textContent = skipped;
-
-            document.getElementById('resBreakdown').innerHTML =
-                `<div><i class="fas fa-check-circle me-2" style="color:#16a34a;"></i>
-             <strong>${sent}</strong> invitation(s) queued & sent</div>
-         <div><i class="fas fa-forward me-2" style="color:#7c3aed;"></i>
-             <strong>${skipped}</strong> skipped — already registered or missing data</div>`;
-
-            getModal('resultsModal').show();
-        }
-
-        /* ══════════════════════════════════════════════════════════════
-           ALERT HELPERS
-        ══════════════════════════════════════════════════════════════ */
         function showAlert(type, html) {
             const el = document.getElementById('inviteAlert');
-            const s = {
-                success: { bg: '#f0fdf4', border: '#2ecc71', color: '#1e8449' },
-                danger: { bg: '#fdf2f2', border: '#e74c3c', color: '#c0392b' },
-                info: { bg: '#eef5ff', border: '#3498db', color: '#1a5276' },
-            }[type] || {};
-            el.style.cssText = 'display:flex; align-items:flex-start; gap:8px; background:' + s.bg + '; border:1px solid ' + s.border + '; color:' + s.color + '; border-radius:8px; padding:12px 16px; margin-bottom:18px; font-size:13px;';
+            const s = { success: '#2ecc71', danger: '#e74c3c', info: '#3498db' }[type] || '#333';
+            el.style.cssText = `display:block; border:1px solid ${s}; color:${s}; border-radius:8px; padding:12px; margin-bottom:18px; font-size:13px;`;
             el.innerHTML = html;
         }
-        function hideAlert() {
-            const el = document.getElementById('inviteAlert');
-            el.style.display = 'none';
-            el.innerHTML = '';
-        }
-
-        /* expose validateRowData for potential external use */
-        window._validateInviteRow = validateRowData;
+        function hideAlert() { document.getElementById('inviteAlert').style.display = 'none'; }
 
     })();
 </script>

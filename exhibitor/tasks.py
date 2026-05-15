@@ -262,6 +262,7 @@ def process_invitations_batch(self, entries, exhibitor_id):
             email      = (entry.get("email") or "").strip().lower()
             first_name = (entry.get("first_name") or "").strip()
             last_name  = (entry.get("last_name") or "").strip()
+            mobile_number = (entry.get("mobile_number") or "").strip()
             ticket_type = (entry.get("ticket_type") or "").strip()
 
             if not email or not first_name:
@@ -279,6 +280,7 @@ def process_invitations_batch(self, entries, exhibitor_id):
                 email=email,
                 first_name=first_name,
                 last_name=last_name,
+                mobile_number=mobile_number or None,
                 attendee_type=ticket_type,
                 status=Attendee.Status.INVITED,
             ))
@@ -329,41 +331,15 @@ def process_invitations_batch(self, entries, exhibitor_id):
                 'total': len(to_create)
             })
 
-        # ── Phase 2: Sending (Email Queueing) ──────────────────────
-        sent_count = 0
-        total_to_send = len(created)
+        # ── Phase 2: Completed (Database Only) ──────────────────────
+        total_created = len(created)
         
-        self.update_state(state='PROGRESS', meta={
-            'phase': 'SENDING',
-            'current': 0,
-            'total': total_to_send,
-            'sent': 0,
-            'skipped': skipped_count
-        })
-
-        for idx, attendee in enumerate(created):
-            if attendee.pk:
-                send_invite_email.delay(attendee.email, str(attendee.invite_token))
-                sent_count += 1
-            else:
-                skipped_count += 1
-            
-            # Update progress every 100 emails
-            if idx % 100 == 0 or idx == total_to_send - 1:
-                self.update_state(state='PROGRESS', meta={
-                    'phase': 'SENDING',
-                    'current': idx + 1,
-                    'total': total_to_send,
-                    'sent': sent_count,
-                    'skipped': skipped_count
-                })
-
-        logger.info(f"✅ Batch complete — Sent: {sent_count} | Skipped: {skipped_count}")
+        logger.info(f"✅ Batch complete — Added to DB: {total_created} | Skipped: {skipped_count}")
 
         return {
-            "created":       sent_count,
+            "created":       total_created,
             "skipped":       skipped_count,
-            "sent_count":    sent_count,
+            "sent_count":    total_created, # Keeping key for UI compatibility
             "skipped_count": skipped_count,
         }
 

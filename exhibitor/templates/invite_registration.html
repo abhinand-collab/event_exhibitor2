@@ -1,29 +1,40 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Complete Your Registration – {{ attendee.event.name }}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <!-- Select2 -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css"
+        rel="stylesheet">
 
-     <!-- intl-tel-input -->
+    <!-- intl-tel-input -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@23.1.0/build/css/intlTelInput.css">
 
     <style>
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
         :root {
-            --red:      #e74c3c;
+            --red: #e74c3c;
             --red-dark: #c0392b;
-            --ink:      #1a1a2e;
-            --slate:    #4a4a6a;
-            --mist:     #f4f5f9;
-            --line:     #e2e4ee;
-            --white:    #ffffff;
+            --ink: #1a1a2e;
+            --slate: #4a4a6a;
+            --mist: #f4f5f9;
+            --line: #e2e4ee;
+            --white: #ffffff;
         }
 
         body {
@@ -45,18 +56,20 @@
             position: relative;
             overflow: hidden;
         }
+
         .hero::before {
             content: '';
             position: absolute;
             inset: 0;
             background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
         }
+
         .hero-badge-pill {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            background: rgba(231,76,60,0.2);
-            border: 1px solid rgba(231,76,60,0.5);
+            background: rgba(231, 76, 60, 0.2);
+            border: 1px solid rgba(231, 76, 60, 0.5);
             color: #ff8a7a;
             font-size: 12px;
             font-weight: 600;
@@ -66,6 +79,7 @@
             border-radius: 50px;
             margin-bottom: 20px;
         }
+
         .hero h1 {
             font-family: 'Playfair Display', serif;
             color: var(--white);
@@ -74,20 +88,22 @@
             margin-bottom: 10px;
             position: relative;
         }
+
         .hero p {
-            color: rgba(255,255,255,0.6);
+            color: rgba(255, 255, 255, 0.6);
             font-size: 14px;
             font-weight: 300;
             position: relative;
         }
+
         .ticket-banner {
             display: inline-flex;
             align-items: center;
             gap: 10px;
             margin-top: 22px;
-            background: rgba(255,255,255,0.08);
+            background: rgba(255, 255, 255, 0.08);
             backdrop-filter: blur(8px);
-            border: 1px solid rgba(255,255,255,0.15);
+            border: 1px solid rgba(255, 255, 255, 0.15);
             border-radius: 50px;
             padding: 10px 22px;
             color: var(--white);
@@ -95,11 +111,13 @@
             font-weight: 500;
             position: relative;
         }
+
         .ticket-dot {
-            width: 9px; height: 9px;
+            width: 9px;
+            height: 9px;
             border-radius: 50%;
             background: #2ecc71;
-            box-shadow: 0 0 0 3px rgba(46,204,113,0.25);
+            box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.25);
         }
 
         /* ── CARD ── */
@@ -108,17 +126,21 @@
             max-width: 680px;
             background: var(--white);
             border-radius: 20px;
-            box-shadow: 0 8px 40px rgba(26,26,46,0.10);
+            box-shadow: 0 8px 40px rgba(26, 26, 46, 0.10);
             margin-top: -24px;
             overflow: hidden;
             position: relative;
             z-index: 1;
         }
+
         .card-header-strip {
             height: 4px;
             background: linear-gradient(90deg, var(--red) 0%, #ff7043 100%);
         }
-        .card-body { padding: 36px 40px; }
+
+        .card-body {
+            padding: 36px 40px;
+        }
 
         /* greeting */
         .greeting {
@@ -129,21 +151,32 @@
             border-bottom: 1px solid var(--line);
             margin-bottom: 28px;
         }
+
         .greeting-avatar {
-            width: 52px; height: 52px;
+            width: 52px;
+            height: 52px;
             border-radius: 50%;
             background: linear-gradient(135deg, var(--red) 0%, #ff7043 100%);
-            display: flex; align-items: center; justify-content: center;
-            color: white; font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
             flex-shrink: 0;
         }
+
         .greeting-text h2 {
             font-family: 'Playfair Display', serif;
             font-size: 20px;
             color: var(--ink);
             line-height: 1.3;
         }
-        .greeting-text p { font-size: 13px; color: var(--slate); margin-top: 3px; }
+
+        .greeting-text p {
+            font-size: 13px;
+            color: var(--slate);
+            margin-top: 3px;
+        }
 
         /* prefilled */
         .prefilled-grid {
@@ -152,12 +185,14 @@
             gap: 14px;
             margin-bottom: 28px;
         }
+
         .prefilled-item {
             background: var(--mist);
             border: 1px solid var(--line);
             border-radius: 10px;
             padding: 12px 16px;
         }
+
         .prefilled-item label {
             font-size: 10px;
             font-weight: 600;
@@ -167,7 +202,12 @@
             display: block;
             margin-bottom: 4px;
         }
-        .prefilled-item span { font-size: 15px; font-weight: 500; color: var(--ink); }
+
+        .prefilled-item span {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--ink);
+        }
 
         /* section title */
         .section-title {
@@ -181,12 +221,28 @@
             align-items: center;
             gap: 8px;
         }
-        .section-title::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+
+        .section-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--line);
+        }
 
         /* form */
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        .form-group { margin-bottom: 20px; }
-        .form-group.full { grid-column: 1 / -1; }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group.full {
+            grid-column: 1 / -1;
+        }
 
         .form-group label {
             display: block;
@@ -196,7 +252,11 @@
             color: var(--slate);
             margin-bottom: 7px;
         }
-        .form-group label .req { color: var(--red); margin-left: 2px; }
+
+        .form-group label .req {
+            color: var(--red);
+            margin-left: 2px;
+        }
 
         .form-control {
             width: 100%;
@@ -210,13 +270,26 @@
             transition: border-color 0.2s, box-shadow 0.2s;
             outline: none;
         }
+
         .form-control:focus {
             border-color: var(--red);
-            box-shadow: 0 0 0 3px rgba(231,76,60,0.12);
+            box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.12);
         }
-        .form-control.error { border-color: var(--red); }
-        .error-msg { font-size: 12px; color: var(--red); margin-top: 5px; display: none; }
-        .error-msg.show { display: block; }
+
+        .form-control.error {
+            border-color: var(--red);
+        }
+
+        .error-msg {
+            font-size: 12px;
+            color: var(--red);
+            margin-top: 5px;
+            display: none;
+        }
+
+        .error-msg.show {
+            display: block;
+        }
 
         /* ── CONSENT ── */
         .consent-block {
@@ -226,6 +299,7 @@
             padding: 20px 22px;
             margin-bottom: 22px;
         }
+
         .consent-item {
             display: flex;
             align-items: flex-start;
@@ -233,11 +307,19 @@
             padding: 14px 0;
             border-bottom: 1px solid var(--line);
         }
-        .consent-item:last-child { border-bottom: none; padding-bottom: 0; }
-        .consent-item:first-child { padding-top: 0; }
+
+        .consent-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .consent-item:first-child {
+            padding-top: 0;
+        }
 
         .consent-checkbox {
-            width: 20px; height: 20px;
+            width: 20px;
+            height: 20px;
             border: 2px solid var(--line);
             border-radius: 6px;
             background: white;
@@ -247,8 +329,15 @@
             accent-color: var(--red);
             transition: border-color 0.2s;
         }
-        .consent-checkbox:checked { border-color: var(--red); }
-        .consent-checkbox.error { border-color: var(--red); outline: 2px solid rgba(231,76,60,0.2); }
+
+        .consent-checkbox:checked {
+            border-color: var(--red);
+        }
+
+        .consent-checkbox.error {
+            border-color: var(--red);
+            outline: 2px solid rgba(231, 76, 60, 0.2);
+        }
 
         .consent-label {
             font-size: 13px;
@@ -257,6 +346,7 @@
             cursor: pointer;
             flex: 1;
         }
+
         .consent-label strong {
             display: block;
             color: var(--ink);
@@ -264,9 +354,10 @@
             font-weight: 600;
             margin-bottom: 2px;
         }
+
         .req-badge {
             display: inline-block;
-            background: rgba(231,76,60,0.1);
+            background: rgba(231, 76, 60, 0.1);
             color: var(--red);
             font-size: 10px;
             font-weight: 700;
@@ -277,9 +368,10 @@
             margin-left: 6px;
             vertical-align: middle;
         }
+
         .opt-badge {
             display: inline-block;
-            background: rgba(74,74,106,0.08);
+            background: rgba(74, 74, 106, 0.08);
             color: var(--slate);
             font-size: 10px;
             font-weight: 700;
@@ -290,8 +382,17 @@
             margin-left: 6px;
             vertical-align: middle;
         }
-        .consent-err { font-size: 11px; color: var(--red); margin-top: 4px; display: none; }
-        .consent-err.show { display: block; }
+
+        .consent-err {
+            font-size: 11px;
+            color: var(--red);
+            margin-top: 4px;
+            display: none;
+        }
+
+        .consent-err.show {
+            display: block;
+        }
 
         /* submit */
         .btn-submit {
@@ -313,27 +414,79 @@
             gap: 10px;
             margin-top: 8px;
         }
-        .btn-submit:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(231,76,60,0.35); }
-        .btn-submit:active { transform: translateY(0); }
-        .btn-submit:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
 
-        .terms-note { text-align: center; font-size: 12px; color: var(--slate); margin-top: 14px; }
+        .btn-submit:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 24px rgba(231, 76, 60, 0.35);
+        }
+
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .terms-note {
+            text-align: center;
+            font-size: 12px;
+            color: var(--slate);
+            margin-top: 14px;
+        }
 
         /* ── SUCCESS ── */
-        .success-screen { display: none; text-align: center; padding: 60px 40px; }
-        .success-screen.show { display: block; }
+        .success-screen {
+            display: none;
+            text-align: center;
+            padding: 60px 40px;
+        }
+
+        .success-screen.show {
+            display: block;
+        }
+
         .success-icon {
-            width: 80px; height: 80px;
+            width: 80px;
+            height: 80px;
             border-radius: 50%;
             background: linear-gradient(135deg, #2ecc71, #27ae60);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 36px; color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            color: white;
             margin: 0 auto 24px;
-            animation: pop 0.4s cubic-bezier(0.34,1.56,0.64,1);
+            animation: pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
-        @keyframes pop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .success-screen h2 { font-family: 'Playfair Display', serif; font-size: 28px; color: var(--ink); margin-bottom: 10px; }
-        .success-screen p { color: var(--slate); font-size: 15px; line-height: 1.6; }
+
+        @keyframes pop {
+            from {
+                transform: scale(0);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .success-screen h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 28px;
+            color: var(--ink);
+            margin-bottom: 10px;
+        }
+
+        .success-screen p {
+            color: var(--slate);
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
         .badge-preview {
             display: inline-block;
             margin-top: 28px;
@@ -344,23 +497,62 @@
             font-size: 13px;
             color: var(--slate);
         }
-        .badge-preview strong { display: block; font-size: 22px; color: var(--ink); font-family: 'Playfair Display', serif; margin-bottom: 4px; }
+
+        .badge-preview strong {
+            display: block;
+            font-size: 22px;
+            color: var(--ink);
+            font-family: 'Playfair Display', serif;
+            margin-bottom: 4px;
+        }
 
         /* alerts */
-        .alert { border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; font-size: 13px; display: flex; align-items: flex-start; gap: 10px; }
-        .alert-danger { background: #fdf2f2; border: 1px solid #f5c6cb; color: #c0392b; }
-        .alert i { margin-top: 2px; flex-shrink: 0; }
+        .alert {
+            border-radius: 10px;
+            padding: 14px 18px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .alert-danger {
+            background: #fdf2f2;
+            border: 1px solid #f5c6cb;
+            color: #c0392b;
+        }
+
+        .alert i {
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
 
         @media (max-width: 640px) {
-            .card-body { padding: 24px 20px; }
-            .form-row { grid-template-columns: 1fr; }
-            .prefilled-grid { grid-template-columns: 1fr; }
-            .form-group.full { grid-column: 1; }
+            .card-body {
+                padding: 24px 20px;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .prefilled-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-group.full {
+                grid-column: 1;
+            }
         }
+
         /* ── intl-tel-input overrides ── */
-        .iti { width: 100%; }
-        .iti__tel-input { 
-            width: 100%; 
+        .iti {
+            width: 100%;
+        }
+
+        .iti__tel-input {
+            width: 100%;
             border: 1.5px solid var(--line);
             border-radius: 10px;
             padding: 12px 15px;
@@ -370,18 +562,22 @@
             transition: border-color 0.2s, box-shadow 0.2s;
             outline: none;
         }
+
         .iti__tel-input:focus {
             border-color: var(--red);
-            box-shadow: 0 0 0 3px rgba(231,76,60,0.12);
+            box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.12);
         }
-        .iti__tel-input.error { border-color: var(--red); }
+
+        .iti__tel-input.error {
+            border-color: var(--red);
+        }
 
         /* ── Select2 — match the page's form-control style exactly ── */
         .select2-container--default .select2-selection--single {
             border: 1.5px solid var(--line) !important;
             border-radius: 10px !important;
             height: 46px !important;
-            padding: 0 !important; /* padding handled by rendered text */
+            padding: 0 !important;
             display: flex !important;
             align-items: center !important;
             background: var(--white) !important;
@@ -393,10 +589,9 @@
         .select2-container--default.select2-container--open .select2-selection--single,
         .select2-container--default.select2-container--focus .select2-selection--single {
             border-color: var(--red) !important;
-            box-shadow: 0 0 0 3px rgba(231,76,60,0.12) !important;
+            box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.12) !important;
         }
 
-        /* Rendered value text */
         .select2-container--default .select2-selection--single .select2-selection__rendered {
             color: var(--ink) !important;
             font-size: 14px !important;
@@ -404,19 +599,17 @@
             font-weight: 400 !important;
             line-height: 43px !important;
             padding-left: 15px !important;
-            padding-right: 35px !important;
+            padding-right: 55px !important;
             display: flex !important;
             align-items: center !important;
             gap: 8px !important;
         }
 
-        /* Placeholder color */
         .select2-container--default .select2-selection--single .select2-selection__placeholder {
             color: #aaa !important;
             font-size: 14px !important;
         }
 
-        /* Arrow icon */
         .select2-container--default .select2-selection--single .select2-selection__arrow {
             height: 44px !important;
             right: 12px !important;
@@ -425,38 +618,45 @@
             align-items: center !important;
             justify-content: center !important;
         }
+
         .select2-container--default .select2-selection--single .select2-selection__arrow b {
             border-color: #888 transparent transparent transparent !important;
             border-width: 5px 4px 0 4px !important;
             position: static !important;
             margin: 0 !important;
         }
+
         .select2-container--default.select2-container--open .select2-selection--single .select2-selection__arrow b {
             border-color: transparent transparent #888 transparent !important;
             border-width: 0 4px 5px 4px !important;
         }
 
-        /* Clear button */
         .select2-container--default .select2-selection--single .select2-selection__clear {
-            margin-right: 25px !important;
+            position: absolute !important;
+            right: 33px !important;
+            top: 0 !important;
+            height: 44px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            margin-right: 0 !important;
             font-size: 18px !important;
             color: #aaa !important;
             font-weight: 400 !important;
         }
+
         .select2-container--default .select2-selection--single .select2-selection__clear:hover {
             color: var(--red) !important;
         }
 
-        /* Dropdown panel */
         .select2-container--default .select2-dropdown {
             border: 1.5px solid var(--line) !important;
             border-radius: 12px !important;
-            box-shadow: 0 12px 30px rgba(0,0,0,0.12) !important;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12) !important;
             overflow: hidden !important;
             margin-top: 6px !important;
         }
 
-        /* Search box inside dropdown */
         .select2-container--default .select2-search--dropdown .select2-search__field {
             border: 1.5px solid var(--line) !important;
             border-radius: 8px !important;
@@ -467,761 +667,490 @@
             margin: 10px !important;
             width: calc(100% - 20px) !important;
         }
+
         .select2-container--default .select2-search--dropdown .select2-search__field:focus {
             border-color: var(--red) !important;
-            box-shadow: 0 0 0 3px rgba(231,76,60,0.08) !important;
+            box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.08) !important;
         }
 
-        /* Option items */
         .select2-container--default .select2-results__option {
             font-size: 14px !important;
             padding: 10px 15px !important;
             color: var(--ink) !important;
         }
+
         .select2-container--default .select2-results__option--highlighted[aria-selected] {
             background-color: var(--red) !important;
             color: white !important;
         }
+
         .select2-container--default .select2-results__option[aria-selected=true] {
-            background-color: rgba(231,76,60,0.06) !important;
+            background-color: rgba(231, 76, 60, 0.06) !important;
             color: var(--red) !important;
             font-weight: 500 !important;
         }
 
-        /* Error state */
         .select2-container--default .select2-selection--single.select2-error {
             border-color: var(--red) !important;
-            box-shadow: 0 0 0 3px rgba(231,76,60,0.12) !important;
+            box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.12) !important;
         }
     </style>
 </head>
+
 <body>
 
-<!-- ── HERO ── -->
-<div class="hero">
-    <div class="hero-badge-pill">
-        <i class="fas fa-calendar-alt"></i>
-        You're Invited
-    </div>
-    <h1>{{ attendee.event.name }}</h1>
-    <p>
-        {% if attendee.event.start_date %}
+    <!-- ── HERO ── -->
+    <div class="hero">
+        <div class="hero-badge-pill">
+            <i class="fas fa-calendar-alt"></i>
+            You're Invited
+        </div>
+        <h1>{{ attendee.event.name }}</h1>
+        <p>
+            {% if attendee.event.start_date %}
             {{ attendee.event.start_date|date:"M j, Y" }}
             {% if attendee.event.end_date %} – {{ attendee.event.end_date|date:"M j, Y" }}{% endif %}
-        {% endif %}
-    </p>
-    <div class="ticket-banner">
-        <span class="ticket-dot"></span>
-        {{ attendee.get_attendee_type_display }} Pass
-    </div>
-</div>
-
-<!-- ── CARD ── -->
-<div class="card">
-    <div class="card-header-strip"></div>
-
-    <!-- FORM STATE -->
-    <div class="card-body" id="formSection">
-
-        <!-- Global error -->
-        <div class="alert alert-danger" id="globalError" style="display:none;">
-            <i class="fas fa-exclamation-circle"></i>
-            <span id="globalErrorMsg"></span>
-        </div>
-
-        <!-- Greeting -->
-        <div class="greeting">
-            <div class="greeting-avatar"><i class="fas fa-user"></i></div>
-            <div class="greeting-text">
-                <h2>Hello, {{ attendee.first_name }}!</h2>
-                <p>Please complete your registration to confirm your attendance.</p>
-            </div>
-        </div>
-
-        <!-- Pre-filled read-only info — now split first / last -->
-        <div class="section-title">Your Details</div>
-        <div class="prefilled-grid">
-            <div class="prefilled-item">
-                <label>First Name</label>
-                <span>{{ attendee.first_name }}</span>
-            </div>
-            <div class="prefilled-item">
-                <label>Last Name</label>
-                <span>{{ attendee.last_name|default:"—" }}</span>
-            </div>
-            <div class="prefilled-item" style="grid-column: 1 / -1;">
-                <label>Email Address</label>
-                <span style="word-break: break-all;">{{ attendee.email }}</span>
-            </div>
-        </div>
-
-        <!-- Form -->
-        <form method="POST" id="registrationForm" novalidate>
-            {% csrf_token %}
-
-            <div class="section-title" style="margin-bottom:20px;">Complete Your Profile</div>
-
-            <div class="form-row">
-    <div class="form-group">
-        <label>Mobile Number <span class="req">*</span></label>
-        <!-- hidden input that stores the E.164 value submitted to server -->
-        <input type="hidden" name="mobile" id="mobileHidden">
-        <input type="tel" class="form-control" id="fieldMobile" placeholder="50 000 0000">
-        <div class="error-msg" id="errMobile"></div>
-    </div>
-    <div class="form-group">
-        <label>Company / Organisation <span class="req">*</span></label>
-        <input type="text" name="company" class="form-control" id="fieldCompany"
-               placeholder="Your company name"
-               value="{{ request.POST.company|default:'' }}">
-        <div class="error-msg" id="errCompany"></div>
-    </div>
-</div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Job Title</label>
-                    <input type="text" name="job_title" class="form-control" id="fieldJobTitle"
-                           placeholder="e.g. Head of Procurement"
-                           value="{{ request.POST.job_title|default:'' }}">
-                </div>
-                <div class="form-group">
-                    <!-- layout spacer -->
-                </div>
-            </div>
-
-            <div class="form-row">
-    <div class="form-group">
-        <label>Country of Residence <span class="req">*</span></label>
-        <!-- hidden input stores the actual value submitted -->
-        <input type="hidden" name="country" id="countryHidden">
-        <select id="fieldCountry" style="width:100%;">
-            <option value="">Select Country</option>
-        </select>
-        <div class="error-msg" id="errCountry"></div>
-    </div>
-    <div class="form-group">
-        <label>Nationality <span class="req">*</span></label>
-        <input type="hidden" name="nationality" id="nationalityHidden">
-        <select id="fieldNationality" style="width:100%;">
-            <option value="">Select Nationality</option>
-        </select>
-        <div class="error-msg" id="errNationality"></div>
-    </div>
-</div>
-
-            <!-- ── CONSENTS ── -->
-            <div class="section-title" style="margin-bottom:16px; margin-top:4px;">Terms & Consent</div>
-
-            <div class="consent-block">
-
-                <!-- T&C — REQUIRED -->
-                <div class="consent-item">
-                    <input type="checkbox" class="consent-checkbox" name="accepted_terms"
-                           id="chkTerms" {% if request.POST.accepted_terms %}checked{% endif %}>
-                    <div style="flex:1;">
-                        <label class="consent-label" for="chkTerms">
-                            <strong>
-                                Terms &amp; Conditions
-                                <span class="req-badge">Required</span>
-                            </strong>
-                            I agree to the event's <a href="#" style="color:var(--red); text-decoration:none; font-weight:500;">Terms and Conditions</a>.
-                            By registering, you confirm that the information provided is accurate and that you will
-                            comply with all event regulations, including health &amp; safety guidelines and the code
-                            of conduct applicable to all participants.
-                        </label>
-                        <div class="consent-err" id="errTerms">You must accept the Terms &amp; Conditions to continue.</div>
-                    </div>
-                </div>
-
-                <!-- Data Sharing — OPTIONAL -->
-                <div class="consent-item">
-                    <input type="checkbox" class="consent-checkbox" name="accepted_data_sharing"
-                           id="chkData" {% if request.POST.accepted_data_sharing %}checked{% endif %}>
-                    <div style="flex:1;">
-                        <label class="consent-label" for="chkData">
-                            <strong>
-                                Data Sharing Policy
-                                <span class="opt-badge">Optional</span>
-                            </strong>
-                            I consent to my registration details being shared with event organisers, exhibitors,
-                            and official partners for event management, networking, and post-event communication.
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Marketing — OPTIONAL -->
-                <div class="consent-item">
-                    <input type="checkbox" class="consent-checkbox" name="accepted_marketing"
-                           id="chkMarketing" {% if request.POST.accepted_marketing %}checked{% endif %}>
-                    <div style="flex:1;">
-                        <label class="consent-label" for="chkMarketing">
-                            <strong>
-                                Marketing Communications
-                                <span class="opt-badge">Optional</span>
-                            </strong>
-                            I would like to receive updates, offers, and news about upcoming events and partner
-                            promotions via email. You may unsubscribe at any time.
-                        </label>
-                    </div>
-                </div>
-
-            </div>
-
-            <button type="submit" class="btn-submit" id="submitBtn">
-                <i class="fas fa-check-circle"></i>
-                Confirm My Registration
-            </button>
-        </form>
-
-        <p class="terms-note">
-            <i class="fas fa-lock" style="margin-right:4px; color:#aaa;"></i>
-            Your information is stored securely and will only be used for event purposes.
+            {% endif %}
         </p>
-    </div>
-
-    <!-- SUCCESS STATE -->
-    <div class="success-screen" id="successSection">
-        <div class="success-icon"><i class="fas fa-check"></i></div>
-        <h2>You're Confirmed!</h2>
-        <p>Your registration is complete. Your badge will be ready at the event entrance.<br>
-        A confirmation email has been sent to <strong>{{ attendee.email }}</strong>.</p>
-        <div class="badge-preview">
-            <strong>{{ attendee.first_name }} {{ attendee.last_name }}</strong>
-            {{ attendee.get_attendee_type_display }} Pass &nbsp;·&nbsp; {{ attendee.event.name }}
+        <div class="ticket-banner">
+            <span class="ticket-dot"></span>
+            {{ attendee.get_attendee_type_display }} Pass
         </div>
     </div>
-</div>
 
-<!-- jQuery (required by Select2) -->
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<!-- Select2 -->
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<!-- intl-tel-input -->
-<script src="https://cdn.jsdelivr.net/npm/intl-tel-input@23.1.0/build/js/intlTelInput.min.js"></script>
+    <!-- ── CARD ── -->
+    <div class="card">
+        <div class="card-header-strip"></div>
 
-<script>
-document.addEventListener("DOMContentLoaded", function () {
+        <!-- FORM STATE -->
+        <div class="card-body" id="formSection">
 
-    const attendeeStatus = "{{ attendee.status|default:'' }}";
-    const errorMessages  = "{{ errors|join:', '|default:'' }}";
+            <!-- Global error -->
+            <div class="alert alert-danger" id="globalError" style="display:none;">
+                <i class="fas fa-exclamation-circle"></i>
+                <span id="globalErrorMsg"></span>
+            </div>
 
-    /* ── Show success screen if already confirmed ── */
-    if (attendeeStatus === "CONFIRMED") {
-        document.getElementById('formSection').style.display   = 'none';
-        document.getElementById('successSection').classList.add('show');
-    }
+            <!-- Greeting -->
+            <div class="greeting">
+                <div class="greeting-avatar"><i class="fas fa-user"></i></div>
+                <div class="greeting-text">
+                    <h2>Hello, {{ attendee.first_name }}!</h2>
+                    <p>Please complete your registration to confirm your attendance.</p>
+                </div>
+            </div>
 
-     // ── Countries Data ──────────────────────────────────────────
-    const COUNTRIES = [
-        { code: "AF", name: "Afghanistan", nationality: "Afghan" },
-        { code: "AL", name: "Albania", nationality: "Albanian" },
-        { code: "DZ", name: "Algeria", nationality: "Algerian" },
-        { code: "AD", name: "Andorra", nationality: "Andorran" },
-        { code: "AO", name: "Angola", nationality: "Angolan" },
-        { code: "AG", name: "Antigua and Barbuda", nationality: "Antiguan" },
-        { code: "AR", name: "Argentina", nationality: "Argentine" },
-        { code: "AM", name: "Armenia", nationality: "Armenian" },
-        { code: "AU", name: "Australia", nationality: "Australian" },
-        { code: "AT", name: "Austria", nationality: "Austrian" },
-        { code: "AZ", name: "Azerbaijan", nationality: "Azerbaijani" },
-        { code: "BS", name: "Bahamas", nationality: "Bahamian" },
-        { code: "BH", name: "Bahrain", nationality: "Bahraini" },
-        { code: "BD", name: "Bangladesh", nationality: "Bangladeshi" },
-        { code: "BB", name: "Barbados", nationality: "Barbadian" },
-        { code: "BY", name: "Belarus", nationality: "Belarusian" },
-        { code: "BE", name: "Belgium", nationality: "Belgian" },
-        { code: "BZ", name: "Belize", nationality: "Belizean" },
-        { code: "BJ", name: "Benin", nationality: "Beninese" },
-        { code: "BT", name: "Bhutan", nationality: "Bhutanese" },
-        { code: "BO", name: "Bolivia", nationality: "Bolivian" },
-        { code: "BA", name: "Bosnia and Herzegovina", nationality: "Bosnian" },
-        { code: "BW", name: "Botswana", nationality: "Motswana" },
-        { code: "BR", name: "Brazil", nationality: "Brazilian" },
-        { code: "BN", name: "Brunei", nationality: "Bruneian" },
-        { code: "BG", name: "Bulgaria", nationality: "Bulgarian" },
-        { code: "BF", name: "Burkina Faso", nationality: "Burkinabé" },
-        { code: "BI", name: "Burundi", nationality: "Burundian" },
-        { code: "CV", name: "Cabo Verde", nationality: "Cape Verdean" },
-        { code: "KH", name: "Cambodia", nationality: "Cambodian" },
-        { code: "CM", name: "Cameroon", nationality: "Cameroonian" },
-        { code: "CA", name: "Canada", nationality: "Canadian" },
-        { code: "CF", name: "Central African Republic", nationality: "Central African" },
-        { code: "TD", name: "Chad", nationality: "Chadian" },
-        { code: "CL", name: "Chile", nationality: "Chilean" },
-        { code: "CN", name: "China", nationality: "Chinese" },
-        { code: "CO", name: "Colombia", nationality: "Colombian" },
-        { code: "KM", name: "Comoros", nationality: "Comorian" },
-        { code: "CG", name: "Congo", nationality: "Congolese" },
-        { code: "CD", name: "Congo (DRC)", nationality: "Congolese" },
-        { code: "CR", name: "Costa Rica", nationality: "Costa Rican" },
-        { code: "CI", name: "Côte d'Ivoire", nationality: "Ivorian" },
-        { code: "HR", name: "Croatia", nationality: "Croatian" },
-        { code: "CU", name: "Cuba", nationality: "Cuban" },
-        { code: "CY", name: "Cyprus", nationality: "Cypriot" },
-        { code: "CZ", name: "Czech Republic", nationality: "Czech" },
-        { code: "DK", name: "Denmark", nationality: "Danish" },
-        { code: "DJ", name: "Djibouti", nationality: "Djiboutian" },
-        { code: "DM", name: "Dominica", nationality: "Dominican" },
-        { code: "DO", name: "Dominican Republic", nationality: "Dominican" },
-        { code: "EC", name: "Ecuador", nationality: "Ecuadorian" },
-        { code: "EG", name: "Egypt", nationality: "Egyptian" },
-        { code: "SV", name: "El Salvador", nationality: "Salvadoran" },
-        { code: "GQ", name: "Equatorial Guinea", nationality: "Equatoguinean" },
-        { code: "ER", name: "Eritrea", nationality: "Eritrean" },
-        { code: "EE", name: "Estonia", nationality: "Estonian" },
-        { code: "SZ", name: "Eswatini", nationality: "Swazi" },
-        { code: "ET", name: "Ethiopia", nationality: "Ethiopian" },
-        { code: "FJ", name: "Fiji", nationality: "Fijian" },
-        { code: "FI", name: "Finland", nationality: "Finnish" },
-        { code: "FR", name: "France", nationality: "French" },
-        { code: "GA", name: "Gabon", nationality: "Gabonese" },
-        { code: "GM", name: "Gambia", nationality: "Gambian" },
-        { code: "GE", name: "Georgia", nationality: "Georgian" },
-        { code: "DE", name: "Germany", nationality: "German" },
-        { code: "GH", name: "Ghana", nationality: "Ghanaian" },
-        { code: "GR", name: "Greece", nationality: "Greek" },
-        { code: "GD", name: "Grenada", nationality: "Grenadian" },
-        { code: "GT", name: "Guatemala", nationality: "Guatemalan" },
-        { code: "GN", name: "Guinea", nationality: "Guinean" },
-        { code: "GW", name: "Guinea-Bissau", nationality: "Guinean" },
-        { code: "GY", name: "Guyana", nationality: "Guyanese" },
-        { code: "HT", name: "Haiti", nationality: "Haitian" },
-        { code: "HN", name: "Honduras", nationality: "Honduran" },
-        { code: "HU", name: "Hungary", nationality: "Hungarian" },
-        { code: "IS", name: "Iceland", nationality: "Icelandic" },
-        { code: "IN", name: "India", nationality: "Indian" },
-        { code: "ID", name: "Indonesia", nationality: "Indonesian" },
-        { code: "IR", name: "Iran", nationality: "Iranian" },
-        { code: "IQ", name: "Iraq", nationality: "Iraqi" },
-        { code: "IE", name: "Ireland", nationality: "Irish" },
-        { code: "IL", name: "Israel", nationality: "Israeli" },
-        { code: "IT", name: "Italy", nationality: "Italian" },
-        { code: "JM", name: "Jamaica", nationality: "Jamaican" },
-        { code: "JP", name: "Japan", nationality: "Japanese" },
-        { code: "JO", name: "Jordan", nationality: "Jordanian" },
-        { code: "KZ", name: "Kazakhstan", nationality: "Kazakhstani" },
-        { code: "KE", name: "Kenya", nationality: "Kenyan" },
-        { code: "KI", name: "Kiribati", nationality: "I-Kiribati" },
-        { code: "KP", name: "Korea (North)", nationality: "North Korean" },
-        { code: "KR", name: "Korea (South)", nationality: "South Korean" },
-        { code: "KW", name: "Kuwait", nationality: "Kuwaiti" },
-        { code: "KG", name: "Kyrgyzstan", nationality: "Kyrgyz" },
-        { code: "LA", name: "Laos", nationality: "Lao" },
-        { code: "LV", name: "Latvia", nationality: "Latvian" },
-        { code: "LB", name: "Lebanon", nationality: "Lebanese" },
-        { code: "LS", name: "Lesotho", nationality: "Mosotho" },
-        { code: "LR", name: "Liberia", nationality: "Liberian" },
-        { code: "LY", name: "Libya", nationality: "Libyan" },
-        { code: "LI", name: "Liechtenstein", nationality: "Liechtenstein" },
-        { code: "LT", name: "Lithuania", nationality: "Lithuanian" },
-        { code: "LU", name: "Luxembourg", nationality: "Luxembourgish" },
-        { code: "MG", name: "Madagascar", nationality: "Malagasy" },
-        { code: "MW", name: "Malawi", nationality: "Malawian" },
-        { code: "MY", name: "Malaysia", nationality: "Malaysian" },
-        { code: "MV", name: "Maldives", nationality: "Maldivian" },
-        { code: "ML", name: "Mali", nationality: "Malian" },
-        { code: "MT", name: "Malta", nationality: "Maltese" },
-        { code: "MH", name: "Marshall Islands", nationality: "Marshallese" },
-        { code: "MR", name: "Mauritania", nationality: "Mauritanian" },
-        { code: "MU", name: "Mauritius", nationality: "Mauritian" },
-        { code: "MX", name: "Mexico", nationality: "Mexican" },
-        { code: "FM", name: "Micronesia", nationality: "Micronesian" },
-        { code: "MD", name: "Moldova", nationality: "Moldovan" },
-        { code: "MC", name: "Monaco", nationality: "Monégasque" },
-        { code: "MN", name: "Mongolia", nationality: "Mongolian" },
-        { code: "ME", name: "Montenegro", nationality: "Montenegrin" },
-        { code: "MA", name: "Morocco", nationality: "Moroccan" },
-        { code: "MZ", name: "Mozambique", nationality: "Mozambican" },
-        { code: "MM", name: "Myanmar", nationality: "Burmese" },
-        { code: "NA", name: "Namibia", nationality: "Namibian" },
-        { code: "NR", name: "Nauru", nationality: "Nauruan" },
-        { code: "NP", name: "Nepal", nationality: "Nepali" },
-        { code: "NL", name: "Netherlands", nationality: "Dutch" },
-        { code: "NZ", name: "New Zealand", nationality: "New Zealander" },
-        { code: "NI", name: "Nicaragua", nationality: "Nicaraguan" },
-        { code: "NE", name: "Niger", nationality: "Nigerien" },
-        { code: "NG", name: "Nigeria", nationality: "Nigerian" },
-        { code: "MK", name: "North Macedonia", nationality: "Macedonian" },
-        { code: "NO", name: "Norway", nationality: "Norwegian" },
-        { code: "OM", name: "Oman", nationality: "Omani" },
-        { code: "PK", name: "Pakistan", nationality: "Pakistani" },
-        { code: "PW", name: "Palau", nationality: "Palauan" },
-        { code: "PA", name: "Panama", nationality: "Panamanian" },
-        { code: "PG", name: "Papua New Guinea", nationality: "Papua New Guinean" },
-        { code: "PY", name: "Paraguay", nationality: "Paraguayan" },
-        { code: "PE", name: "Peru", nationality: "Peruvian" },
-        { code: "PH", name: "Philippines", nationality: "Filipino" },
-        { code: "PL", name: "Poland", nationality: "Polish" },
-        { code: "PT", name: "Portugal", nationality: "Portuguese" },
-        { code: "QA", name: "Qatar", nationality: "Qatari" },
-        { code: "RO", name: "Romania", nationality: "Romanian" },
-        { code: "RU", name: "Russia", nationality: "Russian" },
-        { code: "RW", name: "Rwanda", nationality: "Rwandan" },
-        { code: "KN", name: "Saint Kitts and Nevis", nationality: "Kittitian" },
-        { code: "LC", name: "Saint Lucia", nationality: "Saint Lucian" },
-        { code: "VC", name: "Saint Vincent and the Grenadines", nationality: "Vincentian" },
-        { code: "WS", name: "Samoa", nationality: "Samoan" },
-        { code: "SM", name: "San Marino", nationality: "Sammarinese" },
-        { code: "ST", name: "Sao Tome and Principe", nationality: "São Toméan" },
-        { code: "SA", name: "Saudi Arabia", nationality: "Saudi" },
-        { code: "SN", name: "Senegal", nationality: "Senegalese" },
-        { code: "RS", name: "Serbia", nationality: "Serbian" },
-        { code: "SC", name: "Seychelles", nationality: "Seychellois" },
-        { code: "SL", name: "Sierra Leone", nationality: "Sierra Leonean" },
-        { code: "SG", name: "Singapore", nationality: "Singaporean" },
-        { code: "SK", name: "Slovakia", nationality: "Slovak" },
-        { code: "SI", name: "Slovenia", nationality: "Slovenian" },
-        { code: "SB", name: "Solomon Islands", nationality: "Solomon Islander" },
-        { code: "SO", name: "Somalia", nationality: "Somali" },
-        { code: "ZA", name: "South Africa", nationality: "South African" },
-        { code: "SS", name: "South Sudan", nationality: "South Sudanese" },
-        { code: "ES", name: "Spain", nationality: "Spanish" },
-        { code: "LK", name: "Sri Lanka", nationality: "Sri Lankan" },
-        { code: "SD", name: "Sudan", nationality: "Sudanese" },
-        { code: "SR", name: "Suriname", nationality: "Surinamese" },
-        { code: "SE", name: "Sweden", nationality: "Swedish" },
-        { code: "CH", name: "Switzerland", nationality: "Swiss" },
-        { code: "SY", name: "Syria", nationality: "Syrian" },
-        { code: "TW", name: "Taiwan", nationality: "Taiwanese" },
-        { code: "TJ", name: "Tajikistan", nationality: "Tajik" },
-        { code: "TZ", name: "Tanzania", nationality: "Tanzanian" },
-        { code: "TH", name: "Thailand", nationality: "Thai" },
-        { code: "TL", name: "Timor-Leste", nationality: "Timorese" },
-        { code: "TG", name: "Togo", nationality: "Togolese" },
-        { code: "TO", name: "Tonga", nationality: "Tongan" },
-        { code: "TT", name: "Trinidad and Tobago", nationality: "Trinidadian" },
-        { code: "TN", name: "Tunisia", nationality: "Tunisian" },
-        { code: "TR", name: "Turkey", nationality: "Turkish" },
-        { code: "TM", name: "Turkmenistan", nationality: "Turkmen" },
-        { code: "TV", name: "Tuvalu", nationality: "Tuvaluan" },
-        { code: "UG", name: "Uganda", nationality: "Ugandan" },
-        { code: "UA", name: "Ukraine", nationality: "Ukrainian" },
-        { code: "AE", name: "United Arab Emirates", nationality: "Emirati" },
-        { code: "GB", name: "United Kingdom", nationality: "British" },
-        { code: "US", name: "United States", nationality: "American" },
-        { code: "UY", name: "Uruguay", nationality: "Uruguayan" },
-        { code: "UZ", name: "Uzbekistan", nationality: "Uzbekistani" },
-        { code: "VU", name: "Vanuatu", nationality: "Ni-Vanuatu" },
-        { code: "VE", name: "Venezuela", nationality: "Venezuelan" },
-        { code: "VN", name: "Vietnam", nationality: "Vietnamese" },
-        { code: "YE", name: "Yemen", nationality: "Yemeni" },
-        { code: "ZM", name: "Zambia", nationality: "Zambian" },
-        { code: "ZW", name: "Zimbabwe", nationality: "Zimbabwean" },
-    ];
-     // ── Populate Select2 country/nationality dropdowns ──────────────────
-    function getFlagImg(code) {
-        return `<img src="https://flagcdn.com/20x15/${code.toLowerCase()}.png"
+            <!-- Pre-filled read-only info -->
+            <div class="section-title">Your Details</div>
+            <div class="prefilled-grid">
+                <div class="prefilled-item">
+                    <label>First Name</label>
+                    <span>{{ attendee.first_name }}</span>
+                </div>
+                <div class="prefilled-item">
+                    <label>Last Name</label>
+                    <span>{{ attendee.last_name|default:"—" }}</span>
+                </div>
+                <div class="prefilled-item" style="grid-column: 1 / -1;">
+                    <label>Email Address</label>
+                    <span style="word-break: break-all;">{{ attendee.email }}</span>
+                </div>
+            </div>
+
+            <!-- Form -->
+            <form method="POST" id="registrationForm" novalidate>
+                {% csrf_token %}
+
+                <div class="section-title" style="margin-bottom:20px;">Complete Your Profile</div>
+
+                <!-- Row 1: Company + Job Title -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Company / Organisation</label>
+                        <input type="text" name="company" class="form-control" id="fieldCompany"
+                            placeholder="Your company name" value="{{ request.POST.company|default:'' }}">
+                        <div class="error-msg" id="errCompany"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Job Title</label>
+                        <input type="text" name="job_title" class="form-control" id="fieldJobTitle"
+                            placeholder="e.g. Head of Procurement" value="{{ request.POST.job_title|default:'' }}">
+                    </div>
+                </div>
+
+                <!-- Row 2: Country + Nationality -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Country of Residence <span class="req">*</span></label>
+                        <input type="hidden" name="country" id="countryHidden">
+                        <select id="fieldCountry" style="width:100%;">
+                            <option value="">Select Country</option>
+                        </select>
+                        <div class="error-msg" id="errCountry"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Nationality <span class="req">*</span></label>
+                        <input type="hidden" name="nationality" id="nationalityHidden">
+                        <select id="fieldNationality" style="width:100%;">
+                            <option value="">Select Nationality</option>
+                        </select>
+                        <div class="error-msg" id="errNationality"></div>
+                    </div>
+                </div>
+
+                <!-- Row 3: Mobile (full width) -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Mobile Number <span class="req">*</span></label>
+                        <input type="hidden" name="mobile" id="mobileHidden">
+                        <input type="tel" class="form-control" id="fieldMobile" placeholder="50 000 0000">
+                        <div class="error-msg" id="errMobile"></div>
+                    </div>
+                    <div class="form-group">
+                        <!-- layout spacer -->
+                    </div>
+                </div>
+
+                <!-- ── CONSENTS ── -->
+                <div class="section-title" style="margin-bottom:16px; margin-top:4px;">Terms & Consent</div>
+
+                <div class="consent-block">
+
+                    <!-- T&C — REQUIRED -->
+                    <div class="consent-item">
+                        <input type="checkbox" class="consent-checkbox" name="accepted_terms" id="chkTerms" {% if request.POST.accepted_terms %}checked{% endif %}>
+                        <div style="flex:1;">
+                            <label class="consent-label" for="chkTerms">
+                                <strong>
+                                    Terms &amp; Conditions
+                                    <span class="req-badge">Required</span>
+                                </strong>
+                                I agree to the event's <a href="#"
+                                    style="color:var(--red); text-decoration:none; font-weight:500;">Terms and
+                                    Conditions</a>.
+                                By registering, you confirm that the information provided is accurate and that you will
+                                comply with all event regulations, including health &amp; safety guidelines and the code
+                                of conduct applicable to all participants.
+                            </label>
+                            <div class="consent-err" id="errTerms">You must accept the Terms &amp; Conditions to
+                                continue.</div>
+                        </div>
+                    </div>
+
+                    <!-- Data Sharing — OPTIONAL -->
+                    <div class="consent-item">
+                        <input type="checkbox" class="consent-checkbox" name="accepted_data_sharing" id="chkData" {% if request.POST.accepted_data_sharing %}checked{% endif %}>
+                        <div style="flex:1;">
+                            <label class="consent-label" for="chkData">
+                                <strong>
+                                    Data Sharing Policy
+                                    <span class="opt-badge">Optional</span>
+                                </strong>
+                                I consent to my registration details being shared with event organisers, exhibitors,
+                                and official partners for event management, networking, and post-event communication.
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Marketing — OPTIONAL -->
+                    <div class="consent-item">
+                        <input type="checkbox" class="consent-checkbox" name="accepted_marketing" id="chkMarketing" {% if request.POST.accepted_marketing %}checked{% endif %}>
+                        <div style="flex:1;">
+                            <label class="consent-label" for="chkMarketing">
+                                <strong>
+                                    Marketing Communications
+                                    <span class="opt-badge">Optional</span>
+                                </strong>
+                                I would like to receive updates, offers, and news about upcoming events and partner
+                                promotions via email. You may unsubscribe at any time.
+                            </label>
+                        </div>
+                    </div>
+
+                </div>
+
+                <button type="submit" class="btn-submit" id="submitBtn">
+                    <i class="fas fa-check-circle"></i>
+                    Confirm My Registration
+                </button>
+            </form>
+
+            <p class="terms-note">
+                <i class="fas fa-lock" style="margin-right:4px; color:#aaa;"></i>
+                Your information is stored securely and will only be used for event purposes.
+            </p>
+        </div>
+
+        <!-- SUCCESS STATE -->
+        <div class="success-screen" id="successSection">
+            <div class="success-icon"><i class="fas fa-check"></i></div>
+            <h2>You're Confirmed!</h2>
+            <p>Your registration is complete. Your badge will be ready at the event entrance.<br>
+                A confirmation email has been sent to <strong>{{ attendee.email }}</strong>.</p>
+            <div class="badge-preview">
+                <strong>{{ attendee.first_name }} {{ attendee.last_name }}</strong>
+                {{ attendee.get_attendee_type_display }} Pass &nbsp;·&nbsp; {{ attendee.event.name }}
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery (required by Select2) -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <!-- Select2 -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <!-- intl-tel-input -->
+    <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@23.1.0/build/js/intlTelInput.min.js"></script>
+    <script src="{% static 'js/constants.js' %}"></script>
+
+    <script>
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        const csrftoken = getCookie('csrftoken');
+
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const attendeeStatus = "{{ attendee.status|default:'' }}";
+            const errorMessages = "{{ errors|join:', '|default:'' }}";
+
+            /* ── Show success screen if already confirmed ── */
+            if (attendeeStatus === "CONFIRMED") {
+                document.getElementById('formSection').style.display = 'none';
+                document.getElementById('successSection').classList.add('show');
+            }
+
+            // ── Populate Select2 country/nationality dropdowns ──────────────────
+            function getFlagImg(code) {
+                return `<img src="https://flagcdn.com/20x15/${code.toLowerCase()}.png"
                      width="20" height="15"
                      style="margin-right:8px;vertical-align:middle;border-radius:2px;flex-shrink:0;"
                      onerror="this.style.display='none'">`;
-    }
-
-    function countryTemplate(option) {
-        if (!option.id) return option.text;
-        const code = $(option.element).data('code');
-        if (!code) return option.text;
-        return $(`<span style="display:flex;align-items:center;">${getFlagImg(code)}<span>${option.text}</span></span>`);
-    }
-
-    // Populate country select
-    const countrySelect = document.getElementById('fieldCountry');
-    const nationalitySelect = document.getElementById('fieldNationality');
-
-    COUNTRIES.forEach(c => {
-        const opt1 = new Option(c.name, c.name, false, false);
-        opt1.dataset.code = c.code;
-        countrySelect.appendChild(opt1);
-
-        const opt2 = new Option(c.nationality, c.nationality, false, false);
-        opt2.dataset.code = c.code;
-        nationalitySelect.appendChild(opt2);
-    });
-
-    // Init Select2 for country
-    $('#fieldCountry').select2({
-        placeholder: 'Select Country',
-        allowClear: true,
-        templateResult: countryTemplate,
-        templateSelection: countryTemplate,
-        width: '100%',
-    }).on('change', function () {
-        document.getElementById('countryHidden').value = this.value;
-        // Clear error
-        document.getElementById('errCountry').classList.remove('show');
-        $(this).next('.select2-container').find('.select2-selection').css('border', '');
-    }).on('select2:select', function(e) {
-        const code = e.params.data.element.dataset.code;
-        if (iti && code) {
-            iti.setCountry(code.toLowerCase());
-        }
-    });
-
-    // Init Select2 for nationality
-    $('#fieldNationality').select2({
-        placeholder: 'Select Nationality',
-        allowClear: true,
-        templateResult: countryTemplate,
-        templateSelection: countryTemplate,
-        width: '100%',
-    }).on('change', function () {
-        document.getElementById('nationalityHidden').value = this.value;
-        document.getElementById('errNationality').classList.remove('show');
-        $(this).next('.select2-container').find('.select2-selection').css('border', '');
-    });
-
-    // ── Restore POST values on validation failure ─────────────────────────
-    const postCountry     = "{{ request.POST.country|default:''|escapejs }}";
-    const postNationality = "{{ request.POST.nationality|default:''|escapejs }}";
-    if (postCountry) {
-        $('#fieldCountry').val(postCountry).trigger('change');
-    }
-    if (postNationality) {
-        $('#fieldNationality').val(postNationality).trigger('change');
-    }
-
-    // ── intl-tel-input for mobile ─────────────────────────────────────────
-    const mobileInputEl = document.getElementById('fieldMobile');
-    const iti = intlTelInput(mobileInputEl, {
-        initialCountry: 'ae',
-        separateDialCode: false,
-        utilsScript: 'https://cdn.jsdelivr.net/npm/intl-tel-input@23.1.0/build/js/utils.js',
-        autoPlaceholder: 'aggressive',
-        formatOnDisplay: true,
-    });
-
-    // Restore POST mobile value
-    const postMobile = "{{ request.POST.mobile|default:''|escapejs }}";
-    if (postMobile) {
-        iti.setNumber(postMobile);
-    }
-
-    // Sync to hidden input on change
-    function syncMobile() {
-        document.getElementById('mobileHidden').value = iti.getNumber() || mobileInputEl.value.trim();
-    }
-    mobileInputEl.addEventListener('input', syncMobile);
-    mobileInputEl.addEventListener('countrychange', syncMobile);
-
-    // Clear mobile error on input
-    mobileInputEl.addEventListener('input', () => {
-        mobileInputEl.classList.remove('error');
-        document.getElementById('errMobile').classList.remove('show');
-    });
-
-    /* ── Shared validation helpers ── */
-    const NAME_RE = /^[A-Za-z\s\-'.]+$/;
-
-    function setError(fieldId, errId, msg) {
-        const field = document.getElementById(fieldId);
-        const err   = document.getElementById(errId);
-        if (!field || !err) return;
-        if (msg) {
-            field.classList.add('error');
-            err.textContent = msg;
-            err.classList.add('show');
-            return false;
-        } else {
-            field.classList.remove('error');
-            err.classList.remove('show');
-            return true;
-        }
-    }
-
-    function setCheckboxError(chkId, errId, show) {
-        const chk = document.getElementById(chkId);
-        const err = document.getElementById(errId);
-        if (!chk || !err) return;
-        if (show) {
-            chk.classList.add('error');
-            err.classList.add('show');
-        } else {
-            chk.classList.remove('error');
-            err.classList.remove('show');
-        }
-    }
-
-    /* ── Live clear on input ── */
-    ['fieldMobile','fieldCompany','fieldJobTitle','fieldCountry','fieldNationality'].forEach(id => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.addEventListener('input', () => {
-            el.classList.remove('error');
-            const errMap = {
-                fieldMobile:      'errMobile',
-                fieldCompany:     'errCompany',
-                fieldCountry:     'errCountry',
-                fieldNationality: 'errNationality',
-            };
-            if (errMap[id]) {
-                const errEl = document.getElementById(errMap[id]);
-                if (errEl) errEl.classList.remove('show');
-            }
-        });
-    });
-
-    // ── Form submit with AJAX ─────────────────────────────────────────────
-    const form = document.getElementById('registrationForm');
-    if (form) {
-        form.addEventListener('submit', function (e) {
-            e.preventDefault();
-            let valid = true;
-
-            // Sync hidden fields before submit
-            syncMobile();
-            document.getElementById('countryHidden').value     = $('#fieldCountry').val()     || '';
-            document.getElementById('nationalityHidden').value = $('#fieldNationality').val() || '';
-
-            const mobileRaw   = mobileInputEl.value.trim();
-            const company     = document.getElementById('fieldCompany')?.value.trim();
-            const country     = document.getElementById('countryHidden').value.trim();
-            const nationality = document.getElementById('nationalityHidden').value.trim();
-            const terms       = document.getElementById('chkTerms')?.checked;
-
-            // ── validation ──
-            if (!mobileRaw) {
-                showFieldError('fieldMobile', 'errMobile', 'Mobile number is required.');
-                valid = false;
-            } else {
-                if (!iti.isValidNumber()) {
-                    const code = iti.getValidationError();
-                    const msgs = { 0: 'Invalid number.', 1: 'Invalid country code.', 2: 'Number too short.', 3: 'Number too long.' };
-                    showFieldError('fieldMobile', 'errMobile', msgs[code] || 'Invalid mobile number.');
-                    valid = false;
-                } else {
-                    clearFieldError('fieldMobile', 'errMobile');
-                }
             }
 
-            if (!company) {
-                showFieldError('fieldCompany', 'errCompany', 'Company name is required.');
-                valid = false;
-            } else if (company.length < 2) {
-                showFieldError('fieldCompany', 'errCompany', 'Company name must be at least 2 characters.');
-                valid = false;
-            } else {
-                clearFieldError('fieldCompany', 'errCompany');
+            function countryTemplate(option) {
+                if (!option.id) return option.text;
+                const code = $(option.element).data('code');
+                if (!code) return option.text;
+                return $(`<span style="display:flex;align-items:center;">${getFlagImg(code)}<span>${option.text}</span></span>`);
             }
 
-            if (!country) {
-                showSelect2Error('fieldCountry', 'errCountry', 'Country of residence is required.');
-                valid = false;
-            } else {
-                clearSelect2Error('fieldCountry', 'errCountry');
-            }
+            const countrySelect = document.getElementById('fieldCountry');
+            const nationalitySelect = document.getElementById('fieldNationality');
 
-            if (!nationality) {
-                showSelect2Error('fieldNationality', 'errNationality', 'Nationality is required.');
-                valid = false;
-            } else {
-                clearSelect2Error('fieldNationality', 'errNationality');
-            }
+            COUNTRIES.forEach(c => {
+                const opt1 = new Option(c.name, c.name, false, false);
+                opt1.dataset.code = c.code;
+                countrySelect.appendChild(opt1);
 
-            setCheckboxError('chkTerms', 'errTerms', !terms);
-            if (!terms) valid = false;
-
-            if (!valid) return;
-
-            const btn = document.getElementById('submitBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting…';
-
-            const formData = new FormData(form);
-            
-            fetch(window.location.href, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRFToken': getCsrf()
-                }
-            })
-            .then(response => response.text())
-            .then(html => {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                
-                // Check if the response contains the success section
-                const successSection = doc.getElementById('successSection');
-                if (successSection && successSection.classList.contains('show')) {
-                    // Success! Switch sections
-                    document.getElementById('formSection').style.display = 'none';
-                    const mainSuccess = document.getElementById('successSection');
-                    mainSuccess.innerHTML = successSection.innerHTML;
-                    mainSuccess.classList.add('show');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                } else {
-                    // There were likely errors. Update the form with the new HTML to show errors.
-                    const newFormSection = doc.getElementById('formSection');
-                    if (newFormSection) {
-                        document.getElementById('formSection').innerHTML = newFormSection.innerHTML;
-                        // Note: Re-binding listeners might be needed if we replaced everything,
-                        // but since we are using a full page reload fallback or re-initing, 
-                        // it's safer to just reload if we can't easily patch.
-                        // However, for now, let's just reload if it failed to keep it simple 
-                        // and avoid re-binding complex Select2/intlTelInput logic.
-                        location.reload(); 
-                    }
-                }
-            })
-            .catch(err => {
-                console.error(err);
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm My Registration';
-                alert('An error occurred. Please try again.');
+                const opt2 = new Option(c.nationality, c.nationality, false, false);
+                opt2.dataset.code = c.code;
+                nationalitySelect.appendChild(opt2);
             });
+
+            $('#fieldCountry').select2({
+                placeholder: 'Select Country',
+                allowClear: true,
+                templateResult: countryTemplate,
+                templateSelection: countryTemplate,
+                width: '100%',
+            }).on('change', function () {
+                document.getElementById('countryHidden').value = this.value;
+                document.getElementById('errCountry').classList.remove('show');
+                $(this).next('.select2-container').find('.select2-selection').css('border', '');
+            }).on('select2:select', function (e) {
+                const code = e.params.data.element.dataset.code;
+                if (iti && code) {
+                    iti.setCountry(code.toLowerCase());
+                }
+            });
+
+            $('#fieldNationality').select2({
+                placeholder: 'Select Nationality',
+                allowClear: true,
+                templateResult: countryTemplate,
+                templateSelection: countryTemplate,
+                width: '100%',
+            }).on('change', function () {
+                document.getElementById('nationalityHidden').value = this.value;
+                document.getElementById('errNationality').classList.remove('show');
+                $(this).next('.select2-container').find('.select2-selection').css('border', '');
+            });
+
+            const postCountry = "{{ request.POST.country|default:''|escapejs }}";
+            const postNationality = "{{ request.POST.nationality|default:''|escapejs }}";
+            if (postCountry) { $('#fieldCountry').val(postCountry).trigger('change'); }
+            if (postNationality) { $('#fieldNationality').val(postNationality).trigger('change'); }
+
+            // ── intl-tel-input for mobile ─────────────────────────────────────────
+            const mobileInputEl = document.getElementById('fieldMobile');
+            const iti = intlTelInput(mobileInputEl, {
+                initialCountry: 'ae',
+                separateDialCode: false,
+                utilsScript: 'https://cdn.jsdelivr.net/npm/intl-tel-input@23.1.0/build/js/utils.js',
+                autoPlaceholder: 'aggressive',
+                formatOnDisplay: true,
+            });
+
+            const postMobile = "{{ request.POST.mobile|default:''|escapejs }}";
+            if (postMobile) { iti.setNumber(postMobile); }
+
+            function syncMobile() {
+                document.getElementById('mobileHidden').value = iti.getNumber() || mobileInputEl.value.trim();
+            }
+            mobileInputEl.addEventListener('input', syncMobile);
+            mobileInputEl.addEventListener('countrychange', syncMobile);
+            mobileInputEl.addEventListener('input', () => {
+                mobileInputEl.classList.remove('error');
+                document.getElementById('errMobile').classList.remove('show');
+            });
+
+            // ── Form submit ───────────────────────────────────────────────────────
+            const form = document.getElementById('registrationForm');
+            if (form) {
+                form.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    let valid = true;
+
+                    syncMobile();
+                    document.getElementById('countryHidden').value = $('#fieldCountry').val() || '';
+                    document.getElementById('nationalityHidden').value = $('#fieldNationality').val() || '';
+
+                    const mobileRaw  = mobileInputEl.value.trim();
+                    const company    = document.getElementById('fieldCompany')?.value.trim();
+                    const country    = document.getElementById('countryHidden').value.trim();
+                    const nationality = document.getElementById('nationalityHidden').value.trim();
+                    const terms      = document.getElementById('chkTerms')?.checked;
+
+                    if (!mobileRaw) {
+                        showFieldError('fieldMobile', 'errMobile', 'Mobile number is required.');
+                        valid = false;
+                    } else if (!iti.isValidNumber()) {
+                        const code = iti.getValidationError();
+                        const msgs = { 0: 'Invalid number.', 1: 'Invalid country code.', 2: 'Number too short.', 3: 'Number too long.' };
+                        showFieldError('fieldMobile', 'errMobile', msgs[code] || 'Invalid mobile number.');
+                        valid = false;
+                    } else {
+                        clearFieldError('fieldMobile', 'errMobile');
+                    }
+
+                    if (company && company.length < 2) {
+                        showFieldError('fieldCompany', 'errCompany', 'Company name must be at least 2 characters.');
+                        valid = false;
+                    } else {
+                        clearFieldError('fieldCompany', 'errCompany');
+                    }
+
+                    if (!country) {
+                        showSelect2Error('fieldCountry', 'errCountry', 'Country of residence is required.');
+                        valid = false;
+                    } else {
+                        clearSelect2Error('fieldCountry', 'errCountry');
+                    }
+
+                    if (!nationality) {
+                        showSelect2Error('fieldNationality', 'errNationality', 'Nationality is required.');
+                        valid = false;
+                    } else {
+                        clearSelect2Error('fieldNationality', 'errNationality');
+                    }
+
+                    setCheckboxError('chkTerms', 'errTerms', !terms);
+                    if (!terms) valid = false;
+
+                    if (!valid) return;
+
+                    const btn = document.getElementById('submitBtn');
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting…';
+
+                    const formData = new FormData(form);
+
+                    fetch(window.location.href, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRFToken': csrftoken
+                        }
+                    })
+                        .then(response => response.text())
+                        .then(html => {
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(html, 'text/html');
+                            const successSection = doc.getElementById('successSection');
+                            if (successSection && successSection.classList.contains('show')) {
+                                document.getElementById('formSection').style.display = 'none';
+                                const mainSuccess = document.getElementById('successSection');
+                                mainSuccess.innerHTML = successSection.innerHTML;
+                                mainSuccess.classList.add('show');
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                            } else {
+                                location.reload();
+                            }
+                        })
+                        .catch(err => {
+                            console.error(err);
+                            btn.disabled = false;
+                            btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm My Registration';
+                            alert('An error occurred. Please try again.');
+                        });
+                });
+            }
+
+            // ── Error helpers ─────────────────────────────────────────────────────
+            function showFieldError(fieldId, errId, msg) {
+                const field = document.getElementById(fieldId);
+                const err   = document.getElementById(errId);
+                if (field) field.classList.add('error');
+                if (err)   { err.textContent = msg; err.classList.add('show'); }
+            }
+            function clearFieldError(fieldId, errId) {
+                const field = document.getElementById(fieldId);
+                const err   = document.getElementById(errId);
+                if (field) field.classList.remove('error');
+                if (err)   err.classList.remove('show');
+            }
+            function showSelect2Error(selectId, errId, msg) {
+                const err = document.getElementById(errId);
+                if (err) { err.textContent = msg; err.classList.add('show'); }
+                $(`#${selectId}`).next('.select2-container')
+                    .find('.select2-selection--single').addClass('select2-error');
+            }
+            function clearSelect2Error(selectId, errId) {
+                const err = document.getElementById(errId);
+                if (err) err.classList.remove('show');
+                $(`#${selectId}`).next('.select2-container')
+                    .find('.select2-selection--single').removeClass('select2-error');
+            }
+            function setCheckboxError(chkId, errId, show) {
+                const chk = document.getElementById(chkId);
+                const err = document.getElementById(errId);
+                if (chk) chk.classList.toggle('error', show);
+                if (err) err.classList.toggle('show', show);
+            }
+
+            if (errorMessages && errorMessages.length) {
+                const globalError    = document.getElementById('globalError');
+                const globalErrorMsg = document.getElementById('globalErrorMsg');
+                if (globalError && globalErrorMsg) {
+                    globalError.style.display = 'flex';
+                    globalErrorMsg.textContent = errorMessages;
+                }
+            }
         });
-    }
-
-     // ── Error helpers ─────────────────────────────────────────────────────
-    function showFieldError(fieldId, errId, msg) {
-        const field = document.getElementById(fieldId);
-        const err   = document.getElementById(errId);
-        if (field) field.classList.add('error');
-        if (err)   { err.textContent = msg; err.classList.add('show'); }
-    }
-    function clearFieldError(fieldId, errId) {
-        const field = document.getElementById(fieldId);
-        const err   = document.getElementById(errId);
-        if (field) field.classList.remove('error');
-        if (err)   err.classList.remove('show');
-    }
-    function showSelect2Error(selectId, errId, msg) {
-    const err = document.getElementById(errId);
-    if (err) { err.textContent = msg; err.classList.add('show'); }
-    $(`#${selectId}`).next('.select2-container')
-        .find('.select2-selection--single')
-        .addClass('select2-error');
-}
-
-function clearSelect2Error(selectId, errId) {
-    const err = document.getElementById(errId);
-    if (err) err.classList.remove('show');
-    $(`#${selectId}`).next('.select2-container')
-        .find('.select2-selection--single')
-        .removeClass('select2-error');
-}
-    function setCheckboxError(chkId, errId, show) {
-        const chk = document.getElementById(chkId);
-        const err = document.getElementById(errId);
-        if (chk) chk.classList.toggle('error', show);
-        if (err) err.classList.toggle('show', show);
-    }
-
-    /* ── Show server-side errors ── */
-    if (errorMessages && errorMessages.length) {
-        const globalError    = document.getElementById('globalError');
-        const globalErrorMsg = document.getElementById('globalErrorMsg');
-        if (globalError && globalErrorMsg) {
-            globalError.style.display = 'flex';
-            globalErrorMsg.textContent = errorMessages;
-        }
-    }
-});
-
-
-</script>
-
+    </script>
 
 </body>
+
 </html>

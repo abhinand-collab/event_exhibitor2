@@ -493,6 +493,7 @@
         document.getElementById('notificationMessage').innerHTML = message;
         bootstrap.Modal.getOrCreateInstance(modalEl).show();
     }
+    window.showNotificationModal = showNotificationModal;
 
     // 1. Upload -> Get Headers
     document.getElementById("uploadBulkBtn").addEventListener("click", async () => {

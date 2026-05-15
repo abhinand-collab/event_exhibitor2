@@ -269,6 +269,35 @@
         });
     }
 
+    let selectedAttendeeIds = new Set();
+    let isGlobalSelected = false;
+    let lastTotalCount = 0;
+
+    function updateBulkDeleteUI() {
+        const btn = document.getElementById('bulkDeleteBtn');
+        const countSpan = document.getElementById('selectedCount');
+        const selectAll = document.getElementById('selectAllRegistrations');
+        
+        const count = isGlobalSelected ? lastTotalCount : selectedAttendeeIds.size;
+        countSpan.innerText = count;
+        
+        if (count > 0) {
+            btn.style.display = 'inline-flex';
+        } else {
+            btn.style.display = 'none';
+        }
+
+        // Update Select All checkbox state
+        const totalRows = document.querySelectorAll('.attendee-checkbox').length;
+        if (totalRows > 0) {
+            selectAll.checked = isGlobalSelected || (count === totalRows && count > 0);
+            selectAll.indeterminate = !isGlobalSelected && count > 0 && count < totalRows;
+        } else {
+            selectAll.checked = false;
+            selectAll.indeterminate = false;
+        }
+    }
+
     function loadRegistrations(params) {
         const tbody = document.getElementById('registrationsTableBody');
         const paginationUl = document.getElementById('registrationsPagination');
@@ -283,12 +312,17 @@
             .then(data => {
                 if (!data.success) return;
 
+                lastTotalCount = data.pagination.total_count;
+
+                // Reset select all checkbox
+                document.getElementById('selectAllRegistrations').checked = isGlobalSelected;
+
                 // Render Table Body
                 tbody.innerHTML = '';
                 if (data.registrations.length === 0) {
                     tbody.innerHTML = `
                         <tr>
-                            <td colspan="10" class="text-center py-5">
+                            <td colspan="11" class="text-center py-5">
                                 <div class="empty-state">
                                     <i class="fas fa-folder-open mb-3" style="font-size: 40px; color: #cbd5e1;"></i>
                                     <p class="text-muted">No registrations found</p>
@@ -297,9 +331,13 @@
                         </tr>`;
                 } else {
                     data.registrations.forEach(reg => {
+                        const isChecked = isGlobalSelected || selectedAttendeeIds.has(reg.id.toString());
                         const row = document.createElement('tr');
                         row.dataset.attendeeId = reg.id;
                         row.innerHTML = `
+                            <td style="padding-left: 15px;">
+                                <input type="checkbox" class="form-check-input attendee-checkbox" value="${reg.id}" ${isChecked ? 'checked' : ''}>
+                            </td>
                             <td>
                                 <a href="${reg.audit_url}" class="user-info" style="text-decoration:none;">
                                     <span class="name">${reg.first_name} ${reg.last_name}</span>
@@ -326,6 +364,28 @@
                             </td>`;
                         tbody.appendChild(row);
                     });
+
+                    // Add listeners for checkboxes
+                    document.querySelectorAll('.attendee-checkbox').forEach(cb => {
+                        cb.addEventListener('change', function() {
+                            if (isGlobalSelected) {
+                                // If globally selected and user unchecks one, we drop global mode
+                                // and convert current page selection to individual IDs
+                                isGlobalSelected = false;
+                                selectedAttendeeIds.clear();
+                                document.querySelectorAll('.attendee-checkbox').forEach(box => {
+                                    if (box.checked) selectedAttendeeIds.add(box.value);
+                                });
+                            } else {
+                                if (this.checked) {
+                                    selectedAttendeeIds.add(this.value);
+                                } else {
+                                    selectedAttendeeIds.delete(this.value);
+                                }
+                            }
+                            updateBulkDeleteUI();
+                        });
+                    });
                 }
 
                 // Render Pagination
@@ -334,6 +394,7 @@
                 // Update Info
                 paginationInfo.innerText = `Showing ${data.pagination.start_index} to ${data.pagination.end_index} of ${data.pagination.total_count} entries`;
                 
+                updateBulkDeleteUI();
                 // Sync export link
                 syncExportLink();
             })
@@ -342,6 +403,41 @@
                 if (tableContainer) tableContainer.style.opacity = '1';
             });
     }
+
+    // Select All handler
+    document.getElementById('selectAllRegistrations').addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.attendee-checkbox');
+        isGlobalSelected = this.checked;
+        
+        checkboxes.forEach(cb => {
+            cb.checked = this.checked;
+        });
+
+        if (!this.checked) {
+            selectedAttendeeIds.clear();
+        } else {
+            // We don't strictly need to add all IDs if isGlobalSelected is true, 
+            // but we can clear specific IDs to keep it clean.
+            selectedAttendeeIds.clear();
+        }
+        
+        updateBulkDeleteUI();
+    });
+
+    // Bulk Delete handler
+    document.getElementById('bulkDeleteBtn').addEventListener('click', function() {
+        const count = isGlobalSelected ? lastTotalCount : selectedAttendeeIds.size;
+        if (count === 0) return;
+        
+        const name = isGlobalSelected ? `ALL ${count} matching records across all pages` : `${count} selected record${count > 1 ? 's' : ''}`;
+        
+        deleteTargetId = isGlobalSelected ? 'all' : Array.from(selectedAttendeeIds);
+        document.getElementById('deleteTargetName').textContent = name;
+        document.getElementById('deleteBtnText').style.display = 'inline';
+        document.getElementById('deleteBtnSpinner').style.display = 'none';
+        document.getElementById('confirmDeleteBtn').disabled = false;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteModal')).show();
+    });
 
     function renderPagination(pagination) {
         const ul = document.getElementById('registrationsPagination');
@@ -570,10 +666,29 @@
         document.getElementById('deleteBtnSpinner').style.display = 'inline';
         this.disabled = true;
 
-        fetch(`/delete-attendee/${deleteTargetId}/`, {
+        let url = '';
+        const options = {
             method: 'POST',
-            headers: { 'X-CSRFToken': getCsrfToken() },
-        })
+            headers: { 
+                'X-CSRFToken': getCsrfToken(),
+                'Content-Type': 'application/json'
+            }
+        };
+
+        if (isGlobalSelected) {
+            url = '/bulk-delete-attendees/';
+            options.body = JSON.stringify({ 
+                delete_all: true, 
+                filters: currentFilters 
+            });
+        } else if (Array.isArray(deleteTargetId)) {
+            url = '/bulk-delete-attendees/';
+            options.body = JSON.stringify({ ids: deleteTargetId });
+        } else {
+            url = `/delete-attendee/${deleteTargetId}/`;
+        }
+
+        fetch(url, options)
             .then(r => r.json())
             .then(data => {
                 if (!data.success) {
@@ -581,13 +696,31 @@
                     return;
                 }
 
+                // Clear selection if successful
+                if (isGlobalSelected || Array.isArray(deleteTargetId)) {
+                    selectedAttendeeIds.clear();
+                    isGlobalSelected = false;
+                    updateBulkDeleteUI();
+                } else if (selectedAttendeeIds.has(deleteTargetId.toString())) {
+                    selectedAttendeeIds.delete(deleteTargetId.toString());
+                    updateBulkDeleteUI();
+                }
+
                 // Close modal
                 bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
 
                 // Refresh table instead of manual removal to keep everything in sync
                 window.refreshRegistrations();
+                
+                // Show success notification if showNotificationModal exists
+                if (window.showNotificationModal) {
+                    window.showNotificationModal('Deleted', data.message || 'Records deleted successfully.', 'success');
+                }
             })
-            .catch(() => alert('Network error. Please try again.'))
+            .catch(err => {
+                console.error(err);
+                alert('Network error. Please try again.');
+            })
             .finally(() => {
                 document.getElementById('deleteBtnText').style.display = 'inline';
                 document.getElementById('deleteBtnSpinner').style.display = 'none';

@@ -8,12 +8,12 @@ import pandas as pd
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.db import transaction, IntegrityError
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Value
+from django.db.models.functions import Concat, Coalesce
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_http_methods, require_POST
 
-from .forms import CreateBadgeForm
 from .models import User, Exhibitor, Event, Badge, Attendee
 from math import ceil
 from django.core.paginator import Paginator
@@ -139,23 +139,16 @@ def registration_list(request):
     ticket = request.GET.get("ticket_type", "").strip()
 
     if search:
-        parts = search.split()
-        if len(parts) >= 2:
-            registrations_qs = registrations_qs.filter(
-                Q(first_name__icontains=parts[0], last_name__icontains=parts[1]) |
-                Q(email__icontains=search) |
-                Q(first_name__icontains=parts[1], last_name__icontains=parts[0]) |
-                Q(job_title__icontains=search)    |
-                Q(company_name__icontains=search)
-            )
-        else:
-            registrations_qs = registrations_qs.filter(
-                Q(first_name__icontains=search)   |
-                Q(last_name__icontains=search)    |
-                Q(email__icontains=search)        |
-                Q(job_title__icontains=search)    |
-                Q(company_name__icontains=search)
-            )
+        registrations_qs = registrations_qs.annotate(
+            full_name=Concat('first_name', Value(' '), Coalesce('last_name', Value('')))
+        ).filter(
+            Q(first_name__icontains=search) |
+            Q(last_name__icontains=search) |
+            Q(full_name__icontains=search) |
+            Q(email__icontains=search) |
+            Q(job_title__icontains=search) |
+            Q(company_name__icontains=search)
+        )
     if status:
         registrations_qs = registrations_qs.filter(status__iexact=status)
     if ticket:
@@ -299,48 +292,33 @@ def send_badge_confirmation_email(attendee, ticket_type: str) -> None:
 @login_required
 @require_http_methods(["POST"])
 def create_single_badge(request):
-    # ── 1. Form validation ──────────────────────────────────────────────────
-    form = CreateBadgeForm(request.POST)
-    if not form.is_valid():
-        errors = {field: msgs[0] for field, msgs in form.errors.items()}
-        return JsonResponse({"success": False, "errors": errors}, status=400)
+    """
+    Handle single attendee registration.
+    Uses SingleAttendeeSerializer for validation.
+    """
+    exhibitor = request.user.exhibitor
+    
+    # 1. Validate data
+    serializer = SingleAttendeeSerializer(data=request.POST, exhibitor=exhibitor)
+    if not serializer.is_valid():
+        return JsonResponse({"success": False, "errors": serializer.errors}, status=400)
 
-    # ── 2. Resolve exhibitor ────────────────────────────────────────────────
-    try:
-        exhibitor = request.user.exhibitor
-    except Exception:
-        return JsonResponse(
-            {"success": False, "errors": {"__all__": "User is not an exhibitor"}},
-            status=403,
-        )
+    v_data = serializer.validated_data
+    ticket_type = v_data["ticket_type"]
 
-    # ── 3. Per-type pass limit check ────────────────────────────────────────
-    ticket_type = form.cleaned_data["ticket_type"]
-
+    # 2. Pass limit check
     limit_map = {
         "VIP":       exhibitor.vip_pass_limit,
         "EXHIBITOR": exhibitor.exhibitor_pass_limit,
         "VISITOR":   exhibitor.visitor_pass_limit,
     }
-    label_map = {
-        "VIP":       "VIP",
-        "EXHIBITOR": "Exhibitor",
-        "VISITOR":   "Visitor",
-    }
 
-    
-
-    # ── 4. Create Attendee + Badge ──────────────────────────────────────────
     try:
         with transaction.atomic():
-
-            exhibitor = Exhibitor.objects.select_for_update().get(
-                pk=exhibitor.pk
-                )
+            # Refresh exhibitor with lock
+            exhibitor = Exhibitor.objects.select_for_update().get(pk=exhibitor.pk)
             
-             # Recalculate limit INSIDE transaction
             limit = limit_map.get(ticket_type, 0)
-
             used = Badge.objects.filter(
                 attendee__exhibitor=exhibitor,
                 attendee__attendee_type=ticket_type,
@@ -348,53 +326,43 @@ def create_single_badge(request):
 
             if used >= limit:
                 return JsonResponse({
-                        "success": False,
-                        "errors": (
-                            f"{label_map[ticket_type]} pass limit reached "
-                            f"({used}/{limit}). Cannot create more "
-                            f"{label_map[ticket_type]} badges."
-                        ),
-                    }, status=400)
+                    "success": False,
+                    "errors": f"{ticket_type.title()} pass limit reached ({used}/{limit})."
+                }, status=400)
 
+            # 3. Create Attendee + Badge
             attendee = Attendee.objects.create(
                 event                 = exhibitor.event,
                 exhibitor             = exhibitor,
-                first_name            = form.cleaned_data["first_name"],
-                last_name             = form.cleaned_data["last_name"],
-                email                 = form.cleaned_data["email"],
-                mobile_number         = form.cleaned_data["mobile_number"],
-                job_title             = form.cleaned_data["job_title"],
-                company_name          = form.cleaned_data["company_name"],
-                country_of_residence  = form.cleaned_data["country_of_residence"],
-                nationality           = form.cleaned_data["nationality"],
-                attendee_type         = TICKET_TYPE_MAP[ticket_type],
+                first_name            = v_data["first_name"],
+                last_name             = v_data["last_name"],
+                email                 = v_data["email"],
+                mobile_number         = v_data["mobile_number"],
+                job_title             = v_data["job_title"],
+                company_name          = v_data["company_name"],
+                country_of_residence  = v_data["country_of_residence"],
+                nationality           = v_data["nationality"],
+                attendee_type         = ticket_type,
                 source                = "Exhibitor Portal",
                 status                = Attendee.Status.CONFIRMED,
-                accepted_terms        = form.cleaned_data["accepted_terms"],
-                accepted_data_sharing = form.cleaned_data["accepted_data_sharing"],
-                accepted_marketing    = form.cleaned_data.get("accepted_marketing", False),
+                accepted_terms        = v_data["accepted_terms"],
+                accepted_data_sharing = v_data["accepted_data_sharing"],
+                accepted_marketing    = v_data["accepted_marketing"],
             )
-            Badge.objects.create(
-                attendee   = attendee,
-            )
-    except Exception as e:
-        print(_friendly_db_error(str(e)),'checkingerrorrrr')
-        return JsonResponse(
-            {"success": False, "errors": _friendly_db_error(str(e))},
-            status=500,
-        )
+            Badge.objects.create(attendee=attendee)
 
-    # ── 5. Dispatch Celery email task ───────────────────────────────────────
+    except Exception as e:
+        traceback.print_exc()
+        return JsonResponse({"success": False, "errors": _friendly_db_error(str(e))}, status=500)
+
+    # 4. Dispatch email task
     task = send_badge_confirmation_email_task.delay(attendee.pk, ticket_type)
 
-    return JsonResponse(
-        {
-            "success":  True,
-            "message":  "Badge registered successfully.",
-            "email_task_id": task.id,   # <-- frontend polls this
-        },
-        status=201,
-    )
+    return JsonResponse({
+        "success": True,
+        "message": "Badge registered successfully.",
+        "email_task_id": task.id,
+    }, status=201)
 
 
 @login_required
@@ -432,7 +400,7 @@ def badge_email_status(request, task_id: str):
     # PENDING / STARTED / RETRY — still running
     return JsonResponse({"state": state, "success": None, "error": ""})
 
-from .serializers import BulkAttendeeSerializer
+from .serializers import BulkAttendeeSerializer, BulkInvitationSerializer, SingleAttendeeSerializer
 
 
 # =============================================================================
@@ -844,6 +812,10 @@ def get_attendee(request, attendee_id):
 @login_required
 @require_http_methods(["POST", "PUT"])
 def update_attendee(request, attendee_id):
+    """
+    Update an existing attendee's details.
+    Uses SingleAttendeeSerializer for validation.
+    """
     exhibitor = request.user.exhibitor
     attendee  = get_object_or_404(Attendee, id=attendee_id, exhibitor=exhibitor)
 
@@ -852,56 +824,37 @@ def update_attendee(request, attendee_id):
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'errors': 'Invalid JSON.'}, status=400)
 
-    # ── Basic validation ──────────────────────────────────────────────────────
-    errors = {}
-    first_name   = data.get('first_name', '').strip()
-    email        = data.get('email', '').strip()
-    ticket_type  = data.get('ticket_type', '').strip()
-    country      = data.get('country_of_residence', '').strip()
-    nationality  = data.get('nationality', '').strip()
+    # 1. Validate data
+    serializer = SingleAttendeeSerializer(data=data, exhibitor=exhibitor, attendee_id=attendee_id)
+    if not serializer.is_valid():
+        return JsonResponse({"success": False, "errors": serializer.errors}, status=400)
 
-    if not first_name:
-        errors['first_name'] = 'First name is required.'
-    if not email or '@' not in email:
-        errors['email'] = 'A valid email is required.'
-    if not ticket_type:
-        errors['ticket_type'] = 'Ticket type is required.'
-    if not country:
-        errors['country_of_residence'] = 'Country of residence is required.'
-    if not nationality:
-        errors['nationality'] = 'Nationality is required.'
+    v_data = serializer.validated_data
 
-    # Email uniqueness (exclude self)
-    if email and not errors.get('email'):
-        if Attendee.objects.filter(email=email).exclude(id=attendee_id).exists():
-            errors['email'] = 'This email is already registered to another attendee.'
-
-    if errors:
-        return JsonResponse({'success': False, 'errors': errors}, status=400)
-
-    # ── Persist ───────────────────────────────────────────────────────────────
+    # 2. Persist ───────────────────────────────────────────────────────────────
     try:
         with transaction.atomic():
-            attendee.first_name           = first_name
-            attendee.last_name            = data.get('last_name', '').strip()
-            attendee.email                = email
-            attendee.mobile_number        = data.get('mobile_number', '').strip() or None
-            attendee.job_title            = data.get('job_title', '').strip()     or None
-            attendee.company_name         = data.get('company_name', '').strip()  or None
-            attendee.country_of_residence = country
-            attendee.nationality          = nationality
-            attendee.attendee_type        = ticket_type
+            attendee.first_name           = v_data["first_name"]
+            attendee.last_name            = v_data["last_name"]
+            attendee.email                = v_data["email"]
+            attendee.mobile_number        = v_data["mobile_number"]
+            attendee.job_title            = v_data["job_title"]
+            attendee.company_name         = v_data["company_name"]
+            attendee.country_of_residence = v_data["country_of_residence"]
+            attendee.nationality          = v_data["nationality"]
+            attendee.attendee_type        = v_data["ticket_type"]
             
+            # Status can be passed in payload or kept as is
             new_status = data.get('status', attendee.status).upper()
             attendee.status = new_status
             attendee.save()
 
             if attendee.status == Attendee.Status.CONFIRMED:
-                # Only create/update badge for confirmed attendees
+                # Ensure badge exists for confirmed attendees
                 Badge.objects.get_or_create(attendee=attendee)
 
     except Exception as e:
-        print(str(e),'-errror')
+        traceback.print_exc()
         return JsonResponse({'success': False, 'errors': _friendly_db_error(str(e))}, status=500)
 
     return JsonResponse({
@@ -934,6 +887,58 @@ def delete_attendee(request, attendee_id):
         return JsonResponse({'success': True, 'message': 'Registration deleted successfully.'})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@login_required
+@require_POST
+def bulk_delete_attendees(request):
+    """Delete multiple attendees at once."""
+    exhibitor = request.user.exhibitor
+    try:
+        data = json.loads(request.body)
+        ids = data.get('ids', [])
+        delete_all = data.get('delete_all', False)
+        filters = data.get('filters', {})
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid data format.'}, status=400)
+
+    try:
+        with transaction.atomic():
+            qs = Attendee.objects.filter(exhibitor=exhibitor)
+            
+            if delete_all:
+                search = filters.get("search", "").strip()
+                status = filters.get("status", "").strip()
+                ticket = filters.get("ticket_type", "").strip()
+
+                if search:
+                    qs = qs.annotate(
+                        full_name=Concat('first_name', Value(' '), Coalesce('last_name', Value('')))
+                    ).filter(
+                        Q(first_name__icontains=search) |
+                        Q(last_name__icontains=search) |
+                        Q(full_name__icontains=search) |
+                        Q(email__icontains=search) |
+                        Q(job_title__icontains=search) |
+                        Q(company_name__icontains=search)
+                    )
+                if status:
+                    qs = qs.filter(status__iexact=status)
+                if ticket:
+                    qs = qs.filter(attendee_type__iexact=ticket)
+            else:
+                if not ids:
+                    return JsonResponse({'success': False, 'error': 'No records selected.'}, status=400)
+                qs = qs.filter(id__in=ids)
+
+            deleted_count, _ = qs.delete()
+            
+        return JsonResponse({
+            'success': True, 
+            'message': f'Successfully deleted {deleted_count} record(s).'
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
     
 
 @login_required
@@ -948,19 +953,16 @@ def export_registrations(request):
     ticket = request.GET.get("ticket_type", "").strip()
 
     if search:
-        parts = search.split()
-        if len(parts) >= 2:
-            qs = qs.filter(
-                Q(first_name__icontains=parts[0], last_name__icontains=parts[1]) |
-                Q(first_name__icontains=parts[1], last_name__icontains=parts[0]) |
-                Q(job_title__icontains=search) |
-                Q(company_name__icontains=search)
-            )
-        else:
-            qs = qs.filter(
-                Q(first_name__icontains=search) | Q(last_name__icontains=search) |
-                Q(job_title__icontains=search)  | Q(company_name__icontains=search)
-            )
+        qs = qs.annotate(
+            full_name=Concat('first_name', Value(' '), Coalesce('last_name', Value('')))
+        ).filter(
+            Q(first_name__icontains=search) |
+            Q(last_name__icontains=search) |
+            Q(full_name__icontains=search) |
+            Q(email__icontains=search) |
+            Q(job_title__icontains=search) |
+            Q(company_name__icontains=search)
+        )
     if status:
         qs = qs.filter(status__iexact=status)
     if ticket:
@@ -1096,7 +1098,7 @@ def send_invitations(request):
     # ── Count requested rows per ticket type ─────────────────
     requested = {"VIP": 0, "EXHIBITOR": 0, "VISITOR": 0}
 
-    print(entries,'-------checkentries')
+    # print(entries,'-------checkentries')
     for row in entries:
         t = str(row.get("ticket_type") or "").strip().upper()
         if t in requested:
@@ -1118,7 +1120,7 @@ def send_invitations(request):
                 f"{ticket_type}: trying to import {count} but only {rem} pass(es) remaining "
                 f"(limit: {getattr(exhibitor, f'{ticket_type.lower()}_pass_limit')})."
             )
-    print(limit_errors,'----check limi err')
+    # print(limit_errors,'----check limi err')
 
     if limit_errors:
         return JsonResponse({
@@ -1182,14 +1184,13 @@ def register_attendee(request, token):
         # mobile
         if not mobile:
             errors.append("Mobile number is required.")
- 
+
         # company
-        if not company:
-            errors.append("Company name is required.")
-        elif len(company) < 2:
+        if company and len(company) < 2:
             errors.append("Company name must be at least 2 characters.")
- 
+
         # country — text input, letters only
+
         if not country:
             errors.append("Country of residence is required.")
         elif len(country) < 2:
@@ -1216,14 +1217,14 @@ def register_attendee(request, token):
                 exhibitor=exhibitor,
                 status=Attendee.Status.CONFIRMED,
             ).count()
-            print(used_pass,'--------checkedpass')
+            # print(used_pass,'--------checkedpass')
 
             ticket_type = attendee.attendee_type.upper()
 
             remaining = exhibitor.remaining_by_type()
 
             if remaining.get(ticket_type, 0) <= 0:
-                print("error")
+                # print("error")
                 errors.append(
                     f"{ticket_type} pass limit exceeded. Cannot register more attendees."
                 )
@@ -1310,3 +1311,165 @@ def attendee_audit_logs(request, attendee_id):
         "attendee": attendee,
         "logs": all_logs,
     })
+
+    # =============================================================================
+    # INVITATIONS — BACKEND DRIVEN
+    # =============================================================================
+
+@login_required
+@require_POST
+def get_invitation_preview(request):
+    # """
+    # Backend validation for bulk invitations preview.
+    # """
+    file = request.FILES.get("file")
+    mapping_str = request.POST.get("mapping", "{}")
+
+    if not file:
+        return JsonResponse({"success": False, "error": "No file uploaded"}, status=400)
+
+    try:
+        mapping = {
+            k.strip(): v.strip()
+            for k, v in json.loads(mapping_str).items()
+        }
+        if file.name.endswith(".csv"):
+            df = pd.read_csv(file)
+        else:
+            df = pd.read_excel(file)
+
+        df.columns = [col.strip() for col in df.columns]
+        df = df.where(pd.notnull(df), None)
+
+        # OPTIMIZATION: Fetch existing emails
+        email_col = next((k for k, v in mapping.items() if v == 'email'), None)
+        existing_emails = set()
+        if email_col and email_col in df.columns:
+            file_emails = [str(e).strip().lower() for e in df[email_col].dropna().unique() if e]
+            existing_emails = set(Attendee.objects.filter(email__in=file_emails).values_list("email", flat=True))
+
+        exhibitor = request.user.exhibitor
+        preview_rows = []
+        seen_emails_in_file = set()
+
+        records = df.to_dict('records')
+
+        for index, row in enumerate(records):
+            raw_data = {}
+            for src_col, sys_field in mapping.items():
+                if src_col in row:
+                    val = row[src_col]
+                    if isinstance(val, str):
+                        val = val.strip()
+                    raw_data[sys_field] = val
+
+            if "ticket_type" in raw_data and raw_data["ticket_type"]:
+                raw_data["ticket_type"] = str(raw_data["ticket_type"]).upper()
+
+            serializer = BulkInvitationSerializer(
+                data=raw_data, 
+                exhibitor=exhibitor,
+                existing_emails=existing_emails,
+                seen_emails=seen_emails_in_file
+            )
+
+            is_valid = serializer.is_valid()
+            v_data = serializer.validated_data if is_valid else {}
+
+            email = str(raw_data.get('email') or "").strip().lower()
+            if email and "@" in email:
+                seen_emails_in_file.add(email)
+
+            preview_rows.append({
+                "id": index,
+                "row": index + 1,
+                "status": "valid" if is_valid else "invalid",
+                "errors": serializer.errors,
+                "first_name": v_data.get('first_name') or raw_data.get('first_name') or "",
+                "last_name": v_data.get('last_name') or raw_data.get('last_name') or "",
+                "email": v_data.get('email') or raw_data.get('email') or "",
+                "mobile_number": v_data.get('mobile_number') or raw_data.get('mobile_number') or "",
+                "ticket_type": v_data.get('ticket_type') or (raw_data.get('ticket_type') or "").upper(),
+            })
+
+        return JsonResponse({"success": True, "data": preview_rows})
+
+    except Exception as e:
+        traceback.print_exc()
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+
+@login_required
+@require_POST
+def validate_invitation_row(request):
+    """Validate a single invitation row (used when user edits a row in preview)."""
+    try:
+        body = json.loads(request.body)
+        row_data = body.get("row", {})
+        all_other_emails = body.get("all_other_emails", [])
+
+        exhibitor = request.user.exhibitor
+        existing_emails = set(Attendee.objects.values_list("email", flat=True))
+
+        serializer = BulkInvitationSerializer(
+            data=row_data,
+            exhibitor=exhibitor,
+            existing_emails=existing_emails,
+            seen_emails=set(all_other_emails)
+        )
+
+        is_valid = serializer.is_valid()
+        return JsonResponse({
+            "success": True,
+            "is_valid": is_valid,
+            "errors": serializer.errors,
+            "validated_data": serializer.validated_data if is_valid else None
+        })
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+
+
+@login_required
+@require_POST
+def validate_invitation_batch(request):
+    """Validate multiple invitation rows in a single request."""
+    try:
+        body = json.loads(request.body)
+        rows = body.get("rows", [])
+
+        exhibitor = request.user.exhibitor
+        existing_emails = set(Attendee.objects.values_list("email", flat=True))
+
+        results = []
+        seen_emails_in_batch = set()
+
+        for row_data in rows:
+            row_id = row_data.get("id")
+
+            serializer = BulkInvitationSerializer(
+                data=row_data,
+                exhibitor=exhibitor,
+                existing_emails=existing_emails,
+                seen_emails=seen_emails_in_batch
+            )
+
+            is_valid = serializer.is_valid()
+
+            email = str(row_data.get('email') or "").strip().lower()
+            if email and "@" in email:
+                seen_emails_in_batch.add(email)
+
+            results.append({
+                "id": row_id,
+                "is_valid": is_valid,
+                "errors": serializer.errors,
+                "validated_data": serializer.validated_data if is_valid else None
+            })
+
+        return JsonResponse({
+            "success": True,
+            "results": results
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return JsonResponse({"success": False, "error": str(e)}, status=400)

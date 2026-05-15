@@ -54,8 +54,8 @@
         <div class="row">
             <div class="col-md-6 mb-3">
                 <label class="form-label" style="font-weight: 600; color: #333;">Country of Residence <span
-                        class="text-danger">*</span></label>
-                <select name="country_of_residence" class="form-select select2-country" id="countryResidence" required
+                        class="text-danger req-dot">*</span></label>
+                <select name="country_of_residence" class="form-select select2-country" id="countryResidence"
                     style="width: 100%;">
                     <option value="">Select Country</option>
                 </select>
@@ -65,8 +65,8 @@
             </div>
             <div class="col-md-6 mb-3">
                 <label class="form-label" style="font-weight: 600; color: #333;">Nationality <span
-                        class="text-danger">*</span></label>
-                <select name="nationality" class="form-select select2-country" id="nationality" required
+                        class="text-danger req-dot">*</span></label>
+                <select name="nationality" class="form-select select2-country" id="nationality"
                     style="width: 100%;">
                     <option value="">Select Nationality</option>
                 </select>
@@ -291,11 +291,12 @@
         createModalEl.addEventListener('show.bs.modal', function (event) {
             const button = event.relatedTarget;
             const form = document.getElementById("createBadgeForm");
-            const isEdit = button && button.classList.contains('edit');
+            const attendeeIdInput = document.getElementById('attendeeId');
+            const isEdit = button && (button.classList.contains('edit') || button.closest('.edit'));
             
             // Reset form and UI
             form.reset();
-            document.getElementById('attendeeId').value = '';
+            attendeeIdInput.value = '';
             document.getElementById('statusFieldRow').style.display = 'none';
             document.getElementById('consentSection').style.display = 'block';
             document.getElementById('submitBadgeBtn').innerText = 'REGISTER';
@@ -306,11 +307,17 @@
             document.querySelectorAll(".form-control, .form-select").forEach(el => el.style.border = "1px solid #ddd");
 
             if (isEdit) {
-                const attendeeId = button.closest('tr').dataset.attendeeId;
-                document.getElementById('attendeeId').value = attendeeId;
+                const triggerBtn = button.classList.contains('edit') ? button : button.closest('.edit');
+                const attendeeId = triggerBtn.closest('tr').dataset.attendeeId;
+                attendeeIdInput.value = attendeeId;
                 document.getElementById('statusFieldRow').style.display = 'block';
                 document.getElementById('consentSection').style.display = 'none'; // Usually hide consents on edit
                 document.getElementById('submitBadgeBtn').innerText = 'SAVE CHANGES';
+
+                // ── Make Country/Nationality optional in Edit mode frontend ──
+                document.getElementById('countryResidence').required = false;
+                document.getElementById('nationality').required = false;
+                $('.req-dot').hide();
 
                 // ── Disable fields that should not be editable ──
                 document.getElementById('email').disabled = true;
@@ -342,7 +349,7 @@
                             $('#countryResidence').val(a.country_of_residence).trigger('change');
                             $('#nationality').val(a.nationality).trigger('change');
                             $('#ticketType').trigger('change');
-                            
+
                             const mobileInput = document.getElementById('mobileNumber');
                             if (mobileInput && mobileInput.itiInstance) {
                                 mobileInput.itiInstance.setNumber(a.mobile_number || '');
@@ -358,6 +365,14 @@
                     document.getElementById('ticketType').disabled = false;
                     document.getElementById('attendeeStatus').style.background = '';
                     document.getElementById('ticketType').style.background = '';
+
+                    // ── Restore requirements for Create mode ──
+                    document.getElementById('countryResidence').required = true;
+                    document.getElementById('nationality').required = true;
+                    document.getElementById('countryResidence').disabled = false;
+                    document.getElementById('nationality').disabled = false;
+                    $('.req-dot').show();
+
                 const titleEl = createModalEl.querySelector('.modal-title');
                 if (titleEl) titleEl.innerText = 'GULFOOD 2026';
             }
@@ -391,164 +406,99 @@
             
             const formData = new FormData(form);
 
+            // Clear previous errors before submitting
             document.querySelectorAll(".validation-error span").forEach(el => el.innerText = "");
             document.querySelectorAll(".form-control, .form-select").forEach(el => el.style.border = "1px solid #ddd");
+            document.getElementById("globalFormError").style.display = "none";
 
-            // ── Name Validation ──────────────────────────────────────────────────
-            const nameRegex = /^[A-Za-z\s\-'.]+$/;
-            const fName = formData.get('first_name')?.trim();
-            const lName = formData.get('last_name')?.trim();
-            let stopSubmit = false;
-
-            if (!fName) {
-                const errSpan = document.getElementById("firstNameError").querySelector("span");
-                if (errSpan) errSpan.innerText = "First name is required.";
-                document.getElementById("firstNameError").style.display = "block";
-                highlightFieldError('first_name');
-                stopSubmit = true;
-            } else if (!nameRegex.test(fName)) {
-                const errSpan = document.getElementById("firstNameError").querySelector("span");
-                if (errSpan) errSpan.innerText = "First name should only contain letters.";
-                document.getElementById("firstNameError").style.display = "block";
-                highlightFieldError('first_name');
-                stopSubmit = true;
-            }
-
-            if (lName && !nameRegex.test(lName)) {
-                const errSpan = document.getElementById("lastNameError").querySelector("span");
-                if (errSpan) errSpan.innerText = "Last name should only contain letters.";
-                document.getElementById("lastNameError").style.display = "block";
-                highlightFieldError('last_name');
-                stopSubmit = true;
-            }
-
-            if (stopSubmit) {
-                createModalEl.querySelector(".modal-body").scrollTop = 0;
-                return;
-            }
-
+            // ── Normalize Mobile Number ──
             const mobileInput = document.querySelector("#mobileNumber");
             const itiInstance = mobileInput.itiInstance; 
-
-            if (mobileInput.value.trim() !== "") {
-                if (!itiInstance) {
-                    const phoneRegex = /^[0-9+\-\s()]{8,20}$/;
-                    if (!phoneRegex.test(mobileInput.value)) {
-                        document.getElementById("mobileNumberError").querySelector("span").innerText = "Invalid mobile number format.";
-                        document.getElementById("mobileNumberError").style.display = "block";
-                        mobileInput.style.border = "1px solid red";
-                        return;
-                    }
-                    formData.set("mobile_number", mobileInput.value.trim());
-                } else {
-                    if (!itiInstance.isValidNumber()) {
-                        const errorMsg = itiInstance.getValidationError();
-                        let message = "Invalid mobile number.";
-                        if (errorMsg === 0) message = "Invalid number.";
-                        else if (errorMsg === 1) message = "Invalid country code.";
-                        else if (errorMsg === 2) message = "Number too short.";
-                        else if (errorMsg === 3) message = "Number too long.";
-                        document.getElementById("mobileNumberError").querySelector("span").innerText = message;
-                        document.getElementById("mobileNumberError").style.display = "block";
-                        mobileInput.style.border = "1px solid red";
-                        return;
-                    }
-                    formData.set("mobile_number", itiInstance.getNumber());
-                }
+            if (mobileInput.value.trim() !== "" && itiInstance) {
+                formData.set("mobile_number", itiInstance.getNumber());
             }
 
             let fetchBody = formData;
             let headers = { "X-CSRFToken": getCSRFToken() };
             
             if (method === "PUT") {
-    const payload = Object.fromEntries(formData);
-
-    // ── Disabled fields are excluded from FormData by the browser.
-    //    Read them directly from the DOM and add them back manually. ──
-    const emailEl      = document.getElementById('email');
-    const ticketEl     = document.getElementById('ticketType');
-    const statusEl     = document.getElementById('attendeeStatus');
-
-    if (emailEl && emailEl.disabled)  payload.email       = emailEl.value.trim();
-    if (ticketEl && ticketEl.disabled) payload.ticket_type = ticketEl.value.trim();
-    if (statusEl && statusEl.disabled) payload.status      = statusEl.value.trim();
-
-    fetchBody = JSON.stringify(payload);
-    headers["Content-Type"] = "application/json";
-}
+                const payload = Object.fromEntries(formData);
+                // Manually add values of disabled fields if needed
+                ['email', 'ticketType', 'attendeeStatus'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el && el.disabled) {
+                        const name = el.name || (id === 'ticketType' ? 'ticket_type' : (id === 'attendeeStatus' ? 'status' : id));
+                        payload[name] = el.value.trim();
+                    }
+                });
+                fetchBody = JSON.stringify(payload);
+                headers["Content-Type"] = "application/json";
+            }
 
             fetch(action, {
                 method: method,
                 body: fetchBody,
                 headers: headers
             })
-                .then(res => res.json().then(data => ({ status: res.status, body: data })))
-                .then(({ status, body }) => {
-                    document.getElementById("globalFormError").style.display = "none";
-                    document.getElementById("globalFormSuccess").style.display = "none";
-
-                    if (!body.success) {
-                        if (typeof body.errors === "string") {
-                            document.getElementById("globalFormErrorMsg").innerText = body.errors;
-                            document.getElementById("globalFormError").style.display = "block";
-                            createModalEl.querySelector(".modal-body").scrollTop = 0;
-                            return;
-                        }
-                        for (let field in body.errors) {
-                            let errorDiv = document.getElementById(fieldMap[field]);
-                            if (errorDiv) {
-                                let span = errorDiv.querySelector("span");
-                                if (span) { span.innerText = body.errors[field]; errorDiv.style.display = "block"; }
-                            }
-                            highlightFieldError(field);
-                        }
-                    } else {
-                        form.reset();
-    if (itiInstance) itiInstance.setCountry("in");
-
-    $('#countryResidence, #nationality, #ticketType')
-        .next('.select2-container').find('.select2-selection')
-        .css('border', '1px solid #ddd');
-
-    $('#countryResidence, #nationality').val(null).trigger('change');
-    $('.select2-modal').val(null).trigger('change');
-
-    document.querySelectorAll(".validation-error").forEach(el => el.style.display = "none");
-    document.querySelectorAll(".validation-error span").forEach(el => el.innerText = "");
-    document.querySelectorAll(".form-control, .form-select").forEach(el => el.style.border = "1px solid #ddd");
-
-    document.getElementById("badgeSuccessMsg").innerText = body.message || "Operation successful.";
-
-    // ── Store task id so we can show email errors after the modal closes ──
-    const emailTaskId = body.email_task_id || null;
-
-    createModalEl.addEventListener('hidden.bs.modal', function handler() {
-        createModalEl.removeEventListener('hidden.bs.modal', handler);
-        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-        document.body.classList.remove('modal-open');
-        document.body.style.removeProperty('overflow');
-        document.body.style.removeProperty('padding-right');
-
-        setTimeout(() => {
-            const successModalEl = document.getElementById("badgeSuccessModal");
-            bootstrap.Modal.getOrCreateInstance(successModalEl).show();
-        }, 100);
-
-        // ── Poll for email task result ──────────────────────────────────
-        if (emailTaskId) {
-            pollEmailTask(emailTaskId);
-        }
-    });
-
-    bootstrap.Modal.getOrCreateInstance(createModalEl).hide();
+            .then(res => res.json().then(data => ({ status: res.status, body: data })))
+            .then(({ status, body }) => {
+                if (!body.success) {
+                    if (typeof body.errors === "string") {
+                        document.getElementById("globalFormErrorMsg").innerText = body.errors;
+                        document.getElementById("globalFormError").style.display = "block";
+                        createModalEl.querySelector(".modal-body").scrollTop = 0;
+                        return;
                     }
-                })
-                .catch(err => {
-                    console.error(err);
-                    document.getElementById("globalFormErrorMsg").innerText = "Something Went Wrong";
-                    document.getElementById("globalFormError").style.display = "block";
+                    
+                    // Map structured errors to fields
+                    for (let field in body.errors) {
+                        const errorId = fieldMap[field];
+                        const errorDiv = document.getElementById(errorId);
+                        if (errorDiv) {
+                            errorDiv.querySelector("span").innerText = body.errors[field];
+                            errorDiv.style.display = "block";
+                        }
+                        highlightFieldError(field);
+                    }
                     createModalEl.querySelector(".modal-body").scrollTop = 0;
-                });
+                } else {
+                    // Success!
+                    form.reset();
+                    if (itiInstance) itiInstance.setCountry("in");
+
+                    $('#countryResidence, #nationality, #ticketType')
+                        .next('.select2-container').find('.select2-selection')
+                        .css('border', '1px solid #ddd');
+
+                    $('#countryResidence, #nationality').val(null).trigger('change');
+                    $('.select2-modal').val(null).trigger('change');
+
+                    document.getElementById("badgeSuccessMsg").innerText = body.message || "Operation successful.";
+                    const emailTaskId = body.email_task_id || null;
+
+                    createModalEl.addEventListener('hidden.bs.modal', function handler() {
+                        createModalEl.removeEventListener('hidden.bs.modal', handler);
+                        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+                        document.body.classList.remove('modal-open');
+                        document.body.style.removeProperty('overflow');
+
+                        setTimeout(() => {
+                            const successModalEl = document.getElementById("badgeSuccessModal");
+                            bootstrap.Modal.getOrCreateInstance(successModalEl).show();
+                        }, 100);
+
+                        if (emailTaskId) pollEmailTask(emailTaskId);
+                    });
+
+                    bootstrap.Modal.getOrCreateInstance(createModalEl).hide();
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById("globalFormErrorMsg").innerText = "A network error occurred. Please try again.";
+                document.getElementById("globalFormError").style.display = "block";
+                createModalEl.querySelector(".modal-body").scrollTop = 0;
+            });
         });
 
         function pollEmailTask(taskId, attempts = 0) {

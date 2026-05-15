@@ -4,9 +4,10 @@ from .views import (
     bulk_upload_save, registration_list, get_bulk_headers, 
     get_bulk_preview, validate_bulk_row, validate_bulk_batch,
     bulk_task_status, get_attendee, 
-    update_attendee, delete_attendee, export_registrations, 
+    update_attendee, delete_attendee, bulk_delete_attendees, export_registrations, 
     send_invitations, register_attendee, 
-    attendee_audit_logs, task_status_invitation, badge_email_status
+    attendee_audit_logs, task_status_invitation, badge_email_status,
+    get_invitation_preview,validate_invitation_row,validate_invitation_batch
 )
 
 urlpatterns = [
@@ -23,11 +24,18 @@ urlpatterns = [
     path('api/bulk-upload/validate-row/', validate_bulk_row, name="validate_bulk_row"),
     path('api/bulk-upload/validate-batch/', validate_bulk_batch, name="validate_bulk_batch"),
     path("bulk-upload-save/", bulk_upload_save, name="bulk_upload_save"),
+
+    # Invitations Bulk (New backend driven)
+    path('api/invitations/headers/', get_bulk_headers, name="get_invitation_headers"), # Reuse get_bulk_headers
+    path('api/invitations/preview/', get_invitation_preview, name="get_invitation_preview"),
+    path('api/invitations/validate-row/', validate_invitation_row, name="validate_invitation_row"),
+    path('api/invitations/validate-batch/', validate_invitation_batch, name="validate_invitation_batch"),
     
     path("bulk-task-status/<str:task_id>/", bulk_task_status, name="bulk_task_status"),
     path('get-attendee/<int:attendee_id>/', get_attendee, name='get_attendee'),
     path('update-attendee/<int:attendee_id>/', update_attendee, name='update_attendee'),
     path('delete-attendee/<int:attendee_id>/', delete_attendee, name='delete_attendee'),
+    path('bulk-delete-attendees/', bulk_delete_attendees, name='bulk_delete_attendees'),
     path("export-registrations/", export_registrations, name="export_registrations"),
     path('send-invitations/', send_invitations, name='send_invitations'),
     path("register/<uuid:token>/", register_attendee, name="register_attendee"),
