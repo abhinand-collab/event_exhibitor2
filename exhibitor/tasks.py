@@ -355,6 +355,56 @@ def process_invitations_batch(self, entries, exhibitor_id):
         redis_client.delete(f"active_bulk_task_{exhibitor_id}")
 
 
+@shared_task(bind=True)
+def bulk_delete_attendees_task(self, attendee_ids, exhibitor_id):
+    """
+    Background task to delete attendees in batches with progress updates.
+    """
+    lock_key = f"bulk_op_lock_{exhibitor_id}"
+    if not acquire_lock(lock_key, timeout=1800):
+        logger.warning(f"Bulk operation already in progress for exhibitor {exhibitor_id}")
+        return {"error": "A bulk operation is already in progress."}
+
+    try:
+        total = len(attendee_ids)
+        deleted_count = 0
+        BATCH_SIZE = 500
+
+        # Initial progress
+        self.update_state(state='PROGRESS', meta={'current': 0, 'total': total, 'phase': 'DELETING'})
+
+        for i in range(0, total, BATCH_SIZE):
+            batch_ids = attendee_ids[i:i + BATCH_SIZE]
+            
+            # Update progress
+            self.update_state(state='PROGRESS', meta={
+                'current': i,
+                'total': total,
+                'phase': 'DELETING'
+            })
+
+            # Delete the batch
+            # Note: delete() on a queryset in Django is already somewhat efficient, 
+            # but for very large datasets, batching prevents long-running transactions.
+            count, _ = Attendee.objects.filter(id__in=batch_ids, exhibitor_id=exhibitor_id).delete()
+            deleted_count += count
+
+        logger.info(f"✅ Bulk delete complete for exhibitor {exhibitor_id}. Deleted: {deleted_count}")
+
+    except Exception as e:
+        logger.exception(f"Unexpected error in bulk delete: {e}")
+        raise
+    finally:
+        from .utils.redis_lock import redis_client
+        release_lock(lock_key)
+        redis_client.delete(f"active_bulk_task_{exhibitor_id}")
+
+    return {
+        "deleted_count": deleted_count,
+        "total": total
+    }
+
+
 @shared_task(bind=True, max_tries=3)
 def send_pending_attendee_reminders(self):
     now = timezone.now()

@@ -1,8 +1,10 @@
 # =============================================================================
 # IMPORTS
 # =============================================================================
+import logging
 import json
 import traceback
+import threading
 
 import pandas as pd
 from django.contrib.auth import authenticate, login
@@ -19,6 +21,7 @@ from math import ceil
 from django.core.paginator import Paginator
 from .tasks import bulk_upload_save_task,send_invite_email,process_invitations_batch,send_badge_confirmation_email_task
 from celery.result import AsyncResult
+from celery import uuid
 from django.http import HttpResponse
 import openpyxl
 import re
@@ -29,6 +32,8 @@ from django.contrib.contenttypes.models import ContentType
 from auditlog.models import LogEntry
 from itertools import chain
 from .utils.redis_lock import acquire_lock,release_lock
+
+logger = logging.getLogger(__name__)
 
 
 # =============================================================================
@@ -129,9 +134,29 @@ def index(request):
 def registration_list(request):
     exhibitor = request.user.exhibitor
     
-    registrations_qs = Attendee.objects.filter(
-        exhibitor=exhibitor
-    ).select_related("badge").order_by("-created_at")
+    registrations_qs = (
+        Attendee.objects
+        .filter(exhibitor=exhibitor)
+        .select_related("badge")
+        .only(
+            "id",
+            "first_name",
+            "last_name",
+            "email",
+            "job_title",
+            "country_of_residence",
+            "nationality",
+            "mobile_number",
+            "source",
+            "attendee_type",
+            "company_name",
+            "status",
+            "created_at",
+            "badge__id",
+            "badge__ticket_id"
+        )
+        .order_by("-created_at")
+    )
 
     # ── Filters ─────────────────────────────────────────────────────────────
     search = request.GET.get("search", "").strip()
@@ -292,37 +317,42 @@ def send_badge_confirmation_email(attendee, ticket_type: str) -> None:
 @login_required
 @require_http_methods(["POST"])
 def create_single_badge(request):
-    """
-    Handle single attendee registration.
-    Uses SingleAttendeeSerializer for validation.
-    """
+
     exhibitor = request.user.exhibitor
-    
-    # 1. Validate data
-    serializer = SingleAttendeeSerializer(data=request.POST, exhibitor=exhibitor)
+
+    serializer = SingleAttendeeSerializer(
+        data=request.POST,
+        exhibitor=exhibitor
+    )
+
     if not serializer.is_valid():
-        return JsonResponse({"success": False, "errors": serializer.errors}, status=400)
+        return JsonResponse(
+            {"success": False, "errors": serializer.errors},
+            status=400
+        )
 
     v_data = serializer.validated_data
     ticket_type = v_data["ticket_type"]
 
-    # 2. Pass limit check
-    limit_map = {
-        "VIP":       exhibitor.vip_pass_limit,
-        "EXHIBITOR": exhibitor.exhibitor_pass_limit,
-        "VISITOR":   exhibitor.visitor_pass_limit,
-    }
-
     try:
         with transaction.atomic():
-            # Refresh exhibitor with lock
-            exhibitor = Exhibitor.objects.select_for_update().get(pk=exhibitor.pk)
-            
+
+            exhibitor = Exhibitor.objects.select_for_update().get(
+                pk=exhibitor.pk
+            )
+
+            # ── Unified Limit Check ──────────────────────────────────────────
+            # We count INVITED, PENDING, and CONFIRMED towards the limit, 
+            # ensuring consistency with bulk uploads and invitations.
+            used_counts = exhibitor.passes_used_by_type()
+            used = used_counts.get(ticket_type, 0)
+
+            limit_map = {
+                "VIP": exhibitor.vip_pass_limit,
+                "EXHIBITOR": exhibitor.exhibitor_pass_limit,
+                "VISITOR": exhibitor.visitor_pass_limit,
+            }
             limit = limit_map.get(ticket_type, 0)
-            used = Badge.objects.filter(
-                attendee__exhibitor=exhibitor,
-                attendee__attendee_type=ticket_type,
-            ).count()
 
             if used >= limit:
                 return JsonResponse({
@@ -330,75 +360,58 @@ def create_single_badge(request):
                     "errors": f"{ticket_type.title()} pass limit reached ({used}/{limit})."
                 }, status=400)
 
-            # 3. Create Attendee + Badge
             attendee = Attendee.objects.create(
-                event                 = exhibitor.event,
-                exhibitor             = exhibitor,
-                first_name            = v_data["first_name"],
-                last_name             = v_data["last_name"],
-                email                 = v_data["email"],
-                mobile_number         = v_data["mobile_number"],
-                job_title             = v_data["job_title"],
-                company_name          = v_data["company_name"],
-                country_of_residence  = v_data["country_of_residence"],
-                nationality           = v_data["nationality"],
-                attendee_type         = ticket_type,
-                source                = "Exhibitor Portal",
-                status                = Attendee.Status.CONFIRMED,
-                accepted_terms        = v_data["accepted_terms"],
-                accepted_data_sharing = v_data["accepted_data_sharing"],
-                accepted_marketing    = v_data["accepted_marketing"],
+                event=exhibitor.event,
+                exhibitor=exhibitor,
+                first_name=v_data["first_name"],
+                last_name=v_data["last_name"],
+                email=v_data["email"],
+                mobile_number=v_data["mobile_number"],
+                job_title=v_data["job_title"],
+                company_name=v_data["company_name"],
+                country_of_residence=v_data["country_of_residence"],
+                nationality=v_data["nationality"],
+                attendee_type=ticket_type,
+                source="Exhibitor Portal",
+                status=Attendee.Status.CONFIRMED,
+                accepted_terms=v_data["accepted_terms"],
+                accepted_data_sharing=v_data["accepted_data_sharing"],
+                accepted_marketing=v_data["accepted_marketing"],
             )
+
             Badge.objects.create(attendee=attendee)
+
+            # ── Safe Async Email Dispatch ─────────────────────────────────────
+            # We use on_commit to ensure the task is only queued if the DB 
+            # transaction succeeds. We wrap the queueing in a try/except so 
+            # that even if the broker (Redis) is down, it doesn't crash or 
+            # delay the main request.
+            # We use apply_async with retry=False to fail fast (in 2s) if 
+            # Redis is unreachable.
+            def queue_email():
+                try:
+                    send_badge_confirmation_email_task.apply_async(
+                        args=[attendee.pk, ticket_type],
+                        retry=False
+                    )
+                except Exception as exc:
+                    logger.error(f"Celery Error: Could not queue confirmation email: {exc}")
+
+            transaction.on_commit(queue_email)
 
     except Exception as e:
         traceback.print_exc()
-        return JsonResponse({"success": False, "errors": _friendly_db_error(str(e))}, status=500)
 
-    # 4. Dispatch email task
-    task = send_badge_confirmation_email_task.delay(attendee.pk, ticket_type)
+        return JsonResponse({
+            "success": False,
+            "errors": _friendly_db_error(str(e))
+        }, status=500)
 
     return JsonResponse({
         "success": True,
-        "message": "Badge registered successfully.",
-        "email_task_id": task.id,
+        "message": "Badge registered successfully."
     }, status=201)
 
-
-@login_required
-@require_http_methods(["GET"])
-def badge_email_status(request, task_id: str):
-    """
-    Poll endpoint: returns the Celery task state + any error message.
-
-    States the frontend cares about:
-        pending  → still running / queued
-        success  → email sent
-        failure  → unrecoverable Celery exception (not the same as our
-                   {"success": False} result — that's handled separately)
-    """
-    result = AsyncResult(task_id)
-    state  = result.state   # PENDING | STARTED | SUCCESS | FAILURE | RETRY
-
-    if state == "SUCCESS":
-        task_result = result.get()          # our {"success": True/False, "error": ...}
-        return JsonResponse({
-            "state":   "SUCCESS",
-            "success": task_result.get("success", True),
-            "error":   task_result.get("error", ""),
-        })
-
-    if state == "FAILURE":
-        # Unhandled exception escaped the task — shouldn't happen with our try/except,
-        # but handle it defensively.
-        return JsonResponse({
-            "state":   "FAILURE",
-            "success": False,
-            "error":   "Confirmation email failed unexpectedly. Please contact support.",
-        })
-
-    # PENDING / STARTED / RETRY — still running
-    return JsonResponse({"state": state, "success": None, "error": ""})
 
 from .serializers import BulkAttendeeSerializer, BulkInvitationSerializer, SingleAttendeeSerializer
 
@@ -659,8 +672,16 @@ def bulk_upload_save(request):
                 Badge.objects.bulk_create([Badge(attendee=att) for att in created_objs])
                 created = len(created_objs)
                 
-                for att in created_objs:
-                    send_badge_confirmation_email_task.delay(att.id, att.attendee_type)
+                # ── Safe Async Email Dispatch ─────────────────────────────
+                def dispatch_emails(attendee_info):
+                    for att_id, att_type in attendee_info:
+                        try:
+                            send_badge_confirmation_email_task.delay(att_id, att_type)
+                        except Exception as exc:
+                            logger.error(f"Bulk Upload: Could not queue email for {att_id}: {exc}")
+
+                attendee_data = [(att.id, att.attendee_type) for att in created_objs]
+                transaction.on_commit(lambda: dispatch_emails(attendee_data))
             
             return JsonResponse({
                 "success": True, 
@@ -891,7 +912,9 @@ def delete_attendee(request, attendee_id):
 @login_required
 @require_POST
 def bulk_delete_attendees(request):
-    """Delete multiple attendees at once."""
+    """
+    Refactored to use Celery for background deletion with progress tracking.
+    """
     exhibitor = request.user.exhibitor
     try:
         data = json.loads(request.body)
@@ -901,75 +924,134 @@ def bulk_delete_attendees(request):
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'error': 'Invalid data format.'}, status=400)
 
-    try:
-        with transaction.atomic():
-            qs = Attendee.objects.filter(exhibitor=exhibitor)
-            
-            if delete_all:
-                search = filters.get("search", "").strip()
-                status = filters.get("status", "").strip()
-                ticket = filters.get("ticket_type", "").strip()
-
-                if search:
-                    qs = qs.annotate(
-                        full_name=Concat('first_name', Value(' '), Coalesce('last_name', Value('')))
-                    ).filter(
-                        Q(first_name__icontains=search) |
-                        Q(last_name__icontains=search) |
-                        Q(full_name__icontains=search) |
-                        Q(email__icontains=search) |
-                        Q(job_title__icontains=search) |
-                        Q(company_name__icontains=search)
-                    )
-                if status:
-                    qs = qs.filter(status__iexact=status)
-                if ticket:
-                    qs = qs.filter(attendee_type__iexact=ticket)
-            else:
-                if not ids:
-                    return JsonResponse({'success': False, 'error': 'No records selected.'}, status=400)
-                qs = qs.filter(id__in=ids)
-
-            deleted_count, _ = qs.delete()
-            
+    # ── 1. Check for existing lock (Shared with Bulk Upload/Invites) ──────
+    from .utils.redis_lock import redis_client
+    lock_key = f"bulk_op_lock_{exhibitor.id}"
+    if redis_client.get(lock_key):
         return JsonResponse({
-            'success': True, 
-            'message': f'Successfully deleted {deleted_count} record(s).'
-        })
-    except Exception as e:
-        traceback.print_exc()
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+            "success": False,
+            "errors": "A bulk operation is already in progress. Please wait."
+        }, status=409)
+
+    # ── 2. Identify Target IDs ──────────────────────────────────────────────
+    qs = Attendee.objects.filter(exhibitor=exhibitor)
+    
+    if delete_all:
+        search = filters.get("search", "").strip()
+        status = filters.get("status", "").strip()
+        ticket = filters.get("ticket_type", "").strip()
+
+        if search:
+            qs = qs.annotate(
+                full_name=Concat('first_name', Value(' '), Coalesce('last_name', Value('')))
+            ).filter(
+                Q(first_name__icontains=search) |
+                Q(last_name__icontains=search) |
+                Q(full_name__icontains=search) |
+                Q(email__icontains=search) |
+                Q(job_title__icontains=search) |
+                Q(company_name__icontains=search)
+            )
+        if status:
+            qs = qs.filter(status__iexact=status)
+        if ticket:
+            qs = qs.filter(attendee_type__iexact=ticket)
+        
+        target_ids = list(qs.values_list('id', flat=True))
+    else:
+        if not ids:
+            return JsonResponse({'success': False, 'error': 'No records selected.'}, status=400)
+        # Ensure we only delete IDs belonging to THIS exhibitor
+        target_ids = list(qs.filter(id__in=ids).values_list('id', flat=True))
+
+    if not target_ids:
+        return JsonResponse({'success': False, 'error': 'No matching records found to delete.'}, status=400)
+
+    # ── 3. Initiate Background Task ────────────────────────────────────────
+    from .tasks import bulk_delete_attendees_task
+    task = bulk_delete_attendees_task.delay(target_ids, exhibitor.id)
+
+    # Store task ID for tracking
+    redis_client.set(f"active_bulk_task_{exhibitor.id}", task.id, ex=3600)
+
+    return JsonResponse({
+        'success': True,
+        'task_id': task.id,
+        'message': f'Deleting {len(target_ids)} records in background.'
+    })
     
 
 @login_required
-@require_http_methods(["GET"])
+@require_http_methods(["GET", "POST"])
 def export_registrations(request):
+    """
+    Export registrations to Excel.
+    Supports:
+    1. Specific IDs (passed as 'ids' comma-separated string or POST list)
+    2. Filtered set (if no IDs provided)
+    """
     exhibitor = request.user.exhibitor
-    qs = Attendee.objects.filter(exhibitor=exhibitor).select_related("badge").order_by("-id")
+    
+    # ── 1. Identify Target IDs ──
+    target_ids = []
+    
+    if request.method == "POST":
+        # Check for IDs in POST data (can be direct field or JSON)
+        ids_data = request.POST.get('ids', '')
+        if not ids_data:
+            try:
+                body = json.loads(request.body)
+                ids_data = body.get('ids', '')
+            except: pass
+            
+        if isinstance(ids_data, list):
+            target_ids = ids_data
+        elif isinstance(ids_data, str) and ids_data:
+            target_ids = [i.strip() for i in ids_data.split(',') if i.strip().isdigit()]
+    else:
+        ids_param = request.GET.get('ids', '')
+        if ids_param:
+            target_ids = [i.strip() for i in ids_param.split(',') if i.strip().isdigit()]
 
-    # Apply same filters as index view
-    search = request.GET.get("search", "").strip()
-    status = request.GET.get("status", "").strip()
-    ticket = request.GET.get("ticket_type", "").strip()
-
-    if search:
-        qs = qs.annotate(
-            full_name=Concat('first_name', Value(' '), Coalesce('last_name', Value('')))
-        ).filter(
-            Q(first_name__icontains=search) |
-            Q(last_name__icontains=search) |
-            Q(full_name__icontains=search) |
-            Q(email__icontains=search) |
-            Q(job_title__icontains=search) |
-            Q(company_name__icontains=search)
+    # ── 2. Build Query ──
+    qs = (
+        Attendee.objects.filter(exhibitor=exhibitor)
+       .only(
+            "first_name", "last_name", "email", "job_title", "company_name",
+           "source", "mobile_number", "country_of_residence", "nationality",
+           "accepted_terms", "accepted_data_sharing", "accepted_marketing", "status"
         )
-    if status:
-        qs = qs.filter(status__iexact=status)
-    if ticket:
-        qs = qs.filter(attendee_type__iexact=ticket)
+        .order_by("-id")
+    )
 
-    # Build workbook
-    wb = openpyxl       .Workbook()
+    if target_ids:
+        # If IDs are provided, they take precedence over filters
+        qs = qs.filter(id__in=target_ids)
+    else:
+        # Apply filters from GET or POST
+        data = request.POST if request.method == "POST" else request.GET
+        search = data.get("search", "").strip()
+        status = data.get("status", "").strip()
+        ticket = data.get("ticket_type", "").strip()
+
+        if search:
+            qs = qs.annotate(
+                full_name=Concat('first_name', Value(' '), Coalesce('last_name', Value('')))
+            ).filter(
+                Q(first_name__icontains=search) |
+                Q(last_name__icontains=search) |
+                Q(full_name__icontains=search) |
+                Q(email__icontains=search) |
+                Q(job_title__icontains=search) |
+                Q(company_name__icontains=search)
+            )
+        if status:
+            qs = qs.filter(status__iexact=status)
+        if ticket:
+            qs = qs.filter(attendee_type__iexact=ticket)
+
+    # ── 3. Build Workbook ──
+    wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Registrations"
 
@@ -983,8 +1065,6 @@ def export_registrations(request):
     ws.append(headers)
 
     for reg in qs:
-        badge        = getattr(reg, "badge", None)
-        # ticket_id    = str(badge.ticket_id) if badge and badge.ticket_id else ""
         ws.append([
             reg.first_name,
             reg.last_name or "",
@@ -992,12 +1072,9 @@ def export_registrations(request):
             reg.job_title or "",
             reg.company_name or "",
             reg.source or "",
-            # ticket_id,
             reg.mobile_number or "",
             reg.country_of_residence or "",
             reg.nationality or "",
-            # "Yes" if reg.digital_badge_issued else "No",
-            # "Yes" if reg.onsite_badge_printed else "No",
             "Yes" if reg.accepted_terms else "No",
             "Yes" if reg.accepted_data_sharing else "No",
             "Yes" if reg.accepted_marketing else "No",
@@ -1269,8 +1346,8 @@ def attendee_audit_logs(request, attendee_id):
         ).select_related("actor")
 
     # Build lookup maps
-    event_map = {str(e.id): e.name for e in Event.objects.all()}
-    exhibitor_map = {str(ex.id): ex.company_name for ex in Exhibitor.objects.all()}
+    event_map = {str(e.id): e.name for e in Event.objects.only("id", "name")}
+    exhibitor_map = {str(ex.id): ex.company_name for ex in Exhibitor.objects.only("id", "company_name")}
 
     FK_RESOLVERS = {
         "event":    lambda v: event_map.get(str(v), v),

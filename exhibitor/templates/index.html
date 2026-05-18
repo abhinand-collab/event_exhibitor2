@@ -274,17 +274,22 @@
     let lastTotalCount = 0;
 
     function updateBulkDeleteUI() {
-        const btn = document.getElementById('bulkDeleteBtn');
-        const countSpan = document.getElementById('selectedCount');
+        const btnDelete = document.getElementById('bulkDeleteBtn');
+        const btnExport = document.getElementById('bulkExportBtn');
+        const countSpanDelete = document.getElementById('selectedCount');
+        const countSpanExport = document.getElementById('selectedExportCount');
         const selectAll = document.getElementById('selectAllRegistrations');
         
         const count = isGlobalSelected ? lastTotalCount : selectedAttendeeIds.size;
-        countSpan.innerText = count;
+        countSpanDelete.innerText = count;
+        countSpanExport.innerText = count;
         
         if (count > 0) {
-            btn.style.display = 'inline-flex';
+            btnDelete.style.display = 'inline-flex';
+            btnExport.style.display = 'inline-flex';
         } else {
-            btn.style.display = 'none';
+            btnDelete.style.display = 'none';
+            btnExport.style.display = 'none';
         }
 
         // Update Select All checkbox state
@@ -437,6 +442,23 @@
         document.getElementById('deleteBtnSpinner').style.display = 'none';
         document.getElementById('confirmDeleteBtn').disabled = false;
         bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteModal')).show();
+    });
+
+    // Bulk Export handler
+    document.getElementById('bulkExportBtn').addEventListener('click', function() {
+        const params = new URLSearchParams();
+        
+        if (isGlobalSelected) {
+            // Export all matching current filters
+            if (currentFilters.search) params.append('search', currentFilters.search);
+            if (currentFilters.status) params.append('status', currentFilters.status);
+            if (currentFilters.ticket_type) params.append('ticket_type', currentFilters.ticket_type);
+        } else {
+            // Export specific IDs
+            params.append('ids', Array.from(selectedAttendeeIds).join(','));
+        }
+        
+        window.location.href = `/export-registrations/?${params.toString()}`;
     });
 
     function renderPagination(pagination) {
@@ -613,7 +635,12 @@
                     percentLabel.className = 'badge rounded-pill bg-success';
                     percentLabel.innerText = '100%';
                     statusLabel.innerText = 'Complete!';
-                    countsLabel.innerText = `${data.result.created} created, ${data.result.skipped} skipped`;
+                    
+                    if (data.result.deleted_count !== undefined) {
+                        countsLabel.innerText = `${data.result.deleted_count} deleted`;
+                    } else {
+                        countsLabel.innerText = `${data.result.created} created, ${data.result.skipped} skipped`;
+                    }
                     
                     window.refreshRegistrations();
 
@@ -696,6 +723,20 @@
                     return;
                 }
 
+                // Close modal
+                bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+
+                // If it's a background task, start tracking
+                if (data.task_id) {
+                    const label = isGlobalSelected ? 'Bulk Delete (All Filtered)' : `Bulk Delete (${deleteTargetId.length} selected)`;
+                    window.startTrackingTask(data.task_id, label);
+                    
+                    // Persist task for auto-resume
+                    const pending = JSON.parse(localStorage.getItem('pendingBulkTasks') || '[]');
+                    pending.push({ id: data.task_id, label: label });
+                    localStorage.setItem('pendingBulkTasks', JSON.stringify(pending));
+                }
+
                 // Clear selection if successful
                 if (isGlobalSelected || Array.isArray(deleteTargetId)) {
                     selectedAttendeeIds.clear();
@@ -706,10 +747,7 @@
                     updateBulkDeleteUI();
                 }
 
-                // Close modal
-                bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
-
-                // Refresh table instead of manual removal to keep everything in sync
+                // Refresh table
                 window.refreshRegistrations();
                 
                 // Show success notification if showNotificationModal exists
@@ -730,9 +768,11 @@
 
     // Keep export link in sync with active filters
     function syncExportLink() {
-        const params = new URLSearchParams(window.location.search);
-        params.delete('page');
-        params.delete('page_size');
+        const params = new URLSearchParams();
+        if (currentFilters.search) params.append('search', currentFilters.search);
+        if (currentFilters.status) params.append('status', currentFilters.status);
+        if (currentFilters.ticket_type) params.append('ticket_type', currentFilters.ticket_type);
+        
         const qs = params.toString();
         const exportBtn = document.getElementById('exportBtn');
         if (exportBtn) {

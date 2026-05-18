@@ -91,16 +91,15 @@
       <div class="modal-header preview-header"
         style="background:#fff;border-bottom:3px solid #1a56db;padding:16px 24px;align-items:center;justify-content:space-between;">
         <div class="d-flex align-items-center gap-3">
-            <span style="font-size:18px;font-weight:700;color:#111;">Preview</span>
-            <input type="text" class="form-control form-control-sm" id="previewSearchInput"
-              placeholder="Search data..."
-              style="max-width:200px;border-radius:6px;border:1px solid #ddd;font-size:14px;">
+          <span style="font-size:18px;font-weight:700;color:#111;">Preview</span>
+          <input type="text" class="form-control form-control-sm" id="previewSearchInput" placeholder="Search data..."
+            style="max-width:200px;border-radius:6px;border:1px solid #ddd;font-size:14px;">
         </div>
         <div class="d-flex gap-2">
-            <button class="btn btn-sm btn-outline-primary" id="validateAllBtn">
-                <i class="fas fa-check-double me-1"></i> Validate All
-            </button>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          <button class="btn btn-sm btn-outline-primary" id="validateAllBtn">
+            <i class="fas fa-check-double me-1"></i> Validate All
+          </button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
       </div>
 
@@ -212,14 +211,15 @@
   <div class="modal-dialog modal-dialog-centered modal-sm">
     <div class="modal-content" style="border-radius: 12px; border: none; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
       <div class="modal-body text-center py-4">
-        <div style="width: 60px; height: 60px; background: #fee2e2; color: #dc2626; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 15px;">
-            <i class="fas fa-exclamation-triangle"></i>
+        <div
+          style="width: 60px; height: 60px; background: #fee2e2; color: #dc2626; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 15px;">
+          <i class="fas fa-exclamation-triangle"></i>
         </div>
         <h6 class="fw-bold mb-2">Remove Row?</h6>
         <p class="text-muted small mb-4">Are you sure you want to remove this record from the import batch?</p>
         <div class="d-flex gap-2 justify-content-center">
-            <button type="button" class="btn btn-light btn-sm px-4" data-bs-dismiss="modal">Cancel</button>
-            <button type="button" class="btn btn-danger btn-sm px-4" id="confirmDeleteRowBtn">Delete</button>
+          <button type="button" class="btn btn-light btn-sm px-4" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-danger btn-sm px-4" id="confirmDeleteRowBtn">Delete</button>
         </div>
       </div>
     </div>
@@ -454,117 +454,117 @@
 {# SCRIPTS #}
 {# ============================================================ #}
 <script>
-(function() {
+  (function () {
     let currentFile = null;
     let allRows = [];
-    let rowToDelete = null; 
+    let rowToDelete = null;
     const pagination = {
-        currentPage: 1,
-        pageSize: 50,
-        activeTab: "all",
-        searchQuery: "",
-        mapping: {}
+      currentPage: 1,
+      pageSize: 50,
+      activeTab: "all",
+      searchQuery: "",
+      mapping: {}
     };
 
     function getCsrfToken() {
-        return document.cookie.split("; ").find(r => r.startsWith("csrftoken"))?.split("=")[1];
+      return document.cookie.split("; ").find(r => r.startsWith("csrftoken"))?.split("=")[1];
     }
 
     function escapeHtml(str) {
-        if (str == null) return '';
-        return String(str).replace(/[&<>"']/g, m =>
-            ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])
-        );
+      if (str == null) return '';
+      return String(str).replace(/[&<>"']/g, m =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])
+      );
     }
 
     function debounce(fn, ms) {
-        let t;
-        return function (...args) {
-            clearTimeout(t);
-            t = setTimeout(() => fn.apply(this, args), ms);
-        };
+      let t;
+      return function (...args) {
+        clearTimeout(t);
+        t = setTimeout(() => fn.apply(this, args), ms);
+      };
     }
 
     function showNotificationModal(title, message, type = 'info') {
-        const modalEl = document.getElementById('notificationModal');
-        modalEl.className = 'modal fade'; // Reset
-        modalEl.classList.add(`notification-${type}`);
-        document.getElementById('notificationTitle').textContent = title;
-        document.getElementById('notificationMessage').innerHTML = message;
-        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+      const modalEl = document.getElementById('notificationModal');
+      modalEl.className = 'modal fade'; // Reset
+      modalEl.classList.add(`notification-${type}`);
+      document.getElementById('notificationTitle').textContent = title;
+      document.getElementById('notificationMessage').innerHTML = message;
+      bootstrap.Modal.getOrCreateInstance(modalEl).show();
     }
     window.showNotificationModal = showNotificationModal;
 
     // 1. Upload -> Get Headers
     document.getElementById("uploadBulkBtn").addEventListener("click", async () => {
-        const fileInput = document.getElementById("bulkFile");
-        if (!fileInput.files.length) {
-            showNotificationModal('No File', 'Please select an Excel or CSV file first.', 'warning');
-            return;
-        }
-        
-        currentFile = fileInput.files[0];
-        const fd = new FormData();
-        fd.append("file", currentFile);
+      const fileInput = document.getElementById("bulkFile");
+      if (!fileInput.files.length) {
+        showNotificationModal('No File', 'Please select an Excel or CSV file first.', 'warning');
+        return;
+      }
 
-        const btn = document.getElementById("uploadBulkBtn");
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+      currentFile = fileInput.files[0];
+      const fd = new FormData();
+      fd.append("file", currentFile);
 
-        try {
-            const res = await fetch("/api/bulk-upload/headers/", {
-                method: "POST",
-                headers: { "X-CSRFToken": getCsrfToken() },
-                body: fd
-            });
-            const data = await res.json();
-            if (data.success) {
-                renderMappingUI(data.columns);
-                bootstrap.Modal.getOrCreateInstance(document.getElementById("bulkUploadModal")).hide();
-                new bootstrap.Modal(document.getElementById("fieldMappingModal")).show();
-            } else { 
-                showNotificationModal('Error', data.error || 'Failed to process file headers.', 'error');
-            }
-        } catch (e) { 
-            console.error(e);
-            showNotificationModal('System Error', 'An unexpected error occurred during upload.', 'error');
+      const btn = document.getElementById("uploadBulkBtn");
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+
+      try {
+        const res = await fetch("/api/bulk-upload/headers/", {
+          method: "POST",
+          headers: { "X-CSRFToken": getCsrfToken() },
+          body: fd
+        });
+        const data = await res.json();
+        if (data.success) {
+          renderMappingUI(data.columns);
+          bootstrap.Modal.getOrCreateInstance(document.getElementById("bulkUploadModal")).hide();
+          new bootstrap.Modal(document.getElementById("fieldMappingModal")).show();
+        } else {
+          showNotificationModal('Error', data.error || 'Failed to process file headers.', 'error');
         }
-        finally { btn.disabled = false; btn.innerHTML = "Upload & Process"; }
+      } catch (e) {
+        console.error(e);
+        showNotificationModal('System Error', 'An unexpected error occurred during upload.', 'error');
+      }
+      finally { btn.disabled = false; btn.innerHTML = "Upload & Process"; }
     });
 
     const SYSTEM_FIELDS = [
-        "first_name", "last_name", "email", "mobile_number",
-        "country", "nationality", "company_name", "job_title",
-        "ticket_type", "accepted_terms", "accepted_data_sharing", "accepted_marketing"
+      "first_name", "last_name", "email", "mobile_number",
+      "country", "nationality", "company_name", "job_title",
+      "ticket_type", "accepted_terms", "accepted_data_sharing", "accepted_marketing"
     ];
 
     function toLabel(str) {
-        return str.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      return str.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
     }
 
     function renderMappingUI(columns) {
-        const container = document.getElementById("mappingContainer");
-        container.innerHTML = "";
-        
-        // Keywords that should trigger an auto-match for ticket_type
-        const ticketTypeKeywords = ["visitor", "exhibitor", "vip", "ticket", "type", "class", "pass"];
+      const container = document.getElementById("mappingContainer");
+      container.innerHTML = "";
 
-        columns.forEach(col => {
-            const cleanCol = col.trim().toLowerCase();
-            const norm = cleanCol.replace(/[\s_]+/g, '');
-            
-            let auto = SYSTEM_FIELDS.find(f => f.replace(/_/g, '') === norm) || "";
-            
-            // Smarter auto-mapping for ticket_type
-            if (!auto) {
-                if (ticketTypeKeywords.some(kw => cleanCol.includes(kw))) {
-                    auto = "ticket_type";
-                }
-            }
+      // Keywords that should trigger an auto-match for ticket_type
+      const ticketTypeKeywords = ["visitor", "exhibitor", "vip", "ticket", "type", "class", "pass"];
 
-            const div = document.createElement("div");
-            div.className = "fm-row";
-            div.innerHTML = `
+      columns.forEach(col => {
+        const cleanCol = col.trim().toLowerCase();
+        const norm = cleanCol.replace(/[\s_]+/g, '');
+
+        let auto = SYSTEM_FIELDS.find(f => f.replace(/_/g, '') === norm) || "";
+
+        // Smarter auto-mapping for ticket_type
+        if (!auto) {
+          if (ticketTypeKeywords.some(kw => cleanCol.includes(kw))) {
+            auto = "ticket_type";
+          }
+        }
+
+        const div = document.createElement("div");
+        div.className = "fm-row";
+        div.innerHTML = `
                 <div class="fm-left">${escapeHtml(col)}</div>
                 <div class="fm-right">
                     <select class="fm-select mapping-select" data-col="${escapeHtml(col)}">
@@ -574,131 +574,131 @@
                     <button class="fm-delete" title="Clear" onclick="this.previousElementSibling.value=''"><i class="fas fa-trash"></i></button>
                 </div>
             `;
-            container.appendChild(div);
-        });
+        container.appendChild(div);
+      });
     }
 
     // 2. Mapping -> Get Preview
     document.getElementById("confirmMappingBtn").addEventListener("click", async () => {
-        const mapping = {};
-        document.querySelectorAll(".mapping-select").forEach(s => {
-            if (s.value) mapping[s.dataset.col] = s.value;
+      const mapping = {};
+      document.querySelectorAll(".mapping-select").forEach(s => {
+        if (s.value) mapping[s.dataset.col] = s.value;
+      });
+      pagination.mapping = mapping;
+
+      const fd = new FormData();
+      fd.append("file", currentFile);
+      fd.append("mapping", JSON.stringify(mapping));
+
+      const btn = document.getElementById("confirmMappingBtn");
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Validating...';
+
+      try {
+        const res = await fetch("/api/bulk-upload/preview/", {
+          method: "POST",
+          headers: { "X-CSRFToken": getCsrfToken() },
+          body: fd
         });
-        pagination.mapping = mapping;
-
-        const fd = new FormData();
-        fd.append("file", currentFile);
-        fd.append("mapping", JSON.stringify(mapping));
-
-        const btn = document.getElementById("confirmMappingBtn");
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Validating...';
-
-        try {
-            const res = await fetch("/api/bulk-upload/preview/", {
-                method: "POST",
-                headers: { "X-CSRFToken": getCsrfToken() },
-                body: fd
-            });
-            const data = await res.json();
-            if (data.success) {
-                allRows = data.data;
-                pagination.currentPage = 1;
-                renderCurrentView();
-                bootstrap.Modal.getInstance(document.getElementById("fieldMappingModal")).hide();
-                new bootstrap.Modal(document.getElementById("bulkPreviewModal")).show();
-            } else { 
-                showNotificationModal('Validation Error', data.error || 'Failed to generate preview.', 'error');
-            }
-        } catch (e) { 
-            console.error(e);
-            showNotificationModal('System Error', 'An error occurred during data validation.', 'error');
+        const data = await res.json();
+        if (data.success) {
+          allRows = data.data;
+          pagination.currentPage = 1;
+          renderCurrentView();
+          bootstrap.Modal.getInstance(document.getElementById("fieldMappingModal")).hide();
+          new bootstrap.Modal(document.getElementById("bulkPreviewModal")).show();
+        } else {
+          showNotificationModal('Validation Error', data.error || 'Failed to generate preview.', 'error');
         }
-        finally { btn.disabled = false; btn.innerHTML = "Continue"; }
+      } catch (e) {
+        console.error(e);
+        showNotificationModal('System Error', 'An error occurred during data validation.', 'error');
+      }
+      finally { btn.disabled = false; btn.innerHTML = "Continue"; }
     });
 
     function renderCurrentView() {
-        const filtered = allRows.filter(r => {
-            if (pagination.activeTab === "valid") return r.status === "valid";
-            if (pagination.activeTab === "invalid") return r.status === "invalid";
-            return true;
-        }).filter(r => {
-            const q = pagination.searchQuery.toLowerCase().trim();
-            return !q || [r.first_name, r.last_name, r.email].some(v => v && String(v).toLowerCase().includes(q));
-        });
+      const filtered = allRows.filter(r => {
+        if (pagination.activeTab === "valid") return r.status === "valid";
+        if (pagination.activeTab === "invalid") return r.status === "invalid";
+        return true;
+      }).filter(r => {
+        const q = pagination.searchQuery.toLowerCase().trim();
+        return !q || [r.first_name, r.last_name, r.email].some(v => v && String(v).toLowerCase().includes(q));
+      });
 
-        const start = (pagination.currentPage - 1) * pagination.pageSize;
-        const page = filtered.slice(start, start + pagination.pageSize);
+      const start = (pagination.currentPage - 1) * pagination.pageSize;
+      const page = filtered.slice(start, start + pagination.pageSize);
 
-        updateTabCounts();
-        renderTable(page);
-        bulkRenderPagination(filtered.length, Math.ceil(filtered.length / pagination.pageSize));
+      updateTabCounts();
+      renderTable(page);
+      bulkRenderPagination(filtered.length, Math.ceil(filtered.length / pagination.pageSize));
     }
 
     function getFlagImg(code) {
-        if (!code) return "";
-        return `<img src="https://flagcdn.com/20x15/${code.toLowerCase()}.png" 
+      if (!code) return "";
+      return `<img src="https://flagcdn.com/20x15/${code.toLowerCase()}.png" 
                      width="20" height="15" 
                      style="margin-right:8px; vertical-align:middle; border-radius:2px;">`;
     }
 
     function countryTemplate(option) {
-        if (!option.id) return option.text;
-        const code = option.element ? option.element.dataset.code : null;
-        if (!code) return option.text;
-        return $(`<span style="display:flex; align-items:center;">${getFlagImg(code)}<span>${option.text}</span></span>`);
+      if (!option.id) return option.text;
+      const code = option.element ? option.element.dataset.code : null;
+      if (!code) return option.text;
+      return $(`<span style="display:flex; align-items:center;">${getFlagImg(code)}<span>${option.text}</span></span>`);
     }
 
     function initPreviewSelect2() {
-        $('.bpt-country-select, .bpt-nationality-select').each(function() {
-            if ($(this).data('select2')) $(this).select2('destroy');
-        });
+      $('.bpt-country-select, .bpt-nationality-select').each(function () {
+        if ($(this).data('select2')) $(this).select2('destroy');
+      });
 
-        const select2Config = {
-            theme: 'bootstrap-5',
-            dropdownParent: $('#bulkPreviewModal'),
-            templateResult: countryTemplate,
-            templateSelection: countryTemplate,
-            width: '100%',
-            allowClear: true,
-            placeholder: "-- select --"
-        };
+      const select2Config = {
+        theme: 'bootstrap-5',
+        dropdownParent: $('#bulkPreviewModal'),
+        templateResult: countryTemplate,
+        templateSelection: countryTemplate,
+        width: '100%',
+        allowClear: true,
+        placeholder: "-- select --"
+      };
 
-        $('.bpt-country-select').select2(select2Config).on('change', function() {
-            const rowId = this.dataset.rowId;
-            const selectedOpt = this.options[this.selectedIndex];
-            const code = selectedOpt ? selectedOpt.dataset.code : null;
-            
-            // Sync with mobile input
-            const mobileInput = document.querySelector(`.mobile-number-input[data-row-id="${rowId}"]`);
-            if (mobileInput && mobileInput.itiInstance && code) {
-                mobileInput.itiInstance.setCountry(code.toLowerCase());
-            }
-            handleFieldChange.call(this);
-        });
-        
-        $('.bpt-nationality-select').select2(select2Config).on('change', handleFieldChange);
+      $('.bpt-country-select').select2(select2Config).on('change', function () {
+        const rowId = this.dataset.rowId;
+        const selectedOpt = this.options[this.selectedIndex];
+        const code = selectedOpt ? selectedOpt.dataset.code : null;
+
+        // Sync with mobile input
+        const mobileInput = document.querySelector(`.mobile-number-input[data-row-id="${rowId}"]`);
+        if (mobileInput && mobileInput.itiInstance && code) {
+          mobileInput.itiInstance.setCountry(code.toLowerCase());
+        }
+        handleFieldChange.call(this);
+      });
+
+      $('.bpt-nationality-select').select2(select2Config).on('change', handleFieldChange);
     }
 
     function renderTable(rows) {
-        const tbody = document.getElementById("previewTableBody");
-        tbody.innerHTML = "";
-        
-        const getFieldErr = (fieldErrors) => {
-            if (!fieldErrors || !fieldErrors.length) return "";
-            return fieldErrors.map(e => `<div class="bpt-error">${escapeHtml(e)}</div>`).join("");
-        };
+      const tbody = document.getElementById("previewTableBody");
+      tbody.innerHTML = "";
 
-        const hasErr = (fieldErrors) => (fieldErrors && fieldErrors.length) ? "bpt-input-err" : "";
+      const getFieldErr = (fieldErrors) => {
+        if (!fieldErrors || !fieldErrors.length) return "";
+        return fieldErrors.map(e => `<div class="bpt-error">${escapeHtml(e)}</div>`).join("");
+      };
 
-        rows.forEach(r => {
-            const isInvalid = r.status === "invalid";
-            const errs = r.errors || {}; 
-            const tr = document.createElement("tr");
-            tr.className = `bpt-row ${isInvalid ? "bpt-row-invalid" : ""}`;
-            tr.dataset.idx = r.id;
-            
-            tr.innerHTML = `
+      const hasErr = (fieldErrors) => (fieldErrors && fieldErrors.length) ? "bpt-input-err" : "";
+
+      rows.forEach(r => {
+        const isInvalid = r.status === "invalid";
+        const errs = r.errors || {};
+        const tr = document.createElement("tr");
+        tr.className = `bpt-row ${isInvalid ? "bpt-row-invalid" : ""}`;
+        tr.dataset.idx = r.id;
+
+        tr.innerHTML = `
                 <td class="bpt-td" style="color:#888;font-weight:600;">${r.row}</td>
                 <td class="bpt-td">
                     <input class="bpt-input ${hasErr(errs.first_name)}" value="${escapeHtml(r.first_name)}" data-field="first_name">
@@ -741,9 +741,9 @@
                 <td class="bpt-td">
                     <select class="bpt-input ${hasErr(errs.ticket_type)}" data-field="ticket_type">
                         <option value="">-- select --</option>
-                        <option value="VIP" ${r.ticket_type==='VIP'?'selected':''}>VIP</option>
-                        <option value="EXHIBITOR" ${r.ticket_type==='EXHIBITOR'?'selected':''}>Exhibitor</option>
-                        <option value="VISITOR" ${r.ticket_type==='VISITOR'?'selected':''}>Visitor</option>
+                        <option value="VIP" ${r.ticket_type === 'VIP' ? 'selected' : ''}>VIP</option>
+                        <option value="EXHIBITOR" ${r.ticket_type === 'EXHIBITOR' ? 'selected' : ''}>Exhibitor</option>
+                        <option value="VISITOR" ${r.ticket_type === 'VISITOR' ? 'selected' : ''}>Visitor</option>
                     </select>
                     ${getFieldErr(errs.ticket_type)}
                 </td>
@@ -765,292 +765,309 @@
                     </div>
                 </td>
             `;
-            tbody.appendChild(tr);
-        });
-        attachRowListeners();
-        initMobileFields();
-        initPreviewSelect2();
+        tbody.appendChild(tr);
+      });
+      attachRowListeners();
+      initMobileFields();
+      initPreviewSelect2();
     }
 
     function attachRowListeners() {
-        document.querySelectorAll('.bpt-row').forEach(tr => {
-            tr.querySelectorAll('input, select').forEach(el => {
-                const eventType = el.type === 'checkbox' || el.tagName === 'SELECT' ? 'change' : 'input';
-                el.addEventListener(eventType, debounce(handleFieldChange.bind(el), 200));
-            });
+      document.querySelectorAll('.bpt-row').forEach(tr => {
+        tr.querySelectorAll('input, select').forEach(el => {
+          const eventType = el.type === 'checkbox' || el.tagName === 'SELECT' ? 'change' : 'input';
+          el.addEventListener(eventType, debounce(handleFieldChange.bind(el), 200));
         });
+      });
     }
 
     const handleFieldChange = function () {
-        const tr = this.closest(".bpt-row");
-        if (!tr) return;
-        const rowId = parseInt(tr.dataset.idx);
-        const idx = allRows.findIndex(r => r.id === rowId);
-        if (idx === -1) return;
-        Object.assign(allRows[idx], readRowFromDOM(tr));
+      const tr = this.closest(".bpt-row");
+      if (!tr) return;
+      const rowId = parseInt(tr.dataset.idx);
+      const idx = allRows.findIndex(r => r.id === rowId);
+      if (idx === -1) return;
+      Object.assign(allRows[idx], readRowFromDOM(tr));
     };
 
     function readRowFromDOM(tr) {
-        const rowId = parseInt(tr.dataset.idx);
-        const mobileInput = tr.querySelector(".mobile-number-input");
-        const iti = mobileInput ? mobileInput.itiInstance : null;
-        let mobileNumber = mobileInput ? mobileInput.value.trim() : '';
-        if (iti) mobileNumber = iti.getNumber() || mobileNumber;
+      const rowId = parseInt(tr.dataset.idx);
+      const mobileInput = tr.querySelector(".mobile-number-input");
+      const iti = mobileInput ? mobileInput.itiInstance : null;
+      let mobileNumber = mobileInput ? mobileInput.value.trim() : '';
+      if (iti) mobileNumber = iti.getNumber() || mobileNumber;
 
-        return {
-            first_name: tr.querySelector("[data-field='first_name']").value.trim(),
-            last_name: tr.querySelector("[data-field='last_name']").value.trim(),
-            email: tr.querySelector("[data-field='email']").value.trim(),
-            mobile_number: mobileNumber,
-            country: tr.querySelector("[data-field='country']").value,
-            nationality: tr.querySelector("[data-field='nationality']").value,
-            company_name: tr.querySelector("[data-field='company_name']").value.trim(),
-            job_title: tr.querySelector("[data-field='job_title']").value.trim(),
-            ticket_type: tr.querySelector("[data-field='ticket_type']").value,
-            accepted_terms: tr.querySelector("[data-field='accepted_terms']").checked,
-            accepted_data_sharing: tr.querySelector("[data-field='accepted_data_sharing']").checked,
-            accepted_marketing: tr.querySelector("[data-field='accepted_marketing']").checked,
-        };
+      return {
+        first_name: tr.querySelector("[data-field='first_name']").value.trim(),
+        last_name: tr.querySelector("[data-field='last_name']").value.trim(),
+        email: tr.querySelector("[data-field='email']").value.trim(),
+        mobile_number: mobileNumber,
+        country: tr.querySelector("[data-field='country']").value,
+        nationality: tr.querySelector("[data-field='nationality']").value,
+        company_name: tr.querySelector("[data-field='company_name']").value.trim(),
+        job_title: tr.querySelector("[data-field='job_title']").value.trim(),
+        ticket_type: tr.querySelector("[data-field='ticket_type']").value,
+        accepted_terms: tr.querySelector("[data-field='accepted_terms']").checked,
+        accepted_data_sharing: tr.querySelector("[data-field='accepted_data_sharing']").checked,
+        accepted_marketing: tr.querySelector("[data-field='accepted_marketing']").checked,
+      };
     }
 
     function initMobileFields() {
-        $('.mobile-number-input').each(function() {
-            if (this.itiInstance) this.itiInstance.destroy();
-            this.itiInstance = intlTelInput(this, {
-                initialCountry: 'in',
-                utilsScript: 'https://cdn.jsdelivr.net/npm/intl-tel-input@23.1.0/build/js/utils.js',
-                autoPlaceholder: 'aggressive',
-            });
+      $('.mobile-number-input').each(function () {
+        if (this.itiInstance) this.itiInstance.destroy();
+        this.itiInstance = intlTelInput(this, {
+          initialCountry: 'in',
+          utilsScript: 'https://cdn.jsdelivr.net/npm/intl-tel-input@23.1.0/build/js/utils.js',
+          autoPlaceholder: 'aggressive',
         });
+      });
     }
 
     // 3. Batch Validate
     document.getElementById("validateAllBtn").addEventListener("click", async () => {
-        const btn = document.getElementById("validateAllBtn");
-        const origText = btn.innerHTML;
-        
-        // 1. Sync only the VISIBLE rows from DOM to allRows before sending
-        document.querySelectorAll('.bpt-row').forEach(tr => {
-            const rowId = parseInt(tr.dataset.idx);
-            const idx = allRows.findIndex(r => r.id === rowId);
-            if (idx !== -1) {
-                Object.assign(allRows[idx], readRowFromDOM(tr));
-            }
-        });
+      const btn = document.getElementById("validateAllBtn");
+      const origText = btn.innerHTML;
 
-        // Show loading modal
-        const loadingModalEl = document.getElementById('bulkLoadingModal');
-        const loadingModal = bootstrap.Modal.getOrCreateInstance(loadingModalEl);
-        loadingModal.show();
-
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Validating...';
-
-        try {
-            const res = await fetch("/api/bulk-upload/validate-batch/", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "X-CSRFToken": getCsrfToken() },
-                body: JSON.stringify({ rows: allRows })
-            });
-            const data = await res.json();
-            if (data.success) {
-                const rowLookup = {};
-                allRows.forEach((r, i) => { rowLookup[r.id] = i; });
-
-                data.results.forEach(resItem => {
-                    const idx = rowLookup[resItem.id];
-                    if (idx !== undefined) {
-                        const rowData = allRows[idx];
-                        const finalData = resItem.is_valid && resItem.validated_data 
-                            ? { ...resItem.validated_data, id: resItem.id } 
-                            : { ...rowData };
-                        
-                        allRows[idx] = { 
-                            ...rowData, 
-                            ...finalData, 
-                            status: resItem.is_valid ? "valid" : "invalid", 
-                            errors: resItem.errors 
-                        };
-                    }
-                });
-                renderCurrentView();
-            } else {
-                showNotificationModal('Validation Error', data.error || 'Batch validation failed.', 'error');
-            }
-        } catch (e) {
-            console.error(e);
-            showNotificationModal('System Error', 'An error occurred during batch validation.', 'error');
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = origText;
-            loadingModal.hide();
+      // 1. Sync only the VISIBLE rows from DOM to allRows before sending
+      document.querySelectorAll('.bpt-row').forEach(tr => {
+        const rowId = parseInt(tr.dataset.idx);
+        const idx = allRows.findIndex(r => r.id === rowId);
+        if (idx !== -1) {
+          Object.assign(allRows[idx], readRowFromDOM(tr));
         }
+      });
+
+      // Show loading modal
+      const loadingModalEl = document.getElementById('bulkLoadingModal');
+      const loadingModal = bootstrap.Modal.getOrCreateInstance(loadingModalEl);
+      loadingModal.show();
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Validating...';
+
+      try {
+        const res = await fetch("/api/bulk-upload/validate-batch/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": getCsrfToken() },
+          body: JSON.stringify({ rows: allRows })
+        });
+        const data = await res.json();
+        if (data.success) {
+          const rowLookup = {};
+          allRows.forEach((r, i) => { rowLookup[r.id] = i; });
+
+          data.results.forEach(resItem => {
+            const idx = rowLookup[resItem.id];
+            if (idx !== undefined) {
+              const rowData = allRows[idx];
+              const finalData = resItem.is_valid && resItem.validated_data
+                ? { ...resItem.validated_data, id: resItem.id }
+                : { ...rowData };
+
+              allRows[idx] = {
+                ...rowData,
+                ...finalData,
+                status: resItem.is_valid ? "valid" : "invalid",
+                errors: resItem.errors
+              };
+            }
+          });
+          renderCurrentView();
+        } else {
+          showNotificationModal('Validation Error', data.error || 'Batch validation failed.', 'error');
+        }
+      } catch (e) {
+        console.error(e);
+        showNotificationModal('System Error', 'An error occurred during batch validation.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = origText;
+        loadingModal.hide();
+      }
     });
 
     // 4. Check & Delete Row
     document.addEventListener("click", async (e) => {
-        const checkBtn = e.target.closest(".check-row-btn");
-        const deleteBtn = e.target.closest(".delete-row-btn");
+      const checkBtn = e.target.closest(".check-row-btn");
+      const deleteBtn = e.target.closest(".delete-row-btn");
 
-        if (deleteBtn) {
-            rowToDelete = parseInt(deleteBtn.dataset.idx);
-            bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteConfirmModal')).show();
-            return;
-        }
+      if (deleteBtn) {
+        rowToDelete = parseInt(deleteBtn.dataset.idx);
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteConfirmModal')).show();
+        return;
+      }
 
-        if (!checkBtn) return;
-        const btn = checkBtn;
-        const rowId = parseInt(btn.dataset.idx);
-        const tr = btn.closest("tr");
-        
-        const rowData = { id: rowId };
-        tr.querySelectorAll("[data-field]").forEach(el => {
-            rowData[el.dataset.field] = el.type === 'checkbox' ? el.checked : el.value;
+      if (!checkBtn) return;
+      const btn = checkBtn;
+      const rowId = parseInt(btn.dataset.idx);
+      const tr = btn.closest("tr");
+
+      const rowData = { id: rowId };
+      tr.querySelectorAll("[data-field]").forEach(el => {
+        rowData[el.dataset.field] = el.type === 'checkbox' ? el.checked : el.value;
+      });
+
+      if (rowData.ticket_type) rowData.ticket_type = rowData.ticket_type.toUpperCase();
+
+      const mobInp = tr.querySelector('.mobile-number-input');
+      if (mobInp && mobInp.itiInstance) rowData.mobile_number = mobInp.itiInstance.getNumber() || mobInp.value;
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+      try {
+        const res = await fetch("/api/bulk-upload/validate-row/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": getCsrfToken() },
+          body: JSON.stringify({
+            row: rowData,
+            all_other_emails: allRows.filter(r => r.id !== rowId).map(r => r.email)
+          })
         });
-        
-        if (rowData.ticket_type) rowData.ticket_type = rowData.ticket_type.toUpperCase();
-
-        const mobInp = tr.querySelector('.mobile-number-input');
-        if (mobInp && mobInp.itiInstance) rowData.mobile_number = mobInp.itiInstance.getNumber() || mobInp.value;
-
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-        try {
-            const res = await fetch("/api/bulk-upload/validate-row/", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "X-CSRFToken": getCsrfToken() },
-                body: JSON.stringify({
-                    row: rowData,
-                    all_other_emails: allRows.filter(r => r.id !== rowId).map(r => r.email)
-                })
-            });
-            const data = await res.json();
-            if (data.success) {
-                const idx = allRows.findIndex(r => r.id === rowId);
-                const finalData = data.is_valid && data.validated_data ? { ...data.validated_data, id: rowId } : { ...rowData };
-                allRows[idx] = { ...allRows[idx], ...finalData, status: data.is_valid ? "valid" : "invalid", errors: data.errors };
-                renderCurrentView();
-            } else {
-                showNotificationModal('Validation Error', data.error || 'Failed to validate row.', 'error');
-            }
-        } catch (e) { 
-            console.error(e);
-            showNotificationModal('System Error', 'An unexpected error occurred during validation.', 'error');
-        } finally { 
-            btn.disabled = false; 
-            btn.innerHTML = '✔ Check';
+        const data = await res.json();
+        if (data.success) {
+          const idx = allRows.findIndex(r => r.id === rowId);
+          const finalData = data.is_valid && data.validated_data ? { ...data.validated_data, id: rowId } : { ...rowData };
+          allRows[idx] = { ...allRows[idx], ...finalData, status: data.is_valid ? "valid" : "invalid", errors: data.errors };
+          renderCurrentView();
+        } else {
+          showNotificationModal('Validation Error', data.error || 'Failed to validate row.', 'error');
         }
+      } catch (e) {
+        console.error(e);
+        showNotificationModal('System Error', 'An unexpected error occurred during validation.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '✔ Check';
+      }
     });
 
     // 5. Confirm Batch Delete
     document.getElementById("confirmDeleteRowBtn").addEventListener("click", () => {
-        if (rowToDelete !== null) {
-            allRows = allRows.filter(r => r.id !== rowToDelete);
-            rowToDelete = null;
-            renderCurrentView();
-            bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal')).hide();
-        }
+      if (rowToDelete !== null) {
+        allRows = allRows.filter(r => r.id !== rowToDelete);
+        rowToDelete = null;
+        renderCurrentView();
+        bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal')).hide();
+      }
     });
 
     // 6. Submit
     document.getElementById("submitBulkBtn").addEventListener("click", async () => {
-        const validRows = allRows.filter(r => r.status === "valid");
-        if (!validRows.length) {
-            showNotificationModal('No Valid Data', 'There are no valid rows to submit. Please correct errors or remove invalid rows first.', 'warning');
-            return;
+      const validRows = allRows.filter(r => r.status === "valid");
+      if (!validRows.length) {
+        showNotificationModal('No Valid Data', 'There are no valid rows to submit. Please correct errors or remove invalid rows first.', 'warning');
+        return;
+      }
+
+      const btn = document.getElementById("submitBulkBtn");
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Submitting...';
+
+      try {
+        const res = await fetch("/bulk-upload-save/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": getCsrfToken() },
+          body: JSON.stringify({ rows: validRows })
+        });
+        const data = await res.json();
+        if (data.success) {
+          bootstrap.Modal.getInstance(document.getElementById("bulkPreviewModal")).hide();
+
+          if (data.mode === "async") {
+            // Task is still running — don't show a count
+            showNotificationModal(
+              'Import Started',
+              `Your ${validRows.length} records are being processed in the background. You'll be notified when complete.`,
+              'info'
+            );
+            // Track the task progress if you have that UI
+            if (data.task_id && window.startTrackingTask) {
+  const taskLabel = "Bulk Import";
+  window.startTrackingTask(data.task_id, taskLabel);
+
+  // Persist to localStorage so the task survives a page refresh
+  const pending = JSON.parse(localStorage.getItem('pendingBulkTasks') || '[]');
+  pending.push({ id: data.task_id, label: taskLabel });
+  localStorage.setItem('pendingBulkTasks', JSON.stringify(pending));
+}
+          } else {
+            // Synchronous — count is accurate
+            showNotificationModal(
+              'Success',
+              data.message || `Successfully created ${data.created} records.`,
+              'success'
+            );
+          }
+
+          if (window.refreshRegistrations) window.refreshRegistrations();
+        } else {
+          showNotificationModal('Import Error', data.errors || 'The server rejected the import batch.', 'error');
         }
-
-        const btn = document.getElementById("submitBulkBtn");
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Submitting...';
-
-        try {
-            const res = await fetch("/bulk-upload-save/", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "X-CSRFToken": getCsrfToken() },
-                body: JSON.stringify({ rows: validRows })
-            });
-            const data = await res.json();
-            if (data.success) {
-                bootstrap.Modal.getInstance(document.getElementById("bulkPreviewModal")).hide();
-                
-                // Show success modal
-                showNotificationModal('Success', data.message || `Successfully created ${data.created || validRows.length} records.`, 'success');
-                
-                // Refresh list if helper is available
-                if (window.refreshRegistrations) window.refreshRegistrations();
-                
-                // Track task if async mode used
-                if (data.task_id && window.startTrackingTask) {
-                    window.startTrackingTask(data.task_id, "Bulk Import");
-                }
-            } else { 
-                showNotificationModal('Import Error', data.errors || 'The server rejected the import batch.', 'error');
-            }
-        } catch (e) {
-            console.error(e);
-            showNotificationModal('System Error', 'An unexpected error occurred while submitting data.', 'error');
-        } finally { btn.disabled = false; btn.innerHTML = "Submit"; }
+      } catch (e) {
+        console.error(e);
+        showNotificationModal('System Error', 'An unexpected error occurred while submitting data.', 'error');
+      } finally { btn.disabled = false; btn.innerHTML = "Submit"; }
     });
 
     function updateTabCounts() {
-        document.getElementById("tab-count-all").textContent = allRows.length;
-        document.getElementById("tab-count-valid").textContent = allRows.filter(r => r.status === "valid").length;
-        document.getElementById("tab-count-invalid").textContent = allRows.filter(r => r.status === "invalid").length;
+      document.getElementById("tab-count-all").textContent = allRows.length;
+      document.getElementById("tab-count-valid").textContent = allRows.filter(r => r.status === "valid").length;
+      document.getElementById("tab-count-invalid").textContent = allRows.filter(r => r.status === "invalid").length;
     }
 
     function bulkRenderPagination(total, totalPages) {
-        const { currentPage, pageSize } = pagination;
-        const from = total === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-        const to = Math.min(currentPage * pageSize, total);
+      const { currentPage, pageSize } = pagination;
+      const from = total === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+      const to = Math.min(currentPage * pageSize, total);
 
-        document.getElementById("paginationInfo").textContent = total === 0 ? "No rows" : `Showing ${from}–${to} of ${total} rows`;
+      document.getElementById("paginationInfo").textContent = total === 0 ? "No rows" : `Showing ${from}–${to} of ${total} rows`;
 
-        const container = document.getElementById("paginationBtns");
-        container.innerHTML = "";
-        if (totalPages <= 1) return;
+      const container = document.getElementById("paginationBtns");
+      container.innerHTML = "";
+      if (totalPages <= 1) return;
 
-        const makeBtn = (l, d, fn) => {
-            const b = document.createElement("button");
-            b.className = "pg-btn"; b.textContent = l; b.disabled = d;
-            if (!d) b.onclick = fn; return b;
-        };
+      const makeBtn = (l, d, fn) => {
+        const b = document.createElement("button");
+        b.className = "pg-btn"; b.textContent = l; b.disabled = d;
+        if (!d) b.onclick = fn; return b;
+      };
 
-        container.appendChild(makeBtn("‹", currentPage === 1, () => { pagination.currentPage--; renderCurrentView(); }));
-        for (let i = 1; i <= totalPages; i++) {
-            if (totalPages > 7 && (i > 2 && i < totalPages - 1 && Math.abs(i - currentPage) > 1)) {
-                if (i === 3 || i === totalPages - 1) {
-                    const s = document.createElement("span"); s.textContent = "…"; s.style.padding="0 4px"; container.appendChild(s);
-                }
-                continue;
-            }
-            const b = makeBtn(i, false, () => { pagination.currentPage = i; renderCurrentView(); });
-            if (i === currentPage) b.classList.add("active");
-            container.appendChild(b);
+      container.appendChild(makeBtn("‹", currentPage === 1, () => { pagination.currentPage--; renderCurrentView(); }));
+      for (let i = 1; i <= totalPages; i++) {
+        if (totalPages > 7 && (i > 2 && i < totalPages - 1 && Math.abs(i - currentPage) > 1)) {
+          if (i === 3 || i === totalPages - 1) {
+            const s = document.createElement("span"); s.textContent = "…"; s.style.padding = "0 4px"; container.appendChild(s);
+          }
+          continue;
         }
-        container.appendChild(makeBtn("›", currentPage === totalPages, () => { pagination.currentPage++; renderCurrentView(); }));
+        const b = makeBtn(i, false, () => { pagination.currentPage = i; renderCurrentView(); });
+        if (i === currentPage) b.classList.add("active");
+        container.appendChild(b);
+      }
+      container.appendChild(makeBtn("›", currentPage === totalPages, () => { pagination.currentPage++; renderCurrentView(); }));
     }
 
     document.querySelectorAll(".bulk-preview-tab").forEach(btn => {
-        btn.onclick = () => {
-            document.querySelectorAll(".bulk-preview-tab").forEach(b => b.classList.remove("active"));
-            btn.classList.add("active");
-            pagination.activeTab = btn.dataset.bptab;
-            pagination.currentPage = 1;
-            renderCurrentView();
-        };
+      btn.onclick = () => {
+        document.querySelectorAll(".bulk-preview-tab").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        pagination.activeTab = btn.dataset.bptab;
+        pagination.currentPage = 1;
+        renderCurrentView();
+      };
     });
 
     document.getElementById("previewSearchInput").oninput = debounce(e => {
-        pagination.searchQuery = e.target.value;
-        pagination.currentPage = 1;
-        renderCurrentView();
+      pagination.searchQuery = e.target.value;
+      pagination.currentPage = 1;
+      renderCurrentView();
     }, 300);
 
     document.getElementById("backToUploadBtn").onclick = () => {
-        bootstrap.Modal.getInstance(document.getElementById("bulkPreviewModal")).hide();
-        setTimeout(() => new bootstrap.Modal(document.getElementById("bulkUploadModal")).show(), 350);
+      bootstrap.Modal.getInstance(document.getElementById("bulkPreviewModal")).hide();
+      setTimeout(() => new bootstrap.Modal(document.getElementById("bulkUploadModal")).show(), 350);
     };
 
-})();
+  })();
 </script>

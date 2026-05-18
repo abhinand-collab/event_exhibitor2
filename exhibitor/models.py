@@ -128,7 +128,7 @@ class Attendee(models.Model):
     accepted_data_sharing = models.BooleanField(default=False)
     accepted_marketing = models.BooleanField(default=False)
     invite_token = models.UUIDField(default=uuid.uuid4, editable=False,unique=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True,db_index=True)
 
     def __str__(self):
         full_name = self.first_name

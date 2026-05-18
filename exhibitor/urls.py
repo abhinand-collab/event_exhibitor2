@@ -6,7 +6,7 @@ from .views import (
     bulk_task_status, get_attendee, 
     update_attendee, delete_attendee, bulk_delete_attendees, export_registrations, 
     send_invitations, register_attendee, 
-    attendee_audit_logs, task_status_invitation, badge_email_status,
+    attendee_audit_logs, task_status_invitation,
     get_invitation_preview,validate_invitation_row,validate_invitation_batch
 )
 
@@ -41,9 +41,4 @@ urlpatterns = [
     path("register/<uuid:token>/", register_attendee, name="register_attendee"),
     path("attendee/<int:attendee_id>/logs/", attendee_audit_logs, name="attendee_audit_logs"),
     path("task-status-invitation/<str:task_id>/", task_status_invitation, name="task_status"),
-    path(
-        "badge-email-status/<str:task_id>/",
-        badge_email_status,
-        name="badge_email_status",
-    ),
 ]
