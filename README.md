@@ -17,7 +17,7 @@ A robust Django-based system for managing event registrations, badge issuance, a
 
 - **Backend:** Django 6.0+, Python 3.x
 - **Task Queue:** Celery with Redis as the Broker/Result Backend
-- **Database:** SQLite (configured with WAL mode for performance)
+- **Database:** PostgreSQL (configured for production-ready performance)
 - **Frontend:** HTML5, CSS3 (Vanilla), JavaScript, jQuery, Bootstrap 5
 - **Libraries:** Select2 (flags support), intl-tel-input (phone validation), SheetJS (XLSX parsing)
 
@@ -26,6 +26,7 @@ A robust Django-based system for managing event registrations, badge issuance, a
 ### 1. Prerequisites
 - Python 3.8+
 - Redis Server (Running on `127.0.0.1:6379`)
+- PostgreSQL Server
 
 ### 2. Installation
 Clone the repository and set up a virtual environment:
@@ -36,25 +37,56 @@ pip install -r requirements.txt
 ```
 
 ### 3. Database Setup
+Ensure you have a PostgreSQL database named `exhibitor_db` and a user `exhibito_admin` as per `settings.py`.
+
 Apply migrations and create a superuser:
 ```bash
 python manage.py migrate
 python manage.py createsuperuser
 ```
 
-### 4. Background Worker Setup
-In a separate terminal, start the Celery worker to handle bulk imports and emails:
+### 4. Background Worker Setup (Celery)
+The project uses two separate queues to ensure that slow email delivery doesn't block management tasks.
+
+**Important for Windows Users:**
+1. Use `python -m celery` to avoid "Fatal error in launcher" issues.
+2. **ALWAYS** include `-P solo` (pool: solo) in your worker commands. Windows does not support Celery's default 'prefork' pool, and omitting it will cause errors in `billiard/pool.py`.
+
+#### Running All Queues Together (Development)
+In a separate terminal:
 ```bash
 # Windows
-celery -A event_exhibitor worker --loglevel=info -P solo
+python -m celery -A event_exhibitor worker --loglevel=info -P solo
 
 # Linux/Mac
-celery -A event_exhibitor worker --loglevel=info
+python -m celery -A event_exhibitor worker --loglevel=info
 ```
 
-To enable scheduled tasks (like automatic reminders):
+#### Running Specific Queues (Production Recommended)
+To separate "fast" management tasks from "slow" email tasks, run two worker instances:
+
+**Worker 1: Management Tasks (default queue)**
 ```bash
-celery -A event_exhibitor beat --loglevel=info
+# Windows
+python -m celery -A event_exhibitor worker -Q default --loglevel=info -P solo -n worker_mgmt@%h
+
+# Linux/Mac
+python -m celery -A event_exhibitor worker -Q default --loglevel=info -n worker_mgmt@%h
+```
+
+**Worker 2: Email Tasks (emails queue)**
+```bash
+# Windows
+python -m celery -A event_exhibitor worker -Q emails --loglevel=info -P solo -n worker_emails@%h
+
+# Linux/Mac
+python -m celery -A event_exhibitor worker -Q emails --loglevel=info -n worker_emails@%h
+```
+
+#### Scheduled Tasks (Celery Beat)
+To enable scheduled tasks (like automatic reminders at the top of every hour):
+```bash
+python -m celery -A event_exhibitor beat --loglevel=info
 ```
 
 ### 5. Running the Application
@@ -70,6 +102,7 @@ The project is pre-configured to use Gmail SMTP for sending emails. Update the f
 - `EMAIL_HOST_USER`: Your email address
 - `EMAIL_HOST_PASSWORD`: Your App-specific password
 - `CELERY_BROKER_URL`: Redis connection string
+- `DATABASES`: Update PostgreSQL credentials if different.
 
 ## 📁 Project Structure
 
@@ -77,4 +110,3 @@ The project is pre-configured to use Gmail SMTP for sending emails. Update the f
 - `/exhibitor/templates/includes`: Reusable components (Bulk Upload, Consolidated Modal, Invitations)
 - `/exhibitor/utils`: Utility functions for Redis locking and Email services
 - `/static`: Project assets (CSS, Styles, Sample Templates)
-

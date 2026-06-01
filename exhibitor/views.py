@@ -535,6 +535,8 @@ def validate_bulk_batch(request):
     try:
         body = json.loads(request.body)
         rows = body.get("rows", [])
+        from django.conf import settings
+        print(settings.DATA_UPLOAD_MAX_MEMORY_SIZE)
         
         exhibitor = request.user.exhibitor
         existing_emails = set(Attendee.objects.values_list("email", flat=True))
