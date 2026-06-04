@@ -110,3 +110,7 @@ The project is pre-configured to use Gmail SMTP for sending emails. Update the f
 - `/exhibitor/templates/includes`: Reusable components (Bulk Upload, Consolidated Modal, Invitations)
 - `/exhibitor/utils`: Utility functions for Redis locking and Email services
 - `/static`: Project assets (CSS, Styles, Sample Templates)
+
+Login exhibitor:
+email: veuz@gmail.com
+password: abhi1234

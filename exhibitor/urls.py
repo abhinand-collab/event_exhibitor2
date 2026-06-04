@@ -7,7 +7,12 @@ from .views import (
     update_attendee, delete_attendee, bulk_delete_attendees, export_registrations, 
     send_invitations, register_attendee, 
     attendee_audit_logs, task_status_invitation,
-    get_invitation_preview,validate_invitation_row,validate_invitation_batch
+    get_invitation_preview,validate_invitation_row,validate_invitation_batch,
+    complimentary_invitations_page, complimentary_invitations_list, 
+    create_complimentary_invitation, 
+    send_complimentary_invitation_email, register_complimentary_attendee,
+    get_invitation_usage_details,
+    complimentary_attendee_logs
 )
 
 urlpatterns = [
@@ -39,6 +44,16 @@ urlpatterns = [
     path("export-registrations/", export_registrations, name="export_registrations"),
     path('send-invitations/', send_invitations, name='send_invitations'),
     path("register/<uuid:token>/", register_attendee, name="register_attendee"),
+    
+    # Complimentary Invitations
+    path('complimentary-invitations/', complimentary_invitations_page, name="complimentary_invitations"),
+    path('api/complimentary-invitations/', complimentary_invitations_list, name="complimentary_invitations_list"),
+    path('api/complimentary/create/', create_complimentary_invitation, name="create_complimentary_invitation"),
+    path('api/complimentary/send-email/', send_complimentary_invitation_email, name="send_complimentary_invitation_email"),
+    path('api/complimentary/usage/<int:invite_id>/', get_invitation_usage_details, name="get_invitation_usage_details"),
+    path('api/complimentary/attendee/<int:attendee_id>/logs/', complimentary_attendee_logs, name="complimentary_attendee_logs"),
+    path('register/complimentary/<uuid:token>/', register_complimentary_attendee, name="register_complimentary_attendee"),
+
     path("attendee/<int:attendee_id>/logs/", attendee_audit_logs, name="attendee_audit_logs"),
     path("task-status-invitation/<str:task_id>/", task_status_invitation, name="task_status"),
 ]

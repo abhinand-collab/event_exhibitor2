@@ -705,16 +705,16 @@
             <i class="fas fa-calendar-alt"></i>
             You're Invited
         </div>
-        <h1>{{ attendee.event.name }}</h1>
+        <h1>{{ attendee.event.name|default:invite.exhibitor.event.name }}</h1>
         <p>
-            {% if attendee.event.start_date %}
-            {{ attendee.event.start_date|date:"M j, Y" }}
-            {% if attendee.event.end_date %} – {{ attendee.event.end_date|date:"M j, Y" }}{% endif %}
+            {% if attendee.event.start_date or invite.exhibitor.event.start_date %}
+            {{ attendee.event.start_date|default:invite.exhibitor.event.start_date|date:"M j, Y" }}
+            {% if attendee.event.end_date or invite.exhibitor.event.end_date %} – {{ attendee.event.end_date|default:invite.exhibitor.event.end_date|date:"M j, Y" }}{% endif %}
             {% endif %}
         </p>
         <div class="ticket-banner">
             <span class="ticket-dot"></span>
-            {{ attendee.get_attendee_type_display }} Pass
+            {{ attendee.get_attendee_type_display|default:invite.get_attendee_type_display }} Pass
         </div>
     </div>
 
@@ -725,21 +725,22 @@
         <!-- FORM STATE -->
         <div class="card-body" id="formSection">
 
-            <!-- Global error -->
-            <div class="alert alert-danger" id="globalError" style="display:none;">
+            <!-- Global error area -->
+            <div class="alert alert-danger" id="globalError" {% if not errors and not error %}style="display:none;"{% endif %}>
                 <i class="fas fa-exclamation-circle"></i>
-                <span id="globalErrorMsg"></span>
+                <span id="globalErrorMsg">{{ error }}{% if errors %}{{ errors|join:", " }}{% endif %}</span>
             </div>
 
             <!-- Greeting -->
             <div class="greeting">
                 <div class="greeting-avatar"><i class="fas fa-user"></i></div>
                 <div class="greeting-text">
-                    <h2>Hello, {{ attendee.first_name }}!</h2>
-                    <p>Please complete your registration to confirm your attendance.</p>
+                    <h2>Hello{% if attendee %}, {{ attendee.first_name }}{% endif %}!</h2>
+                    <p>{% if not error %}Please complete your registration to confirm your attendance.{% else %}We're sorry, but this invitation link is no longer available.{% endif %}</p>
                 </div>
             </div>
 
+            {% if attendee %}
             <!-- Pre-filled read-only info -->
             <div class="section-title">Your Details</div>
             <div class="prefilled-grid">
@@ -756,12 +757,37 @@
                     <span style="word-break: break-all;">{{ attendee.email }}</span>
                 </div>
             </div>
+            {% endif %}
 
+            {% if not error %}
             <!-- Form -->
             <form method="POST" id="registrationForm" novalidate>
                 {% csrf_token %}
 
                 <div class="section-title" style="margin-bottom:20px;">Complete Your Profile</div>
+
+                {% if is_complimentary %}
+                <!-- Row 0: Name + Email (for complimentary) -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>First Name <span class="req">*</span></label>
+                        <input type="text" name="first_name" class="form-control" id="fieldFirstName"
+                            placeholder="Your first name" value="{{ request.POST.first_name|default:'' }}">
+                        <div class="error-msg" id="errFirstName"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Last Name</label>
+                        <input type="text" name="last_name" class="form-control" id="fieldLastName"
+                            placeholder="Your last name" value="{{ request.POST.last_name|default:'' }}">
+                    </div>
+                </div>
+                <div class="form-group full">
+                    <label>Email Address <span class="req">*</span></label>
+                    <input type="email" name="email" class="form-control" id="fieldEmail"
+                        placeholder="you@example.com" value="{{ request.POST.email|default:'' }}">
+                    <div class="error-msg" id="errEmail"></div>
+                </div>
+                {% endif %}
 
                 <!-- Row 1: Company + Job Title -->
                 <div class="form-row">
@@ -801,7 +827,7 @@
                 <!-- Row 3: Mobile (full width) -->
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Mobile Number <span class="req">*</span></label>
+                        <label>Mobile Number</label>
                         <input type="hidden" name="mobile" id="mobileHidden">
                         <input type="tel" class="form-control" id="fieldMobile" placeholder="50 000 0000">
                         <div class="error-msg" id="errMobile"></div>
@@ -879,10 +905,11 @@
                 <i class="fas fa-lock" style="margin-right:4px; color:#aaa;"></i>
                 Your information is stored securely and will only be used for event purposes.
             </p>
+            {% endif %}
         </div>
 
         <!-- SUCCESS STATE -->
-        <div class="success-screen" id="successSection">
+        <div class="success-screen {% if success or attendee.status == 'CONFIRMED' %}show{% endif %}" id="successSection">
             <div class="success-icon"><i class="fas fa-check"></i></div>
             <h2>You're Confirmed!</h2>
             <p>Your registration is complete. Your badge will be ready at the event entrance.<br>
@@ -1015,11 +1042,11 @@
                 document.getElementById('errMobile').classList.remove('show');
             });
 
-            // ── Form submit ───────────────────────────────────────────────────────
-            const form = document.getElementById('registrationForm');
-            if (form) {
-                form.addEventListener('submit', function (e) {
+            // ── Form submit (Event Delegation) ───────────────────────────────────
+            document.addEventListener('submit', function (e) {
+                if (e.target && e.target.id === 'registrationForm') {
                     e.preventDefault();
+                    const form = e.target;
                     let valid = true;
 
                     syncMobile();
@@ -1032,10 +1059,25 @@
                     const nationality = document.getElementById('nationalityHidden').value.trim();
                     const terms      = document.getElementById('chkTerms')?.checked;
 
-                    if (!mobileRaw) {
-                        showFieldError('fieldMobile', 'errMobile', 'Mobile number is required.');
+                    // Name/Email validation if they exist (complimentary mode)
+                    const firstName = document.getElementById('fieldFirstName')?.value.trim();
+                    const email = document.getElementById('fieldEmail')?.value.trim();
+
+                    if (firstName === "") {
+                        showFieldError('fieldFirstName', 'errFirstName', 'First name is required.');
                         valid = false;
-                    } else if (!iti.isValidNumber()) {
+                    } else if (firstName) {
+                        clearFieldError('fieldFirstName', 'errFirstName');
+                    }
+
+                    if (email === "") {
+                        showFieldError('fieldEmail', 'errEmail', 'Email is required.');
+                        valid = false;
+                    } else if (email) {
+                        clearFieldError('fieldEmail', 'errEmail');
+                    }
+
+                    if (mobileRaw && !iti.isValidNumber()) {
                         const code = iti.getValidationError();
                         const msgs = { 0: 'Invalid number.', 1: 'Invalid country code.', 2: 'Number too short.', 3: 'Number too long.' };
                         showFieldError('fieldMobile', 'errMobile', msgs[code] || 'Invalid mobile number.');
@@ -1088,15 +1130,40 @@
                         .then(html => {
                             const parser = new DOMParser();
                             const doc = parser.parseFromString(html, 'text/html');
+                            
                             const successSection = doc.getElementById('successSection');
-                            if (successSection && successSection.classList.contains('show')) {
+                            const hasConfirmed = successSection && successSection.classList.contains('show');
+
+                            if (hasConfirmed) {
                                 document.getElementById('formSection').style.display = 'none';
                                 const mainSuccess = document.getElementById('successSection');
                                 mainSuccess.innerHTML = successSection.innerHTML;
                                 mainSuccess.classList.add('show');
                                 window.scrollTo({ top: 0, behavior: 'smooth' });
                             } else {
-                                location.reload();
+                                // Error case: update form with errors from the response
+                                const globalError = document.getElementById('globalError');
+                                const globalErrorMsg = document.getElementById('globalErrorMsg');
+                                
+                                // Try to find error messages in the new HTML
+                                const newErrorMsg = doc.getElementById('globalErrorMsg')?.textContent;
+                                const fieldErrors = doc.querySelectorAll('.error-msg.show');
+
+                                if (newErrorMsg || fieldErrors.length > 0) {
+                                    if (globalError && globalErrorMsg && newErrorMsg) {
+                                        globalError.style.display = 'flex';
+                                        globalErrorMsg.textContent = newErrorMsg;
+                                    }
+                                    // Update individual field errors if we want to be very precise, 
+                                    // but for now, showing the global error is a good start.
+                                    // Reset button
+                                    btn.disabled = false;
+                                    btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm My Registration';
+                                } else {
+                                    // If we can't find specific errors but didn't succeed, something is wrong
+                                    location.reload();
+                                }
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
                             }
                         })
                         .catch(err => {
@@ -1105,8 +1172,8 @@
                             btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm My Registration';
                             alert('An error occurred. Please try again.');
                         });
-                });
-            }
+                }
+            });
 
             // ── Error helpers ─────────────────────────────────────────────────────
             function showFieldError(fieldId, errId, msg) {

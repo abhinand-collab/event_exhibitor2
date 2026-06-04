@@ -393,3 +393,87 @@ class SingleAttendeeSerializer:
         if val is None: return False
         if isinstance(val, bool): return val
         return str(val).lower() in ('true', '1', 'yes', 'y', 'checked', 'on')
+
+
+class ComplimentaryInvitationCreateSerializer:
+    """
+    Serializer for creating complimentary (generic) invitation links.
+    Validates link name, attendee type, usage limit, and expiry date.
+    """
+    VALID_TICKET_TYPES = ['VIP', 'VISITOR', 'EXHIBITOR']
+
+    def __init__(self, data, exhibitor, total_count=1):
+        self.data = data
+        self.exhibitor = exhibitor
+        self.total_count = total_count  # For bulk creation, total_count links will be created
+        self._errors = {}
+        self._validated_data = {}
+
+    def is_valid(self):
+        self._errors = {}
+        self._validated_data = {}
+
+        link_name = self.data.get('link_name')
+        attendee_type = str(self.data.get('attendee_type') or "").strip().upper()
+        usage_limit = self.data.get('usage_limit')
+        expiry_date = self.data.get('expiry_date')
+
+        # 1. Required Checks (link_name is optional if we generate it, like in bulk)
+        if attendee_type not in self.VALID_TICKET_TYPES:
+            self._add_error('attendee_type', "Invalid ticket type.")
+
+        # 2. Usage Limit validation
+        try:
+            usage_limit = int(usage_limit)
+            if usage_limit <= 0:
+                self._add_error('usage_limit', "Usage limit must be a positive integer.")
+        except (ValueError, TypeError):
+            self._add_error('usage_limit', "Invalid usage limit format.")
+
+        # 3. Expiry Date validation
+        if expiry_date:
+            from datetime import datetime
+            try:
+                # Expecting YYYY-MM-DD
+                parsed_date = datetime.strptime(expiry_date, '%Y-%m-%d').date()
+                from django.utils import timezone
+                if parsed_date < timezone.now().date():
+                    self._add_error('expiry_date', "Expiry date cannot be in the past.")
+                expiry_date = parsed_date
+            except ValueError:
+                self._add_error('expiry_date', "Invalid date format. Use YYYY-MM-DD.")
+        else:
+            expiry_date = None
+
+        # 4. Pass Limit Check
+        if not self._errors:
+            total_requested = self.total_count * usage_limit
+            remaining = self.exhibitor.remaining_by_type()
+            if remaining.get(attendee_type, 0) < total_requested:
+                self._add_error('usage_limit', f"Limit exceeded. You only have {remaining.get(attendee_type, 0)} {attendee_type} passes remaining.")
+
+        if self._errors:
+            return False
+
+        # 4. All good - populate validated data
+        import time
+        ts = int(time.time())
+        self._validated_data = {
+            'link_name': link_name or f"Link - {attendee_type} - {ts}",
+            'attendee_type': attendee_type,
+            'usage_limit': usage_limit,
+            'expiry_date': expiry_date,
+        }
+        return True
+
+    @property
+    def errors(self):
+        # Join errors for consistent view response
+        return " ".join([f"{v}" for k, v in self._errors.items()])
+
+    @property
+    def validated_data(self):
+        return self._validated_data
+
+    def _add_error(self, field, message):
+        self._errors[field] = message

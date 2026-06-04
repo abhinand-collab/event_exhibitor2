@@ -41,53 +41,7 @@
 <!-- App Wrapper -->
 <div class="app-wrapper">
     <!-- Sidebar -->
-    <nav class="sidebar" id="sidebar">
-        <!-- <div class="countdown-section">
-            <div class="countdown-title">Time Remaining</div>
-            <div class="countdown-display" id="countdown">
-                <span>16<small>Days</small></span>
-                <span>17<small>Hours</small></span>
-                <span>45<small>Mins</small></span>
-                <span>19<small>Secs</small></span>
-            </div>
-        </div> -->
-
-        <div class="nav-menu">
-            <a href="{% url 'home' %}" class="nav-item active">
-                <i class="fas fa-home"></i>
-                <span>HOME</span>
-            </a>
-            <!-- <a href="{% url 'home' %}" class="nav-item">
-                <i class="fas fa-id-badge"></i>
-                <span>BADGES</span>
-            </a> -->
-            <!-- <div class="nav-parent open" id="badgesMenu">
-                <div class="nav-parent-left">
-                    <i class="fas fa-id-badge"></i>
-                    <span>BADGES</span>
-                </div>
-                <i class="fas fa-chevron-right nav-arrow"></i>
-            </div> -->
-            <!-- <div class="nav-submenu open" id="badgesSubmenu">
-                <a href="exhibitor.html" class="nav-item active">
-                    <i class="fas fa-user-tie"></i>
-                    <span>EXHIBITOR BADGE</span>
-                </a>
-                <a href="visitor.html" class="nav-item">
-                    <i class="fas fa-user-plus"></i>
-                    <span>VISITOR</span>
-                </a>
-            </div> -->
-            <!-- <a href="#" class="nav-item">
-                <i class="fas fa-trophy"></i>
-                <span>VIP NOMINATION</span>
-            </a> -->
-            <a href="{% url 'manuals' %}" class="nav-item">
-                <i class="fas fa-book"></i>
-                <span>MANUALS & GUIDES</span>
-            </a>
-        </div>
-    </nav>
+    {% include 'includes/sidebar.html' %}
 
     <!-- Main Content -->
     <main class="main-content">

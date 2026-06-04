@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Event,Exhibitor,Attendee,Badge,User
+from .models import Event,Exhibitor,Attendee,Badge,User,ComplimentaryInvitation
 from django.contrib.auth.admin import UserAdmin
 
 
@@ -10,6 +10,7 @@ admin.site.register(Event)
 admin.site.register(Exhibitor)
 # admin.site.register(Attendee)
 admin.site.register(Badge)
+admin.site.register(ComplimentaryInvitation)
 
 @admin.register(Attendee)
 class AttendeeAdmin(admin.ModelAdmin):

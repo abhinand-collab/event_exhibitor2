@@ -121,6 +121,13 @@ class Attendee(models.Model):
     nationality = models.CharField(max_length=100, blank=True, null=True)
     attendee_type = models.CharField(max_length=20, choices=AttendeeType.choices,db_index=True)
     source = models.CharField(max_length=100, blank=True, null=True)
+    complimentary_link = models.ForeignKey(
+        'ComplimentaryInvitation',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="registered_attendees"
+    )
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING,db_index=True)    
     digital_badge_issued = models.BooleanField(default=False)
     onsite_badge_printed = models.BooleanField(default=False)
@@ -157,3 +164,45 @@ class Badge(models.Model):
         return f"{self.attendee} - {self.attendee.attendee_type}"
     
 auditlog.register(Badge)
+
+
+# ---------------------------
+# 5. Complimentary Invitation (Generic Links)
+# ---------------------------
+class ComplimentaryInvitation(models.Model):
+    exhibitor = models.ForeignKey(
+        Exhibitor,
+        on_delete=models.CASCADE,
+        related_name="complimentary_invitations"
+    )
+    link_name = models.CharField(max_length=255)
+    invite_token = models.UUIDField(
+        default=uuid.uuid4,
+        editable=False,
+        unique=True
+    )
+    attendee_type = models.CharField(
+        max_length=20,
+        choices=Attendee.AttendeeType.choices,
+        default=Attendee.AttendeeType.VISITOR
+    )
+    usage_limit = models.PositiveIntegerField(default=1)
+    used_count = models.PositiveIntegerField(default=0)
+    expiry_date = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.link_name} ({self.exhibitor.company_name})"
+
+    @property
+    def remaining_usage(self):
+        return max(0, self.usage_limit - self.used_count)
+
+    @property
+    def is_expired(self):
+        from django.utils import timezone
+        if self.expiry_date and self.expiry_date < timezone.now().date():
+            return True
+        return False
+
+auditlog.register(ComplimentaryInvitation)

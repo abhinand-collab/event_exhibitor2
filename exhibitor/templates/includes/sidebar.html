@@ -1,0 +1,16 @@
+<nav class="sidebar" id="sidebar">
+    <div class="nav-menu">
+        <a href="{% url 'home' %}" class="nav-item {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+            <i class="fas fa-home"></i>
+            <span>HOME</span>
+        </a>
+        <a href="{% url 'complimentary_invitations' %}" class="nav-item {% if request.resolver_match.url_name == 'complimentary_invitations' %}active{% endif %}">
+            <i class="fas fa-gift"></i>
+            <span>COMPLIMENTARY INVITATION</span>
+        </a>
+        <a href="{% url 'manuals' %}" class="nav-item {% if request.resolver_match.url_name == 'manuals' %}active{% endif %}">
+            <i class="fas fa-book"></i>
+            <span>MANUALS & GUIDES</span>
+        </a>
+    </div>
+</nav>

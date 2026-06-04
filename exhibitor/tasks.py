@@ -8,6 +8,9 @@ from .utils.emails import send_pending_reminder_email
 from .utils.redis_lock import acquire_lock, release_lock
 from collections import Counter
 from django.db.models import Count
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
 
 logger = logging.getLogger(__name__)
 
@@ -125,7 +128,7 @@ def bulk_upload_save_task(self, rows, exhibitor_id):
                         created += len(badges_to_create)
                         for att in created_attendees:
                             if att.pk:
-                                send_badge_confirmation_email.delay(att.id, att.attendee_type)
+                                send_badge_confirmation_email_task.delay(att.id, att.attendee_type)
                             
                 except IntegrityError as e:
                     logger.warning(f"Batch IntegrityError: {e}. Falling back to individual creation.")
@@ -135,7 +138,7 @@ def bulk_upload_save_task(self, rows, exhibitor_id):
                                 att.save()
                                 Badge.objects.create(attendee=att)
                                 created += 1
-                                send_badge_confirmation_email.delay(att.id, att.attendee_type)
+                                send_badge_confirmation_email_task.delay(att.id, att.attendee_type)
                         except IntegrityError:
                             skipped += 1
                             created_by_type[att.attendee_type] -= 1
@@ -156,11 +159,6 @@ def bulk_upload_save_task(self, rows, exhibitor_id):
         "total_valid": len(rows),
         "created_by_type": created_by_type,
     }
-
-
-from django.core.mail import EmailMultiAlternatives
-from django.template.loader import render_to_string
-from django.utils.html import strip_tags
 
 
 @shared_task(bind=True, max_retries=3)
@@ -234,7 +232,6 @@ def process_invitations_batch(self, entries, exhibitor_id):
 
     try:
         exhibitor = Exhibitor.objects.get(id=exhibitor_id)
-        # ... (rest of function)
         event = exhibitor.event
 
         incoming_emails = {
@@ -525,3 +522,27 @@ def send_badge_confirmation_email_task(self, attendee_id: int, ticket_type: str)
                     "The badge was created successfully, but please resend the email manually."
                 ),
             }
+
+
+@shared_task(bind=True, max_retries=3)
+def send_complimentary_link_task(self, email, link, link_name):
+    """
+    Send a generic complimentary invitation link to a specified email.
+    """
+    try:
+        subject = f"Invitation: {link_name}"
+        message = f"You are invited! Please use the following link to register for your complimentary badge: {link}"
+        
+        # In a real app, we'd use a styled HTML template here as well
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=None,
+            recipient_list=[email],
+        )
+        logger.info(f"Complimentary link sent to {email}")
+    except Exception as exc:
+        logger.error(f"Error sending complimentary link to {email}: {exc}")
+        raise self.retry(exc=exc)
+
+

@@ -1,0 +1,659 @@
+{% extends 'base.html' %}
+{% block content %}
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+</div>
+
+<!-- Top Header -->
+<div class="top-header">
+    <div class="container-fluid px-4">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="search-wrapper">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" class="form-control search-input form-control-sm" placeholder="Search...">
+                    </div>
+                    <select class="form-select form-select-sm"
+                        style="width: 200px; background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3); color: white; height: 32px;">
+                        <option>GULFOOD 2026</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-6 text-end d-flex align-items-center justify-content-end">
+                <span class="me-3 text-white">Welcome, {{ request.user.get_full_name|default:request.user.username }}</span>
+                <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-light" style="height: 32px; display: flex; align-items: center;">
+                    <i class="fas fa-sign-out-alt me-1"></i> Sign Out
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sidebar Toggle Button (Mobile) -->
+<button class="sidebar-toggle" id="sidebarToggle">
+    <i class="fas fa-bars"></i>
+</button>
+
+<!-- App Wrapper -->
+<div class="app-wrapper" style="margin-top: 90px;">
+    <!-- Sidebar -->
+    {% include 'includes/sidebar.html' %}
+
+    <!-- Main Content -->
+    <main class="main-content" style="padding-top: 10px;">
+        <!-- Page Hero Section (Consistency with Homepage) -->
+        <div class="badge-stats-card animate-fade-in mb-4" style="background: linear-gradient(45deg, #3f0e60, #891487); border: none; padding: 25px; border-radius: 12px;">
+            <div class="row align-items-center mb-4">
+                <div class="col-md-12 text-white">
+                    <h2 class="mb-1" style="font-weight: 700;">Complimentary Invitations</h2>
+                    <p class="mb-0 text-white-50">Generate and manage generic registration links for your special guests.</p>
+                </div>
+            </div>
+            
+            <!-- Pass Status Dashboard -->
+            {% include 'includes/stats.html' %}
+        </div>
+
+        <!-- Action Cards -->
+        <div class="row g-2 mb-4 animate-fade-in">
+            <div class="col-md-12 mb-3">
+                <div class="action-card" style="display: flex; flex-direction: row; align-items: center; justify-content: space-between; padding: 30px;">
+                    <div class="d-flex align-items-center gap-4">
+                        <div class="action-card-icon purple" style="margin-bottom: 0;">
+                            <i class="fas fa-plus-circle"></i>
+                        </div>
+                        <div class="text-start">
+                            <h5 class="mb-1" style="font-size: 20px;">Generate Generic Link</h5>
+                            <p class="mb-0">Create a reusable registration link for social media, WhatsApp, or special guest lists.</p>
+                        </div>
+                    </div>
+                    <button class="btn btn-action-card" onclick="openCreateModal()" style="width: auto; padding: 12px 30px;">
+                        <i class="fas fa-plus-circle me-2"></i>Generate Now
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Invitations Section -->
+        <div class="registrations-section animate-fade-in">
+            <div class="registrations-header">
+                <h5 class="mb-0">Active Invitation Links</h5>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="invitationsTable">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-4">Link Name</th>
+                            <th>Type</th>
+                            <th>Limit</th>
+                            <th>Used</th>
+                            <th>Remaining</th>
+                            <th>Expiration</th>
+                            <th>Registration Link</th>
+                            <th class="pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invitationsBody">
+                        <!-- Data will be loaded via AJAX -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination-wrapper" style="margin-top: 20px; padding: 15px 0; border-top: 1px solid #e5e7eb;">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <div class="pagination-info" id="paginationInfo" style="color: #6b7280; font-size: 14px;">
+                            Showing 0 to 0 of 0 entries
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination justify-content-end" id="invitationsPagination" style="margin: 0; gap: 5px;">
+                                <!-- Pagination will be populated by AJAX -->
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+
+            <div class="page-size-selector" style="margin-top: 10px; display: flex; justify-content: flex-end; align-items: center; gap: 10px;">
+                <label style="color: #6b7280; font-size: 14px; margin: 0;">Show</label>
+                <select id="pageSizeSelect" class="form-select form-select-sm" style="width: auto; border-radius: 6px;" onchange="changePageSize()">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+                <span style="color: #6b7280; font-size: 14px;">entries per page</span>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Task Progress Container (Floating) -->
+<div id="taskProgressContainer" style="position: fixed; bottom: 20px; right: 20px; z-index: 1050; width: 320px; display: flex; flex-direction: column; gap: 10px;"></div>
+
+<!-- Toast Notification Container -->
+<div id="toastContainer" style="position: fixed; top: 20px; right: 20px; z-index: 9999; pointer-events: none;"></div>
+
+<!-- Error Popup Modal -->
+<div class="modal fade" id="errorPopupModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 400px;">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+            <div class="modal-header bg-danger text-white py-3">
+                <h5 class="modal-title d-flex align-items-center" style="font-size: 16px; font-weight: 700;">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <span id="errorPopupTitle">Action Blocked</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <div class="mb-3">
+                    <div class="rounded-circle bg-danger bg-opacity-10 d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                        <i class="fas fa-ban text-danger" style="font-size: 28px;"></i>
+                    </div>
+                </div>
+                <h6 class="fw-bold text-dark mb-2" id="errorPopupMainMessage">Pass Limit Reached</h6>
+                <p class="text-muted mb-0" id="errorPopupDetailMessage" style="font-size: 13px; line-height: 1.5;"></p>
+            </div>
+            <div class="modal-footer bg-light border-0 justify-content-center py-3">
+                <button type="button" class="btn btn-secondary px-5" data-bs-dismiss="modal" style="border-radius: 8px; font-weight: 600; font-size: 14px;">Got it</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Single Modal -->
+<div class="modal fade" id="createModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Generate Generic Link</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Link Name (Optional)</label>
+                    <input type="text" id="newLinkName" class="form-control" placeholder="e.g. Social Media Campaign">
+                    <p class="text-muted small mt-1">If left blank, a name will be generated automatically.</p>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Attendee Type</label>
+                        <select id="newAttendeeType" class="form-select">
+                            <option value="VISITOR">Visitor Pass</option>
+                            <option value="EXHIBITOR">Exhibitor Pass</option>
+                            <option value="VIP">VIP Pass</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Usage Limit per Link</label>
+                        <input type="number" id="newUsageLimit" class="form-control" value="1" min="1">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Number of Links to Generate</label>
+                    <input type="number" id="newLinkCount" class="form-control" value="1" min="1" max="100">
+                    <p class="text-muted small mt-1">You can create up to 100 links at once.</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Expiry Date (Optional)</label>
+                    <input type="date" id="newExpiryDate" class="form-control">
+                    <p class="text-muted small mt-1">Leave blank for no expiry. The link will be disabled after this date.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitCreateInvitation()">Create Link</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Send Email Modal -->
+<div class="modal fade" id="sendEmailModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header bg-primary text-white py-3">
+                <h5 class="modal-title" style="font-weight: 700;">
+                    <i class="fas fa-paper-plane me-2"></i>Share Registration Link
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="sendInviteId">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Recipient Emails</label>
+                    <textarea id="sendRecipientEmail" class="form-control" rows="3" 
+                        placeholder="guest1@example.com, guest2@example.com"
+                        style="border-radius: 10px; resize: none;"></textarea>
+                    <div class="form-text mt-2" style="font-size: 12px;">
+                        Separate multiple email addresses with <strong>commas</strong>.
+                    </div>
+                </div>
+                <div class="alert alert-info py-2 px-3 border-0 mb-0" style="border-radius: 10px; background: rgba(13, 110, 253, 0.08);">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-info-circle text-primary me-2"></i>
+                        <span class="text-dark" style="font-size: 12.5px;">Each recipient will receive an individual email with the registration link.</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-0 py-3" style="border-radius: 0 0 16px 16px;">
+                <button type="button" class="btn btn-link text-muted text-decoration-none" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary px-4" onclick="submitSendEmail()" style="border-radius: 8px; font-weight: 600;">
+                    Send Invitations
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Usage Details Modal -->
+<div class="modal fade" id="usageDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header bg-primary text-white py-3">
+                <h5 class="modal-title" style="font-weight: 700;">
+                    <i class="fas fa-users me-2"></i>
+                    Usage Details: <span id="usageLinkName"></span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive" style="max-height: 400px;">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light sticky-top">
+                            <tr>
+                                <th class="ps-4">Attendee Name</th>
+                                <th>Email</th>
+                                <th>Company</th>
+                                <th>Status</th>
+                                <th>Registration Date</th>
+                                <th class="pe-4 text-end">Logs</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usageDetailsBody">
+                            <!-- Populated by AJAX -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="noUsageMessage" class="text-center py-5 d-none">
+                    <div class="mb-3">
+                        <i class="fas fa-user-slash text-muted" style="font-size: 40px;"></i>
+                    </div>
+                    <p class="text-muted">No attendees have registered using this link yet.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Attendee Logs Modal -->
+<div class="modal fade" id="attendeeLogsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header bg-info text-white py-3">
+                <h5 class="modal-title" style="font-weight: 700;">
+                    <i class="fas fa-history me-2"></i>
+                    Audit Logs: <span id="logAttendeeName"></span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive" style="max-height: 400px;">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light sticky-top">
+                            <tr>
+                                <th class="ps-4">Timestamp</th>
+                                <th>Actor</th>
+                                <th>Action</th>
+                                <th class="pe-4">Changes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendeeLogsBody">
+                            <!-- Populated by AJAX -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentPage = 1;
+    let pageSize = 10;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        loadInvitations();
+    });
+
+    function loadInvitations(page = 1) {
+        currentPage = page;
+        document.getElementById('loadingOverlay').classList.add('active');
+        
+        const url = new URL('{% url "complimentary_invitations_list" %}', window.location.origin);
+        url.searchParams.append('page', page);
+        url.searchParams.append('page_size', pageSize);
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                const body = document.getElementById('invitationsBody');
+                body.innerHTML = '';
+                
+                if (data.invitations.length === 0) {
+                    body.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">No invitation links found.</td></tr>';
+                } else {
+                    data.invitations.forEach(invite => {
+                        const expiryDisplay = invite.expiry_date ? invite.expiry_date : 'No Expiry';
+                        const expiredClass = invite.is_expired ? 'text-danger fw-bold' : '';
+                        
+                        const row = `
+                            <tr>
+                                <td class="ps-4"><strong>${invite.link_name}</strong></td>
+                                <td><span class="status-badge ${invite.attendee_type.toLowerCase()}">${invite.attendee_type}</span></td>
+                                <td>${invite.usage_limit}</td>
+                                <td>${invite.used_count}</td>
+                                <td>${invite.remaining}</td>
+                                <td class="${expiredClass}">${expiryDisplay}</td>
+                                <td>
+                                    <div class="d-flex align-items-center bg-light border rounded p-1" style="max-width: 250px;">
+                                        <input type="text" class="form-control form-control-sm border-0 bg-transparent text-muted" value="${invite.invite_url}" readonly style="font-size: 11px;">
+                                        <button class="btn btn-sm btn-white border shadow-sm ms-1" onclick="copyToClipboard('${invite.invite_url}')">
+                                            <i class="far fa-copy text-primary"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                                <td class="pe-4">
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-primary" onclick="openSendEmailModal(${invite.id})" title="Send to Email" ${invite.is_expired ? 'disabled' : ''}>
+                                            <i class="fas fa-envelope"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-info" onclick="viewUsageDetails(${invite.id})" title="View Usage Details">
+                                            <i class="fas fa-users"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                        body.insertAdjacentHTML('beforeend', row);
+                    });
+                }
+                
+                renderPagination(data.pagination);
+                document.getElementById('loadingOverlay').classList.remove('active');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('loadingOverlay').classList.remove('active');
+            });
+    }
+
+    function renderPagination(pagination) {
+        const info = document.getElementById('paginationInfo');
+        info.textContent = `Showing ${pagination.start_index} to ${pagination.end_index} of ${pagination.total_count} entries`;
+
+        const container = document.getElementById('invitationsPagination');
+        container.innerHTML = '';
+
+        // Previous Button
+        const prevLi = document.createElement('li');
+        prevLi.className = `page-item ${!pagination.has_previous ? 'disabled' : ''}`;
+        prevLi.innerHTML = `<a class="page-link" href="#" onclick="loadInvitations(${pagination.current_page - 1})"><i class="fas fa-chevron-left"></i></a>`;
+        container.appendChild(prevLi);
+
+        // Page Numbers
+        pagination.page_range.forEach(p => {
+            const li = document.createElement('li');
+            if (p === '...') {
+                li.className = 'page-item disabled';
+                li.innerHTML = '<span class="page-link">...</span>';
+            } else {
+                li.className = `page-item ${p === pagination.current_page ? 'active' : ''}`;
+                li.innerHTML = `<a class="page-link" href="#" onclick="loadInvitations(${p})">${p}</a>`;
+            }
+            container.appendChild(li);
+        });
+
+        // Next Button
+        const nextLi = document.createElement('li');
+        nextLi.className = `page-item ${!pagination.has_next ? 'disabled' : ''}`;
+        nextLi.innerHTML = `<a class="page-link" href="#" onclick="loadInvitations(${pagination.current_page + 1})"><i class="fas fa-chevron-right"></i></a>`;
+        container.appendChild(nextLi);
+    }
+
+    function changePageSize() {
+        pageSize = document.getElementById('pageSizeSelect').value;
+        loadInvitations(1);
+    }
+
+    function openCreateModal() {
+        new bootstrap.Modal(document.getElementById('createModal')).show();
+    }
+
+    function openSendEmailModal(id) {
+        document.getElementById('sendInviteId').value = id;
+        new bootstrap.Modal(document.getElementById('sendEmailModal')).show();
+    }
+
+    function submitCreateInvitation() {
+        const payload = {
+            link_name: document.getElementById('newLinkName').value,
+            attendee_type: document.getElementById('newAttendeeType').value,
+            usage_limit: document.getElementById('newUsageLimit').value,
+            count: document.getElementById('newLinkCount').value,
+            expiry_date: document.getElementById('newExpiryDate').value
+        };
+
+        fetch('{% url "create_complimentary_invitation" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('createModal')).hide();
+                loadInvitations(1);
+                showToast('Link created successfully!', 'success');
+            } else {
+                const activeModal = bootstrap.Modal.getInstance(document.getElementById('createModal'));
+                if (activeModal) activeModal.hide();
+                showErrorPopup('Limit Exceeded', 'Action Blocked', data.error);
+            }
+        });
+    }
+
+    function submitSendEmail() {
+        const payload = {
+            invite_id: document.getElementById('sendInviteId').value,
+            email: document.getElementById('sendRecipientEmail').value
+        };
+
+        if (!payload.email) {
+            showToast('Please enter an email address.', 'error');
+            return;
+        }
+
+        fetch('{% url "send_complimentary_invitation_email" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('sendEmailModal')).hide();
+                showToast('Invitation link sent successfully!', 'success');
+            } else {
+                // Hide the send modal first so the error popup is visible on top
+                const activeModal = bootstrap.Modal.getInstance(document.getElementById('sendEmailModal'));
+                if (activeModal) activeModal.hide();
+                showErrorPopup('Send Failed', 'Invalid Request', data.error);
+            }
+        });
+    }
+
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            showToast('Registration link copied to clipboard!', 'success');
+        });
+    }
+
+    function showErrorPopup(title, mainMsg, detailMsg) {
+        document.getElementById('errorPopupTitle').textContent = title;
+        document.getElementById('errorPopupMainMessage').textContent = mainMsg;
+        document.getElementById('errorPopupDetailMessage').textContent = detailMsg;
+        new bootstrap.Modal(document.getElementById('errorPopupModal')).show();
+    }
+
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        
+        const bgColor = type === 'success' ? '#10b981' : '#ef4444';
+        const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+
+        toast.className = 'animate-fade-in';
+        toast.style.cssText = `
+            background: ${bgColor};
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            pointer-events: auto;
+            transition: all 0.3s ease;
+        `;
+
+        toast.innerHTML = `
+            <i class="fas ${icon}"></i>
+            <span>${message}</span>
+        `;
+
+        container.appendChild(toast);
+
+        // Remove after 3 seconds
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(-10px)';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    function viewUsageDetails(inviteId) {
+        document.getElementById('loadingOverlay').classList.add('active');
+        
+        fetch(`/api/complimentary/usage/${inviteId}/`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('loadingOverlay').classList.remove('active');
+                if (data.success) {
+                    document.getElementById('usageLinkName').textContent = data.link_name;
+                    const body = document.getElementById('usageDetailsBody');
+                    body.innerHTML = '';
+                    
+                    if (data.attendees.length === 0) {
+                        document.getElementById('noUsageMessage').classList.remove('d-none');
+                        body.parentElement.parentElement.classList.add('d-none');
+                    } else {
+                        document.getElementById('noUsageMessage').classList.add('d-none');
+                        body.parentElement.parentElement.classList.remove('d-none');
+                        
+                        data.attendees.forEach(att => {
+                            const row = `
+                                <tr>
+                                    <td class="ps-4"><strong>${att.first_name} ${att.last_name}</strong></td>
+                                    <td>${att.email}</td>
+                                    <td>${att.company}</td>
+                                    <td><span class="badge bg-${att.status === 'CONFIRMED' ? 'success' : 'warning'}">${att.status}</span></td>
+                                    <td>${att.created_at}</td>
+                                    <td class="pe-4 text-end">
+                                        <button class="btn btn-sm btn-outline-info" onclick="viewAttendeeLogs(${att.id})">
+                                            <i class="fas fa-history"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            `;
+                            body.insertAdjacentHTML('beforeend', row);
+                        });
+                    }
+                    new bootstrap.Modal(document.getElementById('usageDetailsModal')).show();
+                }
+            })
+            .catch(err => {
+                document.getElementById('loadingOverlay').classList.remove('active');
+                showToast('Failed to load usage details.', 'error');
+            });
+    }
+
+    function viewAttendeeLogs(attendeeId) {
+        document.getElementById('loadingOverlay').classList.add('active');
+        
+        fetch(`/api/complimentary/attendee/${attendeeId}/logs/`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('loadingOverlay').classList.remove('active');
+                if (data.success) {
+                    document.getElementById('logAttendeeName').textContent = data.attendee_name;
+                    const body = document.getElementById('attendeeLogsBody');
+                    body.innerHTML = '';
+                    
+                    if (data.logs.length === 0) {
+                        body.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-muted">No logs found for this attendee.</td></tr>';
+                    } else {
+                        data.logs.forEach(log => {
+                            let changesHtml = '';
+                            if (log.changes) {
+                                try {
+                                    const changes = typeof log.changes === 'string' ? JSON.parse(log.changes) : log.changes;
+                                    changesHtml = '<ul class="mb-0 ps-3 small">';
+                                    for (const [field, vals] of Object.entries(changes)) {
+                                        changesHtml += `<li><strong>${field}:</strong> ${vals[0]} → ${vals[1]}</li>`;
+                                    }
+                                    changesHtml += '</ul>';
+                                } catch (e) {
+                                    changesHtml = '<span class="text-muted small">Raw: ' + JSON.stringify(log.changes) + '</span>';
+                                }
+                            }
+
+                            const row = `
+                                <tr>
+                                    <td class="ps-4 small">${log.timestamp}</td>
+                                    <td>${log.actor}</td>
+                                    <td><span class="badge bg-secondary">${log.action}</span></td>
+                                    <td class="pe-4">${changesHtml}</td>
+                                </tr>
+                            `;
+                            body.insertAdjacentHTML('beforeend', row);
+                        });
+                    }
+                    new bootstrap.Modal(document.getElementById('attendeeLogsModal')).show();
+                }
+            })
+            .catch(err => {
+                document.getElementById('loadingOverlay').classList.remove('active');
+                showToast('Failed to load logs.', 'error');
+            });
+    }
+</script>
+{% endblock %}

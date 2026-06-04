@@ -14,9 +14,10 @@ from django.db.models import Count, Q, Value
 from django.db.models.functions import Concat, Coalesce
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.views.decorators.http import require_http_methods, require_POST
 
-from .models import User, Exhibitor, Event, Badge, Attendee
+from .models import User, Exhibitor, Event, Badge, Attendee, ComplimentaryInvitation
 from math import ceil
 from django.core.paginator import Paginator
 from .tasks import bulk_upload_save_task,send_invite_email,process_invitations_batch,send_badge_confirmation_email_task
@@ -31,9 +32,14 @@ from django.utils.html import strip_tags
 from django.contrib.contenttypes.models import ContentType
 from auditlog.models import LogEntry
 from itertools import chain
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
+from .serializers import BulkAttendeeSerializer, BulkInvitationSerializer, SingleAttendeeSerializer, ComplimentaryInvitationCreateSerializer
 from .utils.redis_lock import acquire_lock,release_lock
 
 logger = logging.getLogger(__name__)
+
+NAME_RE = re.compile(r"^[A-Za-z\s\-'.]+$")
 
 
 # =============================================================================
@@ -1244,7 +1250,6 @@ def register_attendee(request, token):
         return render(request, "invite_registration.html", {"attendee": attendee})
  
     errors = []
-    NAME_RE = re.compile(r"^[A-Za-z\s\-'.]+$")
  
     if request.method == "POST":
         mobile      = request.POST.get("mobile", "").strip()
@@ -1260,9 +1265,20 @@ def register_attendee(request, token):
  
         # ── Validation (mirrors front-end rules) ────────────────────────────
  
-        # mobile
-        if not mobile:
-            errors.append("Mobile number is required.")
+        # mobile (optional)
+        if mobile:
+            import phonenumbers
+            from .utils.countries import COUNTRIES_MAP
+            try:
+                country_code = COUNTRIES_MAP.get(country)
+                region = country_code if country and not mobile.startswith('+') else None
+                parsed_num = phonenumbers.parse(mobile, region)
+                if not phonenumbers.is_valid_number(parsed_num):
+                    errors.append("Invalid mobile number for the selected country.")
+                else:
+                    mobile = phonenumbers.format_number(parsed_num, phonenumbers.PhoneNumberFormat.E164)
+            except Exception:
+                errors.append("Invalid mobile number format.")
 
         # company
         if company and len(company) < 2:
@@ -1552,3 +1568,372 @@ def validate_invitation_batch(request):
     except Exception as e:
         traceback.print_exc()
         return JsonResponse({"success": False, "error": str(e)}, status=400)
+
+
+# =============================================================================
+# COMPLIMENTARY INVITATIONS
+# =============================================================================
+
+@login_required
+def complimentary_invitations_page(request):
+    """Render the Complimentary Invitations management page with pass status."""
+    exhibitor = request.user.exhibitor
+    total_pass = exhibitor.pass_limit
+    used_pass = Badge.objects.filter(attendee__exhibitor=exhibitor).count()
+
+    # ── Detailed Stats per Ticket Type ──────────────────────────────────────
+    ticket_types = [
+        ("VIP", "VIP PASS", exhibitor.vip_pass_limit),
+        ("EXHIBITOR", "EXHIBITOR PASS", exhibitor.exhibitor_pass_limit),
+        ("VISITOR", "VISITOR PASS", exhibitor.visitor_pass_limit),
+    ]
+    
+    badge_stats = []
+    for t_code, t_label, t_limit in ticket_types:
+        t_counts = Attendee.objects.filter(exhibitor=exhibitor, attendee_type=t_code).aggregate(
+            confirmed=Count("id", filter=Q(status="CONFIRMED")),
+            pending=Count("id", filter=Q(status="PENDING")),
+            invited=Count("id", filter=Q(status="INVITED")),
+        )
+        t_used = Badge.objects.filter(attendee__exhibitor=exhibitor, attendee__attendee_type=t_code).count()
+        
+        badge_stats.append({
+            "label": t_label,
+            "limit": t_limit,
+            "used": t_used,
+            "confirmed": t_counts["confirmed"],
+            "pending": t_counts["pending"],
+            "invited": t_counts["invited"],
+            "percent": int((t_used / t_limit * 100)) if t_limit > 0 else 0
+        })
+
+    total_percent = int((used_pass / total_pass * 100)) if total_pass > 0 else 0
+
+    # ── Aggregate Stats for All Types ───────────────────────────────────────
+    total_counts = Attendee.objects.filter(exhibitor=exhibitor).aggregate(
+        confirmed=Count("id", filter=Q(status="CONFIRMED")),
+        pending=Count("id", filter=Q(status="PENDING")),
+        invited=Count("id", filter=Q(status="INVITED")),
+    )
+
+    context = {
+        "used_pass": used_pass,
+        "total_pass": total_pass,
+        "total_percent": total_percent,
+        "total_counts": total_counts,
+        "badge_stats": badge_stats,
+    }
+
+    return render(request, "complimentary_invitation.html", context)
+
+@login_required
+def complimentary_invitations_list(request):
+    """API to list complimentary invitations for the current exhibitor with pagination."""
+    exhibitor = request.user.exhibitor
+    invites_qs = ComplimentaryInvitation.objects.filter(exhibitor=exhibitor).order_by("-created_at")
+    
+    # Pagination
+    page_size = request.GET.get('page_size', 10)
+    try:
+        page_size = int(page_size)
+    except ValueError:
+        page_size = 10
+        
+    page_number = request.GET.get("page", 1)
+    paginator = Paginator(invites_qs, page_size)
+    page_obj = paginator.get_page(page_number)
+
+    data = []
+    for invite in page_obj:
+        reg_url = request.build_absolute_uri(
+            reverse("register_complimentary_attendee", kwargs={"token": invite.invite_token})
+        )
+        data.append({
+            "id": invite.id,
+            "link_name": invite.link_name,
+            "attendee_type": invite.attendee_type,
+            "usage_limit": invite.usage_limit,
+            "used_count": invite.used_count,
+            "remaining": invite.remaining_usage,
+            "expiry_date": invite.expiry_date.strftime("%Y-%m-%d") if invite.expiry_date else None,
+            "is_expired": invite.is_expired,
+            "invite_url": reg_url,
+            "created_at": invite.created_at.strftime("%Y-%m-%d %H:%M"),
+        })
+        
+    return JsonResponse({
+        "success": True, 
+        "invitations": data,
+        "pagination": {
+            "total_count": paginator.count,
+            "num_pages": paginator.num_pages,
+            "current_page": page_obj.number,
+            "has_next": page_obj.has_next(),
+            "has_previous": page_obj.has_previous(),
+            "start_index": page_obj.start_index(),
+            "end_index": page_obj.end_index(),
+            "page_range": list(paginator.get_elided_page_range(page_obj.number, on_each_side=2, on_ends=1)),
+        }
+    })
+
+@login_required
+@require_POST
+def create_complimentary_invitation(request):
+    """Create one or more generic invitation links with pass limit and expiry validation."""
+    try:
+        data = json.loads(request.body)
+        count = int(data.get("count", 1))
+        if count > 100:
+            return JsonResponse({"success": False, "error": "Maximum 100 links can be generated at once."}, status=400)
+            
+        exhibitor = request.user.exhibitor
+        
+        serializer = ComplimentaryInvitationCreateSerializer(data=data, exhibitor=exhibitor, total_count=count)
+        if not serializer.is_valid():
+            return JsonResponse({"success": False, "error": serializer.errors}, status=400)
+            
+        v_data = serializer.validated_data
+
+        invites = []
+        for i in range(count):
+            invites.append(ComplimentaryInvitation(
+                exhibitor=exhibitor,
+                link_name=v_data['link_name'],
+                attendee_type=v_data['attendee_type'],
+                usage_limit=v_data['usage_limit'],
+                expiry_date=v_data['expiry_date']
+            ))
+        
+        ComplimentaryInvitation.objects.bulk_create(invites)
+        
+        return JsonResponse({"success": True, "message": f"{count} invitation link(s) created successfully."})
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+@login_required
+@require_POST
+def send_complimentary_invitation_email(request):
+    """Send a complimentary invitation link to one or more specified emails."""
+    try:
+        data = json.loads(request.body)
+        emails_raw = data.get("email", "")
+        invite_id = data.get("invite_id")
+        
+        if not emails_raw or not invite_id:
+            return JsonResponse({"success": False, "error": "Email and Invitation Link are required."}, status=400)
+            
+        # Split and clean emails
+        emails = [e.strip() for e in emails_raw.split(",") if e.strip()]
+        if not emails:
+            return JsonResponse({"success": False, "error": "No valid emails provided."}, status=400)
+
+        # Basic validation for each email
+        valid_emails = []
+        invalid_emails = []
+        for email in emails:
+            try:
+                validate_email(email)
+                valid_emails.append(email)
+            except ValidationError:
+                invalid_emails.append(email)
+        
+        if invalid_emails:
+            return JsonResponse({
+                "success": False, 
+                "error": f"Invalid email(s) detected: {', '.join(invalid_emails)}"
+            }, status=400)
+            
+        invite = get_object_or_404(ComplimentaryInvitation, id=invite_id, exhibitor=request.user.exhibitor)
+        
+        reg_url = request.build_absolute_uri(
+            reverse("register_complimentary_attendee", kwargs={"token": invite.invite_token})
+        )
+        
+        from .tasks import send_complimentary_link_task
+        for email in valid_emails:
+            send_complimentary_link_task.delay(email, reg_url, invite.link_name)
+        
+        msg = f"Invitation link sent to {len(valid_emails)} recipient(s)."
+        return JsonResponse({"success": True, "message": msg})
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+def register_complimentary_attendee(request, token):
+    """Public registration page for complimentary generic links with expiry check."""
+    invite = get_object_or_404(ComplimentaryInvitation, invite_token=token)
+    
+    if invite.is_expired:
+        return render(request, "invite_registration.html", {
+            "invite": invite,
+            "error": f"This invitation link expired on {invite.expiry_date.strftime('%b %d, %Y')}."
+        })
+
+    if invite.used_count >= invite.usage_limit:
+        return render(request, "invite_registration.html", {
+            "invite": invite,
+            "error": "This invitation link has reached its usage limit."
+        })
+        
+    exhibitor = invite.exhibitor
+    remaining = exhibitor.remaining_by_type()
+    ticket_type = invite.attendee_type.upper()
+    
+    if remaining.get(ticket_type, 0) <= 0:
+        return render(request, "invite_registration.html", {
+            "invite": invite,
+            "error": f"The exhibitor has no remaining {ticket_type} passes."
+        })
+
+    errors = []
+
+    if request.method == "POST":
+        first_name = request.POST.get("first_name", "").strip()
+        last_name = request.POST.get("last_name", "").strip()
+        email = request.POST.get("email", "").strip().lower()
+        mobile = request.POST.get("mobile", "").strip()
+        company = request.POST.get("company", "").strip()
+        country = request.POST.get("country", "").strip()
+        nationality = request.POST.get("nationality", "").strip()
+        job_title = request.POST.get("job_title", "").strip()
+        
+        accepted_terms = bool(request.POST.get("accepted_terms"))
+        accepted_data_sharing = bool(request.POST.get("accepted_data_sharing"))
+        accepted_marketing = bool(request.POST.get("accepted_marketing"))
+
+        # Basic Validation
+        if not first_name: errors.append("First name is required.")
+        if not email: errors.append("Email is required.")
+        if not country: errors.append("Country of residence is required.")
+        if not nationality: errors.append("Nationality is required.")
+        if not accepted_terms: errors.append("You must accept the Terms & Conditions.")
+
+        # Phone validation (optional)
+        if mobile:
+            import phonenumbers
+            from .utils.countries import COUNTRIES_MAP
+            try:
+                country_code = COUNTRIES_MAP.get(country)
+                region = country_code if country and not mobile.startswith('+') else None
+                parsed_num = phonenumbers.parse(mobile, region)
+                if not phonenumbers.is_valid_number(parsed_num):
+                    errors.append("Invalid mobile number for the selected country.")
+                else:
+                    mobile = phonenumbers.format_number(parsed_num, phonenumbers.PhoneNumberFormat.E164)
+            except Exception:
+                errors.append("Invalid mobile number format.")
+
+        if not errors:
+            if Attendee.objects.filter(email=email).exists():
+                errors.append("This email is already registered.")
+
+        if not errors:
+            try:
+                with transaction.atomic():
+                    # Re-check inside transaction
+                    invite = ComplimentaryInvitation.objects.select_for_update().get(id=invite.id)
+                    exhibitor = Exhibitor.objects.select_for_update().get(id=invite.exhibitor.id)
+                    remaining = exhibitor.remaining_by_type()
+                    
+                    if invite.used_count < invite.usage_limit and remaining.get(ticket_type, 0) > 0:
+                        attendee = Attendee.objects.create(
+                            event=exhibitor.event,
+                            exhibitor=exhibitor,
+                            first_name=first_name,
+                            last_name=last_name,
+                            email=email,
+                            mobile_number=mobile,
+                            company_name=company,
+                            country_of_residence=country,
+                            nationality=nationality,
+                            job_title=job_title,
+                            attendee_type=invite.attendee_type,
+                            status=Attendee.Status.CONFIRMED,
+                            accepted_terms=accepted_terms,
+                            accepted_data_sharing=accepted_data_sharing,
+                            accepted_marketing=accepted_marketing,
+                            source="Complimentary Link",
+                            complimentary_link=invite
+                        )
+                        Badge.objects.create(attendee=attendee)
+                        invite.used_count += 1
+                        invite.save()
+                        
+                        # Send confirmation email
+                        try:
+                            send_badge_confirmation_email_task.delay(attendee.pk, attendee.attendee_type)
+                        except: pass
+                        
+                        return render(request, "invite_registration.html", {
+                            "attendee": attendee, 
+                            "success": True,
+                            "invite": invite
+                        })
+                    else:
+                        errors.append("Usage limit reached or no passes remaining.")
+            except Exception as e:
+                errors.append(f"An error occurred: {str(e)}")
+    print(errors,'----check errors')
+    return render(request, "invite_registration.html", {
+        "invite": invite, 
+        "errors": errors, 
+        "is_complimentary": True
+    }, status=400 if errors else 200)
+
+@login_required
+def get_invitation_usage_details(request, invite_id):
+    """Fetch all attendees who registered using a specific complimentary invitation link."""
+    exhibitor = request.user.exhibitor
+    invite = get_object_or_404(ComplimentaryInvitation, id=invite_id, exhibitor=exhibitor)
+    
+    attendees = invite.registered_attendees.all().order_by("-created_at")
+    
+    data = []
+    for attendee in attendees:
+        data.append({
+            "id": attendee.id,
+            "first_name": attendee.first_name,
+            "last_name": attendee.last_name or "",
+            "email": attendee.email,
+            "company": attendee.company_name or "",
+            "job_title": attendee.job_title or "",
+            "status": attendee.status,
+            "created_at": attendee.created_at.strftime("%Y-%m-%d %H:%M"),
+        })
+        
+    return JsonResponse({
+        "success": True,
+        "link_name": invite.link_name,
+        "attendees": data
+    })
+
+@login_required
+def complimentary_attendee_logs(request, attendee_id):
+    """Wrapper for attendee_audit_logs specialized for complimentary attendees if needed, 
+    but we can just reuse or slightly adapt the existing audit view logic."""
+    # Since we already have attendee_audit_logs, we can either redirect or just use the same logic.
+    # The user asked for "logs", so let's provide a JSON version or just reuse the existing one.
+    # Let's provide a JSON version of logs for the modal.
+    
+    attendee = get_object_or_404(Attendee, id=attendee_id, exhibitor=request.user.exhibitor)
+    
+    attendee_ct = ContentType.objects.get_for_model(Attendee)
+    
+    logs = LogEntry.objects.filter(
+        content_type=attendee_ct,
+        object_id=str(attendee.id)
+    ).select_related("actor").order_by("-timestamp")
+    
+    log_data = []
+    for log in logs:
+        log_data.append({
+            "timestamp": log.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+            "actor": log.actor.get_full_name() if log.actor else "System",
+            "action": log.get_action_display(),
+            "changes": log.changes,
+        })
+        
+    return JsonResponse({
+        "success": True,
+        "attendee_name": f"{attendee.first_name} {attendee.last_name or ''}",
+        "logs": log_data
+    })
