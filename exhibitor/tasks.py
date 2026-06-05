@@ -525,24 +525,136 @@ def send_badge_confirmation_email_task(self, attendee_id: int, ticket_type: str)
 
 
 @shared_task(bind=True, max_retries=3)
-def send_complimentary_link_task(self, email, link, link_name):
+def send_complimentary_link_task(self, email, reg_url, link_name):
     """
-    Send a generic complimentary invitation link to a specified email.
+    Sends a complimentary registration link to the specified email.
     """
     try:
-        subject = f"Invitation: {link_name}"
-        message = f"You are invited! Please use the following link to register for your complimentary badge: {link}"
+        logger.info(f"Sending complimentary link ({link_name}) to {email}")
         
-        # In a real app, we'd use a styled HTML template here as well
+        subject = f"You're Invited: {link_name}"
+        message = f"You have been invited to register. Click the link below to complete your registration:\n\n{reg_url}\n\nThank you!"
+        
         send_mail(
             subject=subject,
             message=message,
-            from_email=None,
+            from_email=None, # Uses DEFAULT_FROM_EMAIL
             recipient_list=[email],
         )
-        logger.info(f"Complimentary link sent to {email}")
+        logger.info(f"Successfully sent complimentary link to {email}")
     except Exception as exc:
         logger.error(f"Error sending complimentary link to {email}: {exc}")
         raise self.retry(exc=exc)
+
+@shared_task(bind=True)
+def create_complimentary_links_task(self, data, exhibitor_id, count):
+    """Background task to generate multiple complimentary invitation links."""
+    from .models import ComplimentaryInvitation, Exhibitor
+    
+    lock_key = f"bulk_op_lock_{exhibitor_id}"
+    if not acquire_lock(lock_key, timeout=1800):
+        return {"error": "A bulk operation is already in progress."}
+
+    try:
+        exhibitor = Exhibitor.objects.get(id=exhibitor_id)
+        
+        # Strict Limit Check
+        ticket_type = data['attendee_type']
+        usage_limit = int(data['usage_limit'])
+        total_requested = count * usage_limit
+        uncommitted = exhibitor.uncommitted_passes_by_type()
+        
+        if uncommitted.get(ticket_type, 0) < total_requested:
+             return {"success": False, "error": f"Insufficient {ticket_type} passes. Needed {total_requested}, only {uncommitted.get(ticket_type, 0)} uncommitted available."}
+
+        # Initial progress
+        self.update_state(state='PROGRESS', meta={'current': 0, 'total': count, 'phase': 'GENERATING'})
+
+        BATCH_SIZE = 50
+        created_count = 0
+
+        for i in range(0, count, BATCH_SIZE):
+            current_batch_size = min(BATCH_SIZE, count - i)
+            invites = []
+            for _ in range(current_batch_size):
+                invites.append(ComplimentaryInvitation(
+                    exhibitor=exhibitor,
+                    link_name=data['link_name'],
+                    attendee_type=data['attendee_type'],
+                    usage_limit=data['usage_limit'],
+                    expiry_date=data['expiry_date']
+                ))
+            
+            ComplimentaryInvitation.objects.bulk_create(invites)
+            created_count += len(invites)
+            
+            self.update_state(state='PROGRESS', meta={
+                'current': created_count,
+                'total': count,
+                'phase': 'GENERATING'
+            })
+
+        return {"created_count": created_count, "total": count}
+    finally:
+        from .utils.redis_lock import redis_client
+        release_lock(lock_key)
+        redis_client.delete(f"active_bulk_task_{exhibitor_id}")
+
+@shared_task(bind=True)
+def bulk_toggle_complimentary_links_task(self, action, select_all, filters, invite_ids, exhibitor_id):
+    """Background task to enable/disable links in bulk with progress tracking."""
+    from .models import ComplimentaryInvitation, Exhibitor
+    from django.db.models import Q, F
+    
+    lock_key = f"bulk_op_lock_{exhibitor_id}"
+    if not acquire_lock(lock_key, timeout=1800):
+        return {"error": "A bulk operation is already in progress."}
+
+    try:
+        exhibitor = Exhibitor.objects.get(id=exhibitor_id)
+        invites_qs = ComplimentaryInvitation.objects.filter(exhibitor=exhibitor)
+
+        if select_all:
+            status_filter = filters.get('status')
+            if status_filter:
+                today = timezone.now().date()
+                if status_filter == 'ACTIVE':
+                    invites_qs = invites_qs.filter(Q(expiry_date__gte=today) | Q(expiry_date__isnull=True), used_count__lt=F('usage_limit'), is_active=True)
+                elif status_filter == 'DISABLED':
+                    invites_qs = invites_qs.filter(is_active=False)
+                elif status_filter == 'EXPIRED':
+                    invites_qs = invites_qs.filter(expiry_date__lt=today)
+                elif status_filter == 'CLOSED':
+                    invites_qs = invites_qs.filter(used_count__gte=F('usage_limit')).exclude(expiry_date__lt=today)
+            
+            attendee_type_filter = filters.get('attendee_type')
+            if attendee_type_filter:
+                invites_qs = invites_qs.filter(attendee_type=attendee_type_filter)
+        else:
+            invites_qs = invites_qs.filter(id__in=invite_ids)
+
+        target_ids = list(invites_qs.values_list('id', flat=True))
+        total = len(target_ids)
+        updated_count = 0
+        BATCH_SIZE = 500
+
+        self.update_state(state='PROGRESS', meta={'current': 0, 'total': total, 'phase': 'UPDATING'})
+
+        for i in range(0, total, BATCH_SIZE):
+            batch_ids = target_ids[i:i + BATCH_SIZE]
+            count = ComplimentaryInvitation.objects.filter(id__in=batch_ids).update(is_active=(action == 'enable'))
+            updated_count += count
+            
+            self.update_state(state='PROGRESS', meta={
+                'current': updated_count,
+                'total': total,
+                'phase': 'UPDATING'
+            })
+
+        return {"updated_count": updated_count, "total": total, "action": action}
+    finally:
+        from .utils.redis_lock import redis_client
+        release_lock(lock_key)
+        redis_client.delete(f"active_bulk_task_{exhibitor_id}")
 
 

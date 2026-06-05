@@ -10,9 +10,12 @@ from .views import (
     get_invitation_preview,validate_invitation_row,validate_invitation_batch,
     complimentary_invitations_page, complimentary_invitations_list, 
     create_complimentary_invitation, 
+    create_personalized_invitation_link,
     send_complimentary_invitation_email, register_complimentary_attendee,
     get_invitation_usage_details,
-    complimentary_attendee_logs
+    complimentary_attendee_logs,
+    toggle_complimentary_link, bulk_toggle_complimentary_links,
+    update_complimentary_link, bulk_update_complimentary_links
 )
 
 urlpatterns = [
@@ -49,7 +52,12 @@ urlpatterns = [
     path('complimentary-invitations/', complimentary_invitations_page, name="complimentary_invitations"),
     path('api/complimentary-invitations/', complimentary_invitations_list, name="complimentary_invitations_list"),
     path('api/complimentary/create/', create_complimentary_invitation, name="create_complimentary_invitation"),
+    path('api/complimentary/create-personalized/', create_personalized_invitation_link, name="create_personalized_invitation_link"),
     path('api/complimentary/send-email/', send_complimentary_invitation_email, name="send_complimentary_invitation_email"),
+    path('api/complimentary/toggle/', toggle_complimentary_link, name="toggle_complimentary_link"),
+    path('api/complimentary/bulk-toggle/', bulk_toggle_complimentary_links, name="bulk_toggle_complimentary_links"),
+    path('api/complimentary/update/', update_complimentary_link, name="update_complimentary_link"),
+    path('api/complimentary/bulk-update/', bulk_update_complimentary_links, name="bulk_update_complimentary_links"),
     path('api/complimentary/usage/<int:invite_id>/', get_invitation_usage_details, name="get_invitation_usage_details"),
     path('api/complimentary/attendee/<int:attendee_id>/logs/', complimentary_attendee_logs, name="complimentary_attendee_logs"),
     path('register/complimentary/<uuid:token>/', register_complimentary_attendee, name="register_complimentary_attendee"),

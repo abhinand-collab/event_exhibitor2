@@ -10,17 +10,22 @@ import pandas as pd
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.db import transaction, IntegrityError
-from django.db.models import Count, Q, Value
+from django.db.models import Count, Q, Value, F
 from django.db.models.functions import Concat, Coalesce
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods, require_POST
+from django.utils import timezone
 
 from .models import User, Exhibitor, Event, Badge, Attendee, ComplimentaryInvitation
 from math import ceil
 from django.core.paginator import Paginator
-from .tasks import bulk_upload_save_task,send_invite_email,process_invitations_batch,send_badge_confirmation_email_task
+from .tasks import (
+    bulk_upload_save_task, send_invite_email, process_invitations_batch, 
+    send_badge_confirmation_email_task, create_complimentary_links_task,
+    bulk_toggle_complimentary_links_task, send_complimentary_link_task
+)
 from celery.result import AsyncResult
 from celery import uuid
 from django.http import HttpResponse
@@ -639,8 +644,8 @@ def bulk_upload_save(request):
 
     exhibitor = request.user.exhibitor
 
-    # ── Preliminary Limit Check ──
-    remaining = exhibitor.remaining_by_type()
+    # ── Preliminary Limit Check (Strict check including pending invitations) ──
+    uncommitted = exhibitor.uncommitted_passes_by_type()
     requested = {"VIP": 0, "EXHIBITOR": 0, "VISITOR": 0}
     for row in rows:
         t = str(row.get("ticket_type") or "").strip().upper()
@@ -649,8 +654,8 @@ def bulk_upload_save(request):
 
     limit_errors = []
     for ticket_type, count in requested.items():
-        if count > 0 and count > remaining.get(ticket_type, 0):
-            limit_errors.append(f"{ticket_type}: requested {count}, only {remaining[ticket_type]} remaining.")
+        if count > 0 and count > uncommitted.get(ticket_type, 0):
+            limit_errors.append(f"{ticket_type}: requested {count}, only {uncommitted.get(ticket_type, 0)} uncommitted remaining.")
 
     if limit_errors:
         return JsonResponse({"success": False, "errors": " | ".join(limit_errors)}, status=400)
@@ -1178,7 +1183,7 @@ def send_invitations(request):
             "errors": "A bulk operation (upload or invitation) is already in progress. Please wait."
         }, status=409)
     
-    remaining = exhibitor.remaining_by_type()
+    uncommitted = exhibitor.uncommitted_passes_by_type()
 
     # ── Count requested rows per ticket type ─────────────────
     requested = {"VIP": 0, "EXHIBITOR": 0, "VISITOR": 0}
@@ -1194,16 +1199,14 @@ def send_invitations(request):
     for ticket_type, count in requested.items():
         if count == 0:
             continue
-        rem = remaining[ticket_type]
+        rem = uncommitted.get(ticket_type, 0)
         if rem <= 0:
             limit_errors.append(
-                f"{ticket_type}: no passes remaining "
-                f"(limit: {getattr(exhibitor, f'{ticket_type.lower()}_pass_limit')})."
+                f"{ticket_type}: no uncommitted passes remaining. All remaining passes are tied to other active links."
             )
         elif count > rem:
             limit_errors.append(
-                f"{ticket_type}: trying to import {count} but only {rem} pass(es) remaining "
-                f"(limit: {getattr(exhibitor, f'{ticket_type.lower()}_pass_limit')})."
+                f"{ticket_type}: trying to import {count} but only {rem} uncommitted pass(es) available."
             )
     # print(limit_errors,'----check limi err')
 
@@ -1407,9 +1410,9 @@ def attendee_audit_logs(request, attendee_id):
         "logs": all_logs,
     })
 
-    # =============================================================================
-    # INVITATIONS — BACKEND DRIVEN
-    # =============================================================================
+# =============================================================================
+# INVITATIONS — BACKEND DRIVEN
+# =============================================================================
 
 @login_required
 @require_POST
@@ -1632,6 +1635,30 @@ def complimentary_invitations_list(request):
     exhibitor = request.user.exhibitor
     invites_qs = ComplimentaryInvitation.objects.filter(exhibitor=exhibitor).order_by("-created_at")
     
+    # Status Filtering
+    status_filter = request.GET.get('status')
+    if status_filter:
+        today = timezone.now().date()
+        if status_filter == 'ACTIVE':
+            invites_qs = invites_qs.filter(
+                Q(expiry_date__gte=today) | Q(expiry_date__isnull=True),
+                used_count__lt=F('usage_limit'),
+                is_active=True
+            )
+        elif status_filter == 'DISABLED':
+            invites_qs = invites_qs.filter(is_active=False)
+        elif status_filter == 'EXPIRED':
+            invites_qs = invites_qs.filter(expiry_date__lt=today)
+        elif status_filter == 'CLOSED':
+            invites_qs = invites_qs.filter(
+                used_count__gte=F('usage_limit')
+            ).exclude(expiry_date__lt=today)
+
+    # Attendee Type Filtering
+    attendee_type_filter = request.GET.get('attendee_type')
+    if attendee_type_filter:
+        invites_qs = invites_qs.filter(attendee_type=attendee_type_filter)
+
     # Pagination
     page_size = request.GET.get('page_size', 10)
     try:
@@ -1652,11 +1679,15 @@ def complimentary_invitations_list(request):
             "id": invite.id,
             "link_name": invite.link_name,
             "attendee_type": invite.attendee_type,
+            "invitation_type": invite.invitation_type,
+            "invitation_type_display": invite.get_invitation_type_display(),
+            "email": invite.email,
             "usage_limit": invite.usage_limit,
             "used_count": invite.used_count,
             "remaining": invite.remaining_usage,
             "expiry_date": invite.expiry_date.strftime("%Y-%m-%d") if invite.expiry_date else None,
             "is_expired": invite.is_expired,
+            "status": invite.status,
             "invite_url": reg_url,
             "created_at": invite.created_at.strftime("%Y-%m-%d %H:%M"),
         })
@@ -1679,13 +1710,10 @@ def complimentary_invitations_list(request):
 @login_required
 @require_POST
 def create_complimentary_invitation(request):
-    """Create one or more generic invitation links with pass limit and expiry validation."""
+    """Create one or more generic invitation links. Uses background task for counts > 10."""
     try:
         data = json.loads(request.body)
         count = int(data.get("count", 1))
-        if count > 100:
-            return JsonResponse({"success": False, "error": "Maximum 100 links can be generated at once."}, status=400)
-            
         exhibitor = request.user.exhibitor
         
         serializer = ComplimentaryInvitationCreateSerializer(data=data, exhibitor=exhibitor, total_count=count)
@@ -1693,6 +1721,26 @@ def create_complimentary_invitation(request):
             return JsonResponse({"success": False, "error": serializer.errors}, status=400)
             
         v_data = serializer.validated_data
+
+        if count > 10:
+            from .utils.redis_lock import redis_client
+            if redis_client.get(f"bulk_op_lock_{exhibitor.id}"):
+                return JsonResponse({"success": False, "error": "An operation is already in progress. Please wait."}, status=409)
+
+            # Ensure data is JSON serializable for Celery
+            task_data = v_data.copy()
+            if task_data.get('expiry_date'):
+                task_data['expiry_date'] = task_data['expiry_date'].isoformat()
+
+            from .tasks import create_complimentary_links_task
+            task = create_complimentary_links_task.delay(task_data, exhibitor.id, count)
+            redis_client.set(f"active_bulk_task_{exhibitor.id}", task.id, ex=3600)
+            return JsonResponse({
+                "success": True, 
+                "task_id": task.id, 
+                "mode": "async", 
+                "message": f"Generating {count} links in background."
+            })
 
         invites = []
         for i in range(count):
@@ -1706,7 +1754,75 @@ def create_complimentary_invitation(request):
         
         ComplimentaryInvitation.objects.bulk_create(invites)
         
-        return JsonResponse({"success": True, "message": f"{count} invitation link(s) created successfully."})
+        response_data = {"success": True, "message": f"{count} invitation link(s) created successfully."}
+        if serializer.warnings:
+            response_data["warning"] = serializer.warnings
+            
+        return JsonResponse(response_data)
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+@login_required
+@require_POST
+def create_personalized_invitation_link(request):
+    """
+    Creates a 'Partially Registered' Attendee and returns a unique registration link.
+    Does not send an email automatically.
+    """
+    try:
+        data = json.loads(request.body)
+        email = data.get("email", "").strip().lower()
+        attendee_type = data.get("attendee_type")
+        expiry_date = data.get("expiry_date")
+        
+        if not email or not attendee_type:
+            return JsonResponse({"success": False, "error": "Email and Attendee Type are required."}, status=400)
+            
+        try:
+            validate_email(email)
+        except ValidationError:
+            return JsonResponse({"success": False, "error": "Invalid email address format."}, status=400)
+
+        if expiry_date == "":
+            expiry_date = None
+
+        exhibitor = request.user.exhibitor
+        
+        # 1. Check if email already exists in Attendees (to prevent double registration)
+        if Attendee.objects.filter(email=email).exists():
+            return JsonResponse({"success": False, "error": "This email is already registered."}, status=400)
+
+        # 2. Check limits (Strict check including pending invitations)
+        uncommitted = exhibitor.uncommitted_passes_by_type()
+        if uncommitted.get(attendee_type, 0) < 1:
+            return JsonResponse({
+                "success": False, 
+                "error": f"No {attendee_type} passes available. All remaining passes are already committed to other active invitation links."
+            }, status=400)
+
+        # 3. Create ComplimentaryInvitation of type PERSONALIZED
+        with transaction.atomic():
+            invite = ComplimentaryInvitation.objects.create(
+                exhibitor=exhibitor,
+                link_name=f"Personalized: {email}",
+                email=email,
+                attendee_type=attendee_type,
+                invitation_type=ComplimentaryInvitation.InvitationType.PERSONALIZED,
+                usage_limit=1,
+                expiry_date=expiry_date
+            )
+            
+        reg_url = request.build_absolute_uri(
+            reverse("register_complimentary_attendee", kwargs={"token": invite.invite_token})
+        )
+        
+        return JsonResponse({
+            "success": True, 
+            "message": "Personalized link generated successfully.",
+            "invite_url": reg_url
+        })
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=500)
 
@@ -1762,17 +1878,23 @@ def register_complimentary_attendee(request, token):
     """Public registration page for complimentary generic links with expiry check."""
     invite = get_object_or_404(ComplimentaryInvitation, invite_token=token)
     
+    if not invite.is_active:
+        return render(request, "invite_registration.html", {
+            "invite": invite,
+            "error": "This invitation link has been disabled by the organizer."
+        }, status=400)
+
     if invite.is_expired:
         return render(request, "invite_registration.html", {
             "invite": invite,
             "error": f"This invitation link expired on {invite.expiry_date.strftime('%b %d, %Y')}."
-        })
+        }, status=400)
 
     if invite.used_count >= invite.usage_limit:
         return render(request, "invite_registration.html", {
             "invite": invite,
             "error": "This invitation link has reached its usage limit."
-        })
+        }, status=400)
         
     exhibitor = invite.exhibitor
     remaining = exhibitor.remaining_by_type()
@@ -1782,14 +1904,28 @@ def register_complimentary_attendee(request, token):
         return render(request, "invite_registration.html", {
             "invite": invite,
             "error": f"The exhibitor has no remaining {ticket_type} passes."
-        })
+        }, status=400)
+
+    # For personalized invitations, we pre-fill the email and potentially other data
+    initial_email = invite.email if invite.invitation_type == ComplimentaryInvitation.InvitationType.PERSONALIZED else ""
+    
+    # Determine the value to show in the email field
+    email_value = initial_email
+    if not email_value and request.method == "POST":
+        email_value = request.POST.get("email", "")
 
     errors = []
 
     if request.method == "POST":
         first_name = request.POST.get("first_name", "").strip()
         last_name = request.POST.get("last_name", "").strip()
-        email = request.POST.get("email", "").strip().lower()
+        
+        # If personalized, ignore the posted email and use the invitation's email
+        if invite.invitation_type == ComplimentaryInvitation.InvitationType.PERSONALIZED:
+            email = invite.email
+        else:
+            email = request.POST.get("email", "").strip().lower()
+            
         mobile = request.POST.get("mobile", "").strip()
         company = request.POST.get("company", "").strip()
         country = request.POST.get("country", "").strip()
@@ -1872,11 +2008,13 @@ def register_complimentary_attendee(request, token):
                         errors.append("Usage limit reached or no passes remaining.")
             except Exception as e:
                 errors.append(f"An error occurred: {str(e)}")
-    print(errors,'----check errors')
+    
     return render(request, "invite_registration.html", {
         "invite": invite, 
         "errors": errors, 
-        "is_complimentary": True
+        "is_complimentary": True,
+        "initial_email": initial_email,
+        "email_value": email_value
     }, status=400 if errors else 200)
 
 @login_required
@@ -1937,3 +2075,172 @@ def complimentary_attendee_logs(request, attendee_id):
         "attendee_name": f"{attendee.first_name} {attendee.last_name or ''}",
         "logs": log_data
     })
+
+@login_required
+@require_POST
+def toggle_complimentary_link(request):
+    """Enable or disable a single invitation link."""
+    try:
+        data = json.loads(request.body)
+        invite_id = data.get("invite_id")
+        action = data.get("action") # "enable" or "disable"
+
+        exhibitor = request.user.exhibitor
+        invite = get_object_or_404(ComplimentaryInvitation, id=invite_id, exhibitor=exhibitor)
+
+        invite.is_active = (action == "enable")
+        invite.save()
+
+        return JsonResponse({
+            "success": True, 
+            "message": f"Link {'enabled' if invite.is_active else 'disabled'} successfully.",
+            "status": invite.status
+        })
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+@login_required
+@require_POST
+def bulk_toggle_complimentary_links(request):
+    """Enable or disable multiple links. Uses background task for large operations."""
+    try:
+        data = json.loads(request.body)
+        invite_ids = data.get("invite_ids", [])
+        action = data.get("action")
+        select_all = data.get("select_all", False)
+        filters = data.get("filters", {})
+        exhibitor = request.user.exhibitor
+
+        # Threshold for background task
+        if select_all or len(invite_ids) > 50:
+            from .utils.redis_lock import redis_client
+            if redis_client.get(f"bulk_op_lock_{exhibitor.id}"):
+                return JsonResponse({"success": False, "error": "An operation is already in progress. Please wait."}, status=409)
+            
+            from .tasks import bulk_toggle_complimentary_links_task
+            task = bulk_toggle_complimentary_links_task.delay(action, select_all, filters, invite_ids, exhibitor.id)
+            redis_client.set(f"active_bulk_task_{exhibitor.id}", task.id, ex=3600)
+            return JsonResponse({
+                "success": True, 
+                "task_id": task.id, 
+                "mode": "async", 
+                "message": f"{action.title()}ing links in background."
+            })
+
+        # Synchronous update for small counts
+        invites_qs = ComplimentaryInvitation.objects.filter(exhibitor=exhibitor, id__in=invite_ids)
+        updated_count = invites_qs.update(is_active=(action == "enable"))
+        return JsonResponse({"success": True, "message": f"{updated_count} link(s) {action}d successfully."})
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+@login_required
+@require_POST
+def update_complimentary_link(request):
+    """Update link_name, usage_limit, or expiry_date for a single link."""
+    try:
+        data = json.loads(request.body)
+        invite_id = data.get("invite_id")
+        exhibitor = request.user.exhibitor
+        invite = get_object_or_404(ComplimentaryInvitation, id=invite_id, exhibitor=exhibitor)
+
+        link_name = data.get("link_name")
+        usage_limit = data.get("usage_limit")
+        expiry_date_str = data.get("expiry_date")
+
+        if link_name:
+            invite.link_name = link_name
+        
+        if usage_limit is not None:
+            try:
+                usage_limit = int(usage_limit)
+                if usage_limit < invite.used_count:
+                    return JsonResponse({"success": False, "error": f"Usage limit cannot be less than already used passes ({invite.used_count})."}, status=400)
+                
+                # Check if we are increasing the limit and if we have enough uncommitted passes
+                if usage_limit > invite.usage_limit:
+                    increase = usage_limit - invite.usage_limit
+                    uncommitted = exhibitor.uncommitted_passes_by_type()
+                    ticket_type = invite.attendee_type.upper()
+                    
+                    if uncommitted.get(ticket_type, 0) < increase:
+                         return JsonResponse({
+                             "success": False, 
+                             "error": f"Insufficient {ticket_type} passes to increase limit. You only have {uncommitted.get(ticket_type, 0)} available spots."
+                         }, status=400)
+                
+                invite.usage_limit = usage_limit
+            except (ValueError, TypeError):
+                return JsonResponse({"success": False, "error": "Invalid usage limit."}, status=400)
+
+        if expiry_date_str is not None:
+            if expiry_date_str == "":
+                invite.expiry_date = None
+            else:
+                from datetime import datetime
+                try:
+                    parsed_date = datetime.strptime(expiry_date_str, '%Y-%m-%d').date()
+                    if parsed_date < timezone.now().date():
+                        return JsonResponse({"success": False, "error": "Expiry date cannot be in the past."}, status=400)
+                    invite.expiry_date = parsed_date
+                except ValueError:
+                    return JsonResponse({"success": False, "error": "Invalid date format. Use YYYY-MM-DD."}, status=400)
+
+        invite.save()
+        return JsonResponse({"success": True, "message": "Link updated successfully."})
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+@login_required
+@require_POST
+def bulk_update_complimentary_links(request):
+    """Bulk update expiry_date for multiple links."""
+    try:
+        data = json.loads(request.body)
+        invite_ids = data.get("invite_ids", [])
+        expiry_date_str = data.get("expiry_date")
+        select_all = data.get("select_all", False)
+        filters = data.get("filters", {})
+        
+        exhibitor = request.user.exhibitor
+        invites_qs = ComplimentaryInvitation.objects.filter(exhibitor=exhibitor)
+
+        if expiry_date_str is None:
+             return JsonResponse({"success": False, "error": "Expiry date is required."}, status=400)
+
+        expiry_date = None
+        if expiry_date_str != "":
+            from datetime import datetime
+            try:
+                expiry_date = datetime.strptime(expiry_date_str, '%Y-%m-%d').date()
+                if expiry_date < timezone.now().date():
+                    return JsonResponse({"success": False, "error": "Expiry date cannot be in the past."}, status=400)
+            except ValueError:
+                return JsonResponse({"success": False, "error": "Invalid date format. Use YYYY-MM-DD."}, status=400)
+
+        if select_all:
+            # Apply filters
+            status_filter = filters.get('status')
+            if status_filter:
+                today = timezone.now().date()
+                if status_filter == 'ACTIVE':
+                    invites_qs = invites_qs.filter(Q(expiry_date__gte=today) | Q(expiry_date__isnull=True), used_count__lt=F('usage_limit'), is_active=True)
+                elif status_filter == 'DISABLED':
+                    invites_qs = invites_qs.filter(is_active=False)
+                elif status_filter == 'EXPIRED':
+                    invites_qs = invites_qs.filter(expiry_date__lt=today)
+                elif status_filter == 'CLOSED':
+                    invites_qs = invites_qs.filter(used_count__gte=F('usage_limit')).exclude(expiry_date__lt=today)
+            
+            attendee_type_filter = filters.get('attendee_type')
+            if attendee_type_filter:
+                invites_qs = invites_qs.filter(attendee_type=attendee_type_filter)
+        else:
+            if not invite_ids:
+                return JsonResponse({"success": False, "error": "No links selected."}, status=400)
+            invites_qs = invites_qs.filter(id__in=invite_ids)
+
+        updated_count = invites_qs.update(expiry_date=expiry_date)
+        return JsonResponse({"success": True, "message": f"{updated_count} link(s) updated successfully."})
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)

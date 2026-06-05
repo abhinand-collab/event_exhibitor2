@@ -83,6 +83,43 @@ class Exhibitor(models.Model):
             "VISITOR":  max(0, self.visitor_pass_limit   - used["VISITOR"]),
         }
 
+    def uncommitted_passes_by_type(self):
+        """
+        Returns the number of passes that are NOT currently committed to 
+        either an Attendee record (Invited/Pending/Confirmed) OR an active Invitation link.
+        """
+        from django.utils import timezone
+        from django.db.models import Sum, Q, F
+        
+        # 1. Total Limits
+        limits = {
+            "VIP": self.vip_pass_limit,
+            "EXHIBITOR": self.exhibitor_pass_limit,
+            "VISITOR": self.visitor_pass_limit
+        }
+        
+        # 2. Subtract used Attendees (INVITED, PENDING, CONFIRMED)
+        used = self.passes_used_by_type()
+        
+        # 3. Subtract remaining slots in ACTIVE, non-expired Invitation links
+        today = timezone.now().date()
+        invites_summary = self.complimentary_invitations.filter(
+            is_active=True
+        ).exclude(
+            expiry_date__lt=today
+        ).values('attendee_type').annotate(
+            total_remaining=Sum(F('usage_limit') - F('used_count'))
+        )
+        
+        pending_invites = {item['attendee_type'].upper(): item['total_remaining'] for item in invites_summary}
+        
+        uncommitted = {}
+        for t in limits:
+            total_committed = used.get(t, 0) + pending_invites.get(t, 0)
+            uncommitted[t] = max(0, limits[t] - total_committed)
+            
+        return uncommitted
+
     def __str__(self):
         return self.company_name    
 auditlog.register(Exhibitor)
@@ -170,6 +207,10 @@ auditlog.register(Badge)
 # 5. Complimentary Invitation (Generic Links)
 # ---------------------------
 class ComplimentaryInvitation(models.Model):
+    class InvitationType(models.TextChoices):
+        GENERIC = "GENERIC", "Generic"
+        PERSONALIZED = "PERSONALIZED", "Personalized"
+
     exhibitor = models.ForeignKey(
         Exhibitor,
         on_delete=models.CASCADE,
@@ -181,6 +222,12 @@ class ComplimentaryInvitation(models.Model):
         editable=False,
         unique=True
     )
+    invitation_type = models.CharField(
+        max_length=20,
+        choices=InvitationType.choices,
+        default=InvitationType.GENERIC
+    )
+    email = models.EmailField(null=True, blank=True)
     attendee_type = models.CharField(
         max_length=20,
         choices=Attendee.AttendeeType.choices,
@@ -189,6 +236,7 @@ class ComplimentaryInvitation(models.Model):
     usage_limit = models.PositiveIntegerField(default=1)
     used_count = models.PositiveIntegerField(default=0)
     expiry_date = models.DateField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -204,5 +252,15 @@ class ComplimentaryInvitation(models.Model):
         if self.expiry_date and self.expiry_date < timezone.now().date():
             return True
         return False
+
+    @property
+    def status(self):
+        if not self.is_active:
+            return "DISABLED"
+        if self.is_expired:
+            return "EXPIRED"
+        if self.used_count >= self.usage_limit:
+            return "CLOSED"
+        return "ACTIVE"
 
 auditlog.register(ComplimentaryInvitation)

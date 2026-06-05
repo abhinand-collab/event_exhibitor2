@@ -784,7 +784,8 @@
                 <div class="form-group full">
                     <label>Email Address <span class="req">*</span></label>
                     <input type="email" name="email" class="form-control" id="fieldEmail"
-                        placeholder="you@example.com" value="{{ request.POST.email|default:'' }}">
+                        placeholder="you@example.com" value="{{ email_value|default:'' }}"
+                        {% if initial_email %}readonly style="background-color: #f8f9fa; cursor: not-allowed;"{% endif %}>
                     <div class="error-msg" id="errEmail"></div>
                 </div>
                 {% endif %}

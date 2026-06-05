@@ -57,20 +57,36 @@
         </div>
 
         <!-- Action Cards -->
-        <div class="row g-2 mb-4 animate-fade-in">
-            <div class="col-md-12 mb-3">
-                <div class="action-card" style="display: flex; flex-direction: row; align-items: center; justify-content: space-between; padding: 30px;">
-                    <div class="d-flex align-items-center gap-4">
+        <div class="row g-3 mb-4 animate-fade-in">
+            <div class="col-md-6">
+                <div class="action-card h-100" style="display: flex; flex-direction: column; align-items: start; justify-content: space-between; padding: 30px;">
+                    <div class="d-flex align-items-center gap-4 mb-3">
                         <div class="action-card-icon purple" style="margin-bottom: 0;">
                             <i class="fas fa-plus-circle"></i>
                         </div>
                         <div class="text-start">
                             <h5 class="mb-1" style="font-size: 20px;">Generate Generic Link</h5>
-                            <p class="mb-0">Create a reusable registration link for social media, WhatsApp, or special guest lists.</p>
+                            <p class="mb-0 text-muted" style="font-size: 14px;">Create a reusable registration link for social media, WhatsApp, or special guest lists.</p>
                         </div>
                     </div>
-                    <button class="btn btn-action-card" onclick="openCreateModal()" style="width: auto; padding: 12px 30px;">
+                    <button class="btn btn-action-card mt-auto" onclick="openCreateModal()" style="width: 100%; padding: 12px 30px;">
                         <i class="fas fa-plus-circle me-2"></i>Generate Now
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="action-card h-100" style="display: flex; flex-direction: column; align-items: start; justify-content: space-between; padding: 30px; border-left: 5px solid #10b981;">
+                    <div class="d-flex align-items-center gap-4 mb-3">
+                        <div class="action-card-icon green" style="margin-bottom: 0; background: rgba(16, 185, 129, 0.1); color: #10b981;">
+                            <i class="fas fa-user-check"></i>
+                        </div>
+                        <div class="text-start">
+                            <h5 class="mb-1" style="font-size: 20px;">Create Personalized Link</h5>
+                            <p class="mb-0 text-muted" style="font-size: 14px;">Pre-register a guest's email to create a secure, one-time link just for them.</p>
+                        </div>
+                    </div>
+                    <button class="btn btn-success mt-auto" onclick="openPersonalizedModal()" style="width: 100%; padding: 12px 30px; border-radius: 10px; font-weight: 600;">
+                        <i class="fas fa-envelope-open-text me-2"></i>Create Personalized Link
                     </button>
                 </div>
             </div>
@@ -78,22 +94,62 @@
 
         <!-- Invitations Section -->
         <div class="registrations-section animate-fade-in">
-            <div class="registrations-header">
-                <h5 class="mb-0">Active Invitation Links</h5>
+            <div class="registrations-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Invitation Links</h5>
+                <div class="d-flex gap-2">
+                    <button id="bulkDeactivateBtn" class="btn btn-sm btn-outline-danger" style="display: none; border-radius: 6px;" onclick="bulkToggleLinks('disable')">
+                        Disable
+                    </button>
+                    <button id="bulkActivateBtn" class="btn btn-sm btn-outline-success" style="display: none; border-radius: 6px;" onclick="bulkToggleLinks('enable')">
+                        Enable
+                    </button>
+                    <button id="bulkEditExpiryBtn" class="btn btn-sm btn-outline-info" style="display: none; border-radius: 6px;" onclick="openBulkEditExpiryModal()">
+                        Edit Expiry
+                    </button>
+                    <select id="attendeeTypeFilter" class="form-select form-select-sm" style="width: 150px; border-radius: 6px;" onchange="loadInvitations(1)">
+                        <option value="">All Types</option>
+                        <option value="VISITOR">Visitor</option>
+                        <option value="EXHIBITOR">Exhibitor</option>
+                        <option value="VIP">VIP</option>
+                    </select>
+                    <select id="statusFilter" class="form-select form-select-sm" style="width: 150px; border-radius: 6px;" onchange="loadInvitations(1)">
+                        <option value="">All Statuses</option>
+                        <option value="ACTIVE">Active</option>
+                        <option value="DISABLED">Disabled</option>
+                        <option value="EXPIRED">Expired</option>
+                        <option value="CLOSED">Closed (Max Used)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Global Select Banner -->
+            <div id="globalSelectBanner" class="alert alert-info py-2 px-4 mb-0 border-0 rounded-0 text-center" style="display: none; font-size: 14px;">
+                <span id="bannerText">All items on this page are selected.</span>
+                <button class="btn btn-link btn-sm fw-bold p-0 ms-2 text-decoration-none" id="selectAllGlobalBtn" onclick="selectAllAcrossPages()">
+                    Select all <span id="totalCountDisplay">0</span> links
+                </button>
+                <button class="btn btn-link btn-sm fw-bold p-0 ms-2 text-decoration-none d-none" id="clearGlobalBtn" onclick="clearGlobalSelection()">
+                    Clear selection
+                </button>
             </div>
 
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0" id="invitationsTable">
                     <thead class="bg-light">
                         <tr>
-                            <th class="ps-4">Link Name</th>
+                            <th style="width: 40px;" class="ps-4">
+                                <input type="checkbox" class="form-check-input" id="selectAllInvites" onclick="toggleSelectAll(this)">
+                            </th>
+                            <th>Link Name</th>
                             <th>Type</th>
+                            <th>Attendee Type</th>
+                            <th>Status</th>
                             <th>Limit</th>
                             <th>Used</th>
                             <th>Remaining</th>
                             <th>Expiration</th>
                             <th>Registration Link</th>
-                            <th class="pe-4">Actions</th>
+                            <th class="pe-4 text-end">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="invitationsBody">
@@ -132,6 +188,55 @@
             </div>
         </div>
     </main>
+</div>
+
+<!-- Personalized Link Modal -->
+<div class="modal fade" id="personalizedModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header bg-success text-white py-3">
+                <h5 class="modal-title" style="font-weight: 700;">
+                    <i class="fas fa-user-check me-2"></i>Create Personalized Link
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Guest Email Address</label>
+                    <input type="email" id="persGuestEmail" class="form-control" placeholder="e.g. guest@example.com" style="border-radius: 8px;">
+                    <p class="text-muted small mt-1">A secure, unique link will be generated for this specific email.</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Attendee Type</label>
+                    <select id="persAttendeeType" class="form-select" style="border-radius: 8px;">
+                        <option value="VISITOR">Visitor Pass</option>
+                        <option value="EXHIBITOR">Exhibitor Pass</option>
+                        <option value="VIP">VIP Pass</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Expiry Date (Optional)</label>
+                    <input type="date" id="persExpiryDate" class="form-control" style="border-radius: 8px;">
+                    <p class="text-muted small mt-1">Leave blank for no expiry. The link will be disabled after this date.</p>
+                </div>
+                
+                <div id="persResultArea" class="mt-4 d-none">
+                    <label class="form-label fw-bold text-success">Link Generated Successfully!</label>
+                    <div class="d-flex align-items-center bg-light border rounded p-2">
+                        <input type="text" id="persGeneratedUrl" class="form-control form-control-sm border-0 bg-transparent text-muted" readonly style="font-size: 13px;">
+                        <button class="btn btn-sm btn-white border shadow-sm ms-2" onclick="copyToClipboard(document.getElementById('persGeneratedUrl').value)">
+                            <i class="far fa-copy text-primary"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-0 py-3">
+                <button type="button" class="btn btn-link text-muted text-decoration-none" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success px-4" id="persSubmitBtn" onclick="submitPersonalizedLink()" style="border-radius: 8px; font-weight: 600;">Create Link</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Task Progress Container (Floating) -->
@@ -197,8 +302,8 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Number of Links to Generate</label>
-                    <input type="number" id="newLinkCount" class="form-control" value="1" min="1" max="100">
-                    <p class="text-muted small mt-1">You can create up to 100 links at once.</p>
+                    <input type="number" id="newLinkCount" class="form-control" value="1" min="1">
+                    <p class="text-muted small mt-1">Generating a large number of links will be processed in the background.</p>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Expiry Date (Optional)</label>
@@ -235,7 +340,7 @@
                         Separate multiple email addresses with <strong>commas</strong>.
                     </div>
                 </div>
-                <div class="alert alert-info py-2 px-3 border-0 mb-0" style="border-radius: 10px; background: rgba(13, 110, 253, 0.08);">
+                <div id="sendEmailInfoAlert" class="alert alert-info py-2 px-3 border-0 mb-0" style="border-radius: 10px; background: rgba(13, 110, 253, 0.08);">
                     <div class="d-flex align-items-center">
                         <i class="fas fa-info-circle text-primary me-2"></i>
                         <span class="text-dark" style="font-size: 12.5px;">Each recipient will receive an individual email with the registration link.</span>
@@ -324,42 +429,172 @@
     </div>
 </div>
 
+<!-- Edit Link Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header bg-primary text-white py-3">
+                <h5 class="modal-title" style="font-weight: 700;">
+                    <i class="fas fa-edit me-2"></i>Edit Invitation Link
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="editInviteId">
+                <div class="mb-3" id="editLinkNameContainer">
+                    <label class="form-label fw-bold">Link Name</label>
+                    <input type="text" id="editLinkName" class="form-control" style="border-radius: 8px;">
+                </div>
+                <div class="mb-3" id="editUsageLimitContainer">
+                    <label class="form-label fw-bold">Usage Limit</label>
+                    <input type="number" id="editUsageLimit" class="form-control" min="1" style="border-radius: 8px;">
+                    <p class="text-muted small mt-1">Current usage: <span id="editCurrentUsage" class="fw-bold text-primary">0</span>. Limit cannot be less than this.</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Expiry Date</label>
+                    <input type="date" id="editExpiryDate" class="form-control" style="border-radius: 8px;">
+                    <p class="text-muted small mt-1">Leave blank for no expiry. The link will be disabled after this date.</p>
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-0 py-3">
+                <button type="button" class="btn btn-link text-muted text-decoration-none" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary px-4" onclick="submitEditInvitation()" style="border-radius: 8px; font-weight: 600;">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Edit Expiry Modal -->
+<div class="modal fade" id="bulkEditExpiryModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 400px;">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header bg-info text-white py-3">
+                <h5 class="modal-title" style="font-weight: 700;">
+                    <i class="fas fa-calendar-alt me-2"></i>Bulk Edit Expiry
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <p class="mb-3">Set a new expiry date for the <span id="bulkEditCount" class="fw-bold text-primary">0</span> selected link(s).</p>
+                <div class="mb-3 text-start">
+                    <label class="form-label fw-bold">New Expiry Date</label>
+                    <input type="date" id="bulkNewExpiryDate" class="form-control" style="border-radius: 8px;">
+                    <p class="text-muted small mt-1">Leave blank to remove expiry from all selected links.</p>
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-0 justify-content-center py-3">
+                <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal" style="border-radius: 8px;">Cancel</button>
+                <button type="button" class="btn btn-info text-white px-4" onclick="submitBulkEditExpiry()" style="border-radius: 8px; font-weight: 600;">Update Links</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="confirmActionModal" tabindex="-1" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 400px;">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+            <div class="modal-header py-3" id="confirmModalHeader">
+                <h5 class="modal-title d-flex align-items-center" style="font-size: 16px; font-weight: 700;">
+                    <i class="fas fa-question-circle me-2"></i>
+                    <span id="confirmModalTitle">Confirm Action</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <div class="mb-3">
+                    <div class="rounded-circle d-inline-flex align-items-center justify-content-center" id="confirmIconWrapper" style="width: 60px; height: 60px;">
+                        <i id="confirmModalIcon" class="fas fa-pause" style="font-size: 28px;"></i>
+                    </div>
+                </div>
+                <h6 class="fw-bold text-dark mb-2" id="confirmMainMessage">Are you sure?</h6>
+                <p class="text-muted mb-0" id="confirmDetailMessage" style="font-size: 13px; line-height: 1.5;"></p>
+            </div>
+            <div class="modal-footer bg-light border-0 justify-content-center py-3">
+                <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal" style="border-radius: 8px; font-weight: 600; font-size: 14px;">Cancel</button>
+                <button type="button" class="btn px-4" id="confirmActionBtn" style="border-radius: 8px; font-weight: 600; font-size: 14px;">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
     let currentPage = 1;
     let pageSize = 10;
+    let totalCount = 0;
+    let isGlobalSelection = false;
+    let invitationsData = [];
 
     document.addEventListener('DOMContentLoaded', function() {
+        // Set min date for expiry calendar to today
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('newExpiryDate').setAttribute('min', today);
+        document.getElementById('editExpiryDate').setAttribute('min', today);
+        document.getElementById('bulkNewExpiryDate').setAttribute('min', today);
+        
         loadInvitations();
     });
 
     function loadInvitations(page = 1) {
         currentPage = page;
         document.getElementById('loadingOverlay').classList.add('active');
+        document.getElementById('selectAllInvites').checked = false;
+        clearGlobalSelection(false); // Reset global select state on reload
+        updateBulkButtons();
         
         const url = new URL('{% url "complimentary_invitations_list" %}', window.location.origin);
         url.searchParams.append('page', page);
         url.searchParams.append('page_size', pageSize);
+        
+        const statusFilter = document.getElementById('statusFilter').value;
+        if (statusFilter) {
+            url.searchParams.append('status', statusFilter);
+        }
+
+        const attendeeTypeFilter = document.getElementById('attendeeTypeFilter').value;
+        if (attendeeTypeFilter) {
+            url.searchParams.append('attendee_type', attendeeTypeFilter);
+        }
 
         fetch(url)
             .then(response => response.json())
             .then(data => {
+                totalCount = data.pagination.total_count;
+                document.getElementById('totalCountDisplay').textContent = totalCount;
+                invitationsData = data.invitations;
+
                 const body = document.getElementById('invitationsBody');
                 body.innerHTML = '';
                 
                 if (data.invitations.length === 0) {
-                    body.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">No invitation links found.</td></tr>';
+                    body.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted">No invitation links found.</td></tr>';
                 } else {
                     data.invitations.forEach(invite => {
                         const expiryDisplay = invite.expiry_date ? invite.expiry_date : 'No Expiry';
                         const expiredClass = invite.is_expired ? 'text-danger fw-bold' : '';
                         
+                        let statusBadgeClass = 'active';
+                        if (invite.status === 'EXPIRED') statusBadgeClass = 'expired';
+                        else if (invite.status === 'CLOSED') statusBadgeClass = 'pending';
+                        else if (invite.status === 'DISABLED') statusBadgeClass = 'disabled';
+
+                        // Badge for invitation type
+                        const typeBadge = invite.invitation_type === 'PERSONALIZED' 
+                            ? `<span class="badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); font-size: 11px; padding: 4px 8px; border-radius: 4px;">${invite.invitation_type_display}</span>`
+                            : `<span class="badge" style="background: rgba(13, 110, 253, 0.1); color: #0d6efd; border: 1px solid rgba(13, 110, 253, 0.2); font-size: 11px; padding: 4px 8px; border-radius: 4px;">${invite.invitation_type_display}</span>`;
+
                         const row = `
-                            <tr>
-                                <td class="ps-4"><strong>${invite.link_name}</strong></td>
+                            <tr data-id="${invite.id}">
+                                <td class="ps-4">
+                                    <input type="checkbox" class="form-check-input invite-checkbox" value="${invite.id}" onclick="updateBulkButtons()">
+                                </td>
+                                <td><strong>${invite.link_name}</strong></td>
+                                <td>${typeBadge}</td>
                                 <td><span class="status-badge ${invite.attendee_type.toLowerCase()}">${invite.attendee_type}</span></td>
+                                <td><span class="status-badge ${statusBadgeClass}">${invite.status}</span></td>
                                 <td>${invite.usage_limit}</td>
                                 <td>${invite.used_count}</td>
                                 <td>${invite.remaining}</td>
@@ -372,14 +607,30 @@
                                         </button>
                                     </div>
                                 </td>
-                                <td class="pe-4">
-                                    <div class="btn-group">
-                                        <button class="btn btn-sm btn-outline-primary" onclick="openSendEmailModal(${invite.id})" title="Send to Email" ${invite.is_expired ? 'disabled' : ''}>
-                                            <i class="fas fa-envelope"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-info" onclick="viewUsageDetails(${invite.id})" title="View Usage Details">
-                                            <i class="fas fa-users"></i>
-                                        </button>
+                                <td class="pe-4 text-end">
+                                    <div class="d-inline-flex gap-2">
+                                        <div class="btn-group">
+                                            ${invite.status === 'DISABLED' ? `
+                                                <button class="btn btn-sm btn-success" onclick="toggleLink(${invite.id}, 'enable')" style="border-radius: 6px; font-weight: 500;">
+                                                    Enable
+                                                </button>
+                                            ` : `
+                                                <button class="btn btn-sm btn-warning" onclick="toggleLink(${invite.id}, 'disable')" style="border-radius: 6px; font-weight: 500; color: #3f0e60;">
+                                                    Disable
+                                                </button>
+                                            `}
+                                            <button class="btn btn-sm btn-outline-secondary" onclick="openEditModal(${invite.id})" title="Edit Link" 
+                                                ${invite.invitation_type === 'PERSONALIZED' && invite.status === 'CLOSED' ? 'disabled' : ''} 
+                                                style="border-radius: 6px; margin-left: 5px;">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-primary" onclick="openSendEmailModal(${invite.id})" title="Send to Email" ${invite.status === 'EXPIRED' || invite.status === 'DISABLED' || invite.status === 'CLOSED' ? 'disabled' : ''} style="border-radius: 6px; margin-left: 5px;">
+                                                <i class="fas fa-envelope"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-info" onclick="viewUsageDetails(${invite.id})" title="View Usage Details" style="border-radius: 6px; margin-left: 5px;">
+                                                <i class="fas fa-users"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
@@ -395,6 +646,299 @@
                 console.error('Error:', error);
                 document.getElementById('loadingOverlay').classList.remove('active');
             });
+    }
+
+    function toggleSelectAll(checkbox) {
+        const checkboxes = document.querySelectorAll('.invite-checkbox');
+        checkboxes.forEach(cb => cb.checked = checkbox.checked);
+        
+        const banner = document.getElementById('globalSelectBanner');
+        if (checkbox.checked && totalCount > checkboxes.length) {
+            banner.style.display = 'block';
+            document.getElementById('bannerText').textContent = `All ${checkboxes.length} items on this page are selected.`;
+            document.getElementById('selectAllGlobalBtn').classList.remove('d-none');
+            document.getElementById('clearGlobalBtn').classList.add('d-none');
+        } else {
+            banner.style.display = 'none';
+            isGlobalSelection = false;
+        }
+        
+        updateBulkButtons();
+    }
+
+    function selectAllAcrossPages() {
+        isGlobalSelection = true;
+        document.getElementById('bannerText').textContent = `All ${totalCount} links are selected.`;
+        document.getElementById('selectAllGlobalBtn').classList.add('d-none');
+        document.getElementById('clearGlobalBtn').classList.remove('d-none');
+    }
+
+    function clearGlobalSelection(refreshUI = true) {
+        isGlobalSelection = false;
+        document.getElementById('globalSelectBanner').style.display = 'none';
+        if (refreshUI) {
+            document.getElementById('selectAllInvites').checked = false;
+            const checkboxes = document.querySelectorAll('.invite-checkbox');
+            checkboxes.forEach(cb => cb.checked = false);
+            updateBulkButtons();
+        }
+    }
+
+    function updateBulkButtons() {
+        const selectedCheckboxes = document.querySelectorAll('.invite-checkbox:checked');
+        const selectedCount = selectedCheckboxes.length;
+        
+        const bulkDeactivateBtn = document.getElementById('bulkDeactivateBtn');
+        const bulkActivateBtn = document.getElementById('bulkActivateBtn');
+        const bulkEditExpiryBtn = document.getElementById('bulkEditExpiryBtn');
+
+        if (selectedCount === 0) {
+            bulkDeactivateBtn.style.display = 'none';
+            bulkActivateBtn.style.display = 'none';
+            bulkEditExpiryBtn.style.display = 'none';
+            document.getElementById('globalSelectBanner').style.display = 'none';
+            isGlobalSelection = false;
+            return;
+        }
+
+        // When manually unchecking one item, we are no longer in global select mode
+        if (isGlobalSelection && selectedCount < document.querySelectorAll('.invite-checkbox').length) {
+            clearGlobalSelection(false);
+        }
+
+        // If all items on current page are selected, show banner (if total > page_size)
+        const totalItemsOnPage = document.querySelectorAll('.invite-checkbox').length;
+        if (selectedCount === totalItemsOnPage && totalCount > selectedCount) {
+             document.getElementById('globalSelectBanner').style.display = 'block';
+        } else if (!isGlobalSelection) {
+             document.getElementById('globalSelectBanner').style.display = 'none';
+        }
+
+        bulkEditExpiryBtn.style.display = 'inline-block';
+
+        if (isGlobalSelection) {
+            bulkDeactivateBtn.style.display = 'inline-block';
+            bulkActivateBtn.style.display = 'inline-block';
+            return;
+        }
+
+        let hasActive = false;
+        let hasDisabled = false;
+
+        selectedCheckboxes.forEach(cb => {
+            const row = cb.closest('tr');
+            const statusBadge = row.querySelector('.status-badge.disabled');
+            if (statusBadge) {
+                hasDisabled = true;
+            } else {
+                hasActive = true;
+            }
+        });
+
+        bulkDeactivateBtn.style.display = hasActive ? 'inline-block' : 'none';
+        bulkActivateBtn.style.display = hasDisabled ? 'inline-block' : 'none';
+    }
+
+    function startTrackingTask(taskId, label) {
+        const container = document.getElementById('taskProgressContainer');
+        const cardId = `task-${taskId}`;
+
+        if (document.getElementById(cardId)) return;
+
+        const card = document.createElement('div');
+        card.id = cardId;
+        card.className = 'animate-fade-in';
+        card.style.cssText = `
+            background: white; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            padding: 15px; border-left: 5px solid #1a56db; transition: all 0.3s ease;
+        `;
+
+        card.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <strong style="font-size: 13px; color: #111;">${label}</strong>
+                <span id="${cardId}-percent" style="font-size: 12px; font-weight: 700; color: #1a56db;">0%</span>
+            </div>
+            <div class="progress" style="height: 6px; background: #f3f4f6; border-radius: 10px; overflow: hidden;">
+                <div id="${cardId}-bar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                    role="progressbar" style="width: 0%; background: #1a56db;"></div>
+            </div>
+            <div id="${cardId}-status" class="mt-2 text-muted" style="font-size: 11px;">Initializing...</div>
+        `;
+
+        container.appendChild(card);
+        pollTaskProgress(taskId, cardId);
+    }
+
+    function pollTaskProgress(taskId, cardId) {
+        fetch(`/task-status-invitation/${taskId}/`)
+            .then(res => res.json())
+            .then(data => {
+                const bar = document.getElementById(`${cardId}-bar`);
+                const percentText = document.getElementById(`${cardId}-percent`);
+                const statusText = document.getElementById(`${cardId}-status`);
+
+                if (data.state === 'PROGRESS' && data.progress) {
+                    const current = data.progress.current;
+                    const total = data.progress.total;
+                    const percent = Math.round((current / total) * 100);
+                    
+                    bar.style.width = `${percent}%`;
+                    percentText.textContent = `${percent}%`;
+                    statusText.textContent = `Processed ${current} of ${total}...`;
+                    
+                    setTimeout(() => pollTaskProgress(taskId, cardId), 2000);
+                } 
+                else if (data.state === 'SUCCESS') {
+                    bar.style.width = '100%';
+                    bar.classList.remove('progress-bar-striped', 'progress-bar-animated');
+                    bar.style.background = '#10b981';
+                    percentText.textContent = '100%';
+                    percentText.style.color = '#10b981';
+                    statusText.textContent = 'Completed successfully!';
+                    
+                    showToast('Operation completed successfully!', 'success');
+                    loadInvitations(currentPage);
+                    
+                    setTimeout(() => {
+                        const card = document.getElementById(cardId);
+                        if (card) {
+                            card.style.opacity = '0';
+                            card.style.transform = 'translateX(20px)';
+                            setTimeout(() => card.remove(), 500);
+                        }
+                    }, 4000);
+                }
+                else if (data.state === 'FAILURE') {
+                    statusText.textContent = 'Error: Task failed.';
+                    statusText.classList.add('text-danger');
+                    bar.style.background = '#ef4444';
+                    setTimeout(() => document.getElementById(cardId)?.remove(), 5000);
+                }
+                else {
+                    // PENDING or other state
+                    setTimeout(() => pollTaskProgress(taskId, cardId), 2000);
+                }
+            })
+            .catch(() => {
+                setTimeout(() => pollTaskProgress(taskId, cardId), 5000);
+            });
+    }
+
+    function showConfirmPopup(options) {
+        const modalEl = document.getElementById('confirmActionModal');
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        const titleEl = document.getElementById('confirmModalTitle');
+        const headerEl = document.getElementById('confirmModalHeader');
+        const mainMsgEl = document.getElementById('confirmMainMessage');
+        const detailMsgEl = document.getElementById('confirmDetailMessage');
+        const iconEl = document.getElementById('confirmModalIcon');
+        const iconWrapper = document.getElementById('confirmIconWrapper');
+        const confirmBtn = document.getElementById('confirmActionBtn');
+
+        titleEl.textContent = options.title || 'Confirm Action';
+        mainMsgEl.textContent = options.mainMessage || 'Are you sure?';
+        detailMsgEl.textContent = options.detailMessage || '';
+        
+        // Style based on action
+        if (options.action === 'disable') {
+            headerEl.className = 'modal-header bg-warning py-3';
+            iconWrapper.className = 'rounded-circle bg-warning bg-opacity-10 d-inline-flex align-items-center justify-content-center';
+            iconEl.className = 'fas fa-pause text-warning';
+            confirmBtn.className = 'btn btn-warning px-4';
+            confirmBtn.textContent = options.confirmText || 'Confirm Now';
+            confirmBtn.style.color = '#3f0e60';
+        } else {
+            headerEl.className = 'modal-header bg-success py-3 text-white';
+            iconWrapper.className = 'rounded-circle bg-success bg-opacity-10 d-inline-flex align-items-center justify-content-center';
+            iconEl.className = 'fas fa-play text-success';
+            confirmBtn.className = 'btn btn-success px-4';
+            confirmBtn.textContent = options.confirmText || 'Confirm Now';
+            confirmBtn.style.color = 'white';
+        }
+
+        confirmBtn.onclick = () => {
+            modal.hide();
+            options.onConfirm();
+        };
+
+        modal.show();
+    }
+
+    function toggleLink(id, action) {
+        showConfirmPopup({
+            title: action === 'enable' ? 'Enable Link' : 'Disable Link',
+            mainMessage: `Confirm ${action.charAt(0).toUpperCase() + action.slice(1)}`,
+            detailMessage: `Are you sure you want to ${action} this invitation link? Guests ${action === 'enable' ? 'will' : 'will NOT'} be able to use it for registration.`,
+            action: action,
+            confirmText: action === 'enable' ? 'Enable Now' : 'Disable Now',
+            onConfirm: () => {
+                fetch('{% url "toggle_complimentary_link" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({ invite_id: id, action: action })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast(data.message, 'success');
+                        loadInvitations(currentPage);
+                    } else {
+                        showToast(data.error, 'error');
+                        loadInvitations(currentPage);
+                    }
+                });
+            }
+        });
+    }
+
+    function bulkToggleLinks(action) {
+        let payload = { action: action, select_all: isGlobalSelection };
+        let countText = isGlobalSelection ? `ALL ${totalCount}` : document.querySelectorAll('.invite-checkbox:checked').length;
+
+        showConfirmPopup({
+            title: action === 'enable' ? 'Bulk Enable' : 'Bulk Disable',
+            mainMessage: `Confirm Bulk ${action.charAt(0).toUpperCase() + action.slice(1)}`,
+            detailMessage: `You are about to ${action} ${countText} invitation link(s). Do you want to proceed?`,
+            action: action,
+            confirmText: action === 'enable' ? 'Enable Now' : 'Disable Now',
+            onConfirm: () => {
+                if (isGlobalSelection) {
+                    payload.filters = { 
+                        status: document.getElementById('statusFilter').value,
+                        attendee_type: document.getElementById('attendeeTypeFilter').value
+                    };
+                } else {
+                    payload.invite_ids = Array.from(document.querySelectorAll('.invite-checkbox:checked')).map(cb => cb.value);
+                }
+
+                document.getElementById('loadingOverlay').classList.add('active');
+                fetch('{% url "bulk_toggle_complimentary_links" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify(payload)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('loadingOverlay').classList.remove('active');
+                    if (data.success) {
+                        if (data.mode === 'async') {
+                            startTrackingTask(data.task_id, `${action.charAt(0).toUpperCase() + action.slice(1)}ing Links`);
+                        } else {
+                            showToast(data.message, 'success');
+                            loadInvitations(currentPage);
+                        }
+                    } else {
+                        showToast(data.error, 'error');
+                    }
+                });
+            }
+        });
     }
 
     function renderPagination(pagination) {
@@ -435,12 +979,136 @@
         loadInvitations(1);
     }
 
+    function openEditModal(id) {
+        const invite = invitationsData.find(inv => inv.id === id);
+        if (!invite) return;
+
+        document.getElementById('editInviteId').value = invite.id;
+        document.getElementById('editLinkName').value = invite.link_name;
+        document.getElementById('editUsageLimit').value = invite.usage_limit;
+        document.getElementById('editCurrentUsage').textContent = invite.used_count;
+        document.getElementById('editExpiryDate').value = invite.expiry_date || '';
+
+        // Hide specific fields for personalized links
+        const usageLimitContainer = document.getElementById('editUsageLimitContainer');
+        const linkNameContainer = document.getElementById('editLinkNameContainer');
+        
+        if (invite.invitation_type === 'PERSONALIZED') {
+            usageLimitContainer.style.display = 'none';
+            linkNameContainer.style.display = 'none';
+        } else {
+            usageLimitContainer.style.display = 'block';
+            linkNameContainer.style.display = 'block';
+        }
+
+        new bootstrap.Modal(document.getElementById('editModal')).show();
+    }
+
+    function submitEditInvitation() {
+        const id = document.getElementById('editInviteId').value;
+        const payload = {
+            invite_id: id,
+            link_name: document.getElementById('editLinkName').value,
+            usage_limit: document.getElementById('editUsageLimit').value,
+            expiry_date: document.getElementById('editExpiryDate').value
+        };
+
+        document.getElementById('loadingOverlay').classList.add('active');
+        fetch('{% url "update_complimentary_link" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('loadingOverlay').classList.remove('active');
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+                showToast(data.message, 'success');
+                loadInvitations(currentPage);
+            } else {
+                showToast(data.error, 'error');
+            }
+        });
+    }
+
+    function openBulkEditExpiryModal() {
+        let countText = isGlobalSelection ? `ALL ${totalCount}` : document.querySelectorAll('.invite-checkbox:checked').length;
+        document.getElementById('bulkEditCount').textContent = countText;
+        document.getElementById('bulkNewExpiryDate').value = '';
+        new bootstrap.Modal(document.getElementById('bulkEditExpiryModal')).show();
+    }
+
+    function submitBulkEditExpiry() {
+        let payload = { 
+            expiry_date: document.getElementById('bulkNewExpiryDate').value,
+            select_all: isGlobalSelection 
+        };
+
+        if (isGlobalSelection) {
+            payload.filters = { 
+                status: document.getElementById('statusFilter').value,
+                attendee_type: document.getElementById('attendeeTypeFilter').value
+            };
+        } else {
+            payload.invite_ids = Array.from(document.querySelectorAll('.invite-checkbox:checked')).map(cb => cb.value);
+        }
+
+        document.getElementById('loadingOverlay').classList.add('active');
+        fetch('{% url "bulk_update_complimentary_links" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('loadingOverlay').classList.remove('active');
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('bulkEditExpiryModal')).hide();
+                showToast(data.message, 'success');
+                loadInvitations(currentPage);
+            } else {
+                showToast(data.error, 'error');
+            }
+        });
+    }
+
     function openCreateModal() {
         new bootstrap.Modal(document.getElementById('createModal')).show();
     }
 
     function openSendEmailModal(id) {
+        const invite = invitationsData.find(inv => inv.id === id);
+        if (!invite) return;
+
         document.getElementById('sendInviteId').value = id;
+        const emailField = document.getElementById('sendRecipientEmail');
+        const emailHint = document.querySelector('#sendEmailModal .form-text');
+        const infoAlert = document.getElementById('sendEmailInfoAlert');
+        
+        // Pre-fill and lock email if it's a personalized link
+        if (invite.invitation_type === 'PERSONALIZED' && invite.email) {
+            emailField.value = invite.email;
+            emailField.readOnly = true;
+            emailField.style.backgroundColor = '#f8f9fa';
+            emailField.style.cursor = 'not-allowed';
+            if (emailHint) emailHint.innerHTML = '<i class="fas fa-lock me-1"></i> This link is secured for this specific guest and cannot be shared with other emails.';
+            if (infoAlert) infoAlert.classList.add('d-none'); // Hide for personalized
+        } else {
+            emailField.value = '';
+            emailField.readOnly = false;
+            emailField.style.backgroundColor = '';
+            emailField.style.cursor = '';
+            if (emailHint) emailHint.innerHTML = 'Separate multiple email addresses with <strong>commas</strong>.';
+            if (infoAlert) infoAlert.classList.remove('d-none'); // Show for generic
+        }
+
         new bootstrap.Modal(document.getElementById('sendEmailModal')).show();
     }
 
@@ -465,12 +1133,30 @@
         .then(data => {
             if (data.success) {
                 bootstrap.Modal.getInstance(document.getElementById('createModal')).hide();
-                loadInvitations(1);
-                showToast('Link created successfully!', 'success');
+                
+                // Clear the form
+                document.getElementById('newLinkName').value = '';
+                document.getElementById('newAttendeeType').value = 'VISITOR';
+                document.getElementById('newUsageLimit').value = '1';
+                document.getElementById('newLinkCount').value = '1';
+                document.getElementById('newExpiryDate').value = '';
+
+                if (data.mode === 'async') {
+                    startTrackingTask(data.task_id, 'Generating Links');
+                } else {
+                    loadInvitations(1);
+                    showToast(data.message || 'Link created successfully!', 'success');
+                    
+                    if (data.warning) {
+                        setTimeout(() => {
+                            showErrorPopup('Pass Limit Warning', 'Link Created with Warning', data.warning);
+                        }, 500);
+                    }
+                }
             } else {
                 const activeModal = bootstrap.Modal.getInstance(document.getElementById('createModal'));
                 if (activeModal) activeModal.hide();
-                showErrorPopup('Limit Exceeded', 'Action Blocked', data.error);
+                showErrorPopup('Operation Failed', 'Action Blocked', data.error);
             }
         });
     }
@@ -558,6 +1244,77 @@
             toast.style.transform = 'translateY(-10px)';
             setTimeout(() => toast.remove(), 300);
         }, 3000);
+    }
+
+    function openPersonalizedModal() {
+        const modalEl = document.getElementById('personalizedModal');
+        const modal = new bootstrap.Modal(modalEl);
+        
+        // Reset form
+        document.getElementById('persGuestEmail').value = '';
+        document.getElementById('persAttendeeType').value = 'VISITOR';
+        
+        // Set min date to today
+        const today = new Date().toISOString().split('T')[0];
+        const expiryInput = document.getElementById('persExpiryDate');
+        expiryInput.value = '';
+        expiryInput.setAttribute('min', today);
+        
+        document.getElementById('persResultArea').classList.add('d-none');
+        document.getElementById('persGeneratedUrl').value = '';
+        document.getElementById('persSubmitBtn').disabled = false;
+        document.getElementById('persSubmitBtn').textContent = 'Create Link';
+
+        modal.show();
+    }
+
+    function submitPersonalizedLink() {
+        const email = document.getElementById('persGuestEmail').value.trim();
+        const attendeeType = document.getElementById('persAttendeeType').value;
+        const expiryDate = document.getElementById('persExpiryDate').value;
+        const submitBtn = document.getElementById('persSubmitBtn');
+
+        if (!email) {
+            showToast('Please enter a guest email address.', 'error');
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Generating...';
+
+        fetch('{% url "create_personalized_invitation_link" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                email: email,
+                attendee_type: attendeeType,
+                expiry_date: expiryDate
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('persGeneratedUrl').value = data.invite_url;
+                document.getElementById('persResultArea').classList.remove('d-none');
+                submitBtn.textContent = 'Link Created';
+                showToast('Personalized link generated!', 'success');
+                
+                // Refresh the invitation list to show the new link
+                loadInvitations(1);
+            } else {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Create Link';
+                showToast(data.error, 'error');
+            }
+        })
+        .catch(err => {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Create Link';
+            showToast('An unexpected error occurred.', 'error');
+        });
     }
 
     function viewUsageDetails(inviteId) {

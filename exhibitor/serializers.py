@@ -407,10 +407,12 @@ class ComplimentaryInvitationCreateSerializer:
         self.exhibitor = exhibitor
         self.total_count = total_count  # For bulk creation, total_count links will be created
         self._errors = {}
+        self._warnings = {}
         self._validated_data = {}
 
     def is_valid(self):
         self._errors = {}
+        self._warnings = {}
         self._validated_data = {}
 
         link_name = self.data.get('link_name')
@@ -445,17 +447,18 @@ class ComplimentaryInvitationCreateSerializer:
         else:
             expiry_date = None
 
-        # 4. Pass Limit Check
+        # 4. Pass Limit Check (Hard Error)
         if not self._errors:
             total_requested = self.total_count * usage_limit
-            remaining = self.exhibitor.remaining_by_type()
-            if remaining.get(attendee_type, 0) < total_requested:
-                self._add_error('usage_limit', f"Limit exceeded. You only have {remaining.get(attendee_type, 0)} {attendee_type} passes remaining.")
+            uncommitted = self.exhibitor.uncommitted_passes_by_type()
+            
+            if uncommitted.get(attendee_type, 0) < total_requested:
+                self._add_error('usage_limit', f"Insufficient {attendee_type} passes. You only have {uncommitted.get(attendee_type, 0)} uncommitted passes remaining, but you requested {total_requested}.")
 
         if self._errors:
             return False
 
-        # 4. All good - populate validated data
+        # 5. All good - populate validated data
         import time
         ts = int(time.time())
         self._validated_data = {
@@ -470,6 +473,11 @@ class ComplimentaryInvitationCreateSerializer:
     def errors(self):
         # Join errors for consistent view response
         return " ".join([f"{v}" for k, v in self._errors.items()])
+
+    @property
+    def warnings(self):
+        # Join warnings for consistent view response
+        return " ".join([f"{v}" for k, v in self._warnings.items()])
 
     @property
     def validated_data(self):

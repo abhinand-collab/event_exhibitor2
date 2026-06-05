@@ -1167,6 +1167,15 @@
             background: #dc3545;
         }
 
+        .status-badge.rejected, .status-badge.disabled {
+            background: #e2e8f0;
+            color: #475569;
+        }
+
+        .status-badge.rejected::before, .status-badge.disabled::before {
+            background: #94a3b8;
+        }
+
         /* YES/NO Labels */
         .label-yes {
             color: #28a745;
